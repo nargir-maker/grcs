@@ -1,0 +1,262 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { db } from '../lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+
+interface Brevet {
+  id: string;
+  title: string;
+  distance: number;
+  date: string;
+  organizer: string;
+  start: string;
+  ascent: number;
+  certification: string;
+  type: string;
+  gpxUrl: string;
+  difficultyLabel: string;
+  difficultyColor: string;
+}
+
+function getDifficultyLabel(bdi: number): { label: string; color: string } {
+  if (bdi < 4)  return { label: 'ΕΥΚΟΛΟ',        color: '#2E7D32' };
+  if (bdi < 7)  return { label: 'ΜΕΤΡΙΟ',         color: '#F9A825' };
+  if (bdi < 10) return { label: 'ΔΥΣΚΟΛΟ',        color: '#E65100' };
+  if (bdi < 14) return { label: 'ΠΟΛΥ ΔΥΣΚΟΛΟ',  color: '#D32F2F' };
+  if (bdi < 19) return { label: 'ΑΚΡΑΙΟ',         color: '#6A1B9A' };
+  return         { label: 'ΘΡΥΛΙΚΟ',              color: '#1A1A1A' };
+}
+
+function computeBDI(wcs: number, km: number, ascent: number): number {
+  if (km <= 0) return 0;
+  if (wcs > 0) {
+    const distBase = Math.log(km / 100 + 1) * 2.2;
+    return distBase + wcs / 1403;
+  }
+  // Fallback
+  return (km / 100) * (1 + ascent / (km * 8));
+}
+
+export default function BrevetsPage() {
+  const [brevets, setBrevets] = useState<Brevet[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<number | null>(null);
+  const [search, setSearch] = useState('');
+
+useEffect(() => {
+  console.log('useEffect fired');
+  console.log('db:', db);
+  async function fetchBrevets() {
+    console.log('fetchBrevets started');
+    try {
+      console.log('calling getDocs...');
+      const snapshot = await getDocs(collection(db, 'all_brevets'));
+      console.log('SNAPSHOT SIZE:', snapshot.size);
+    const data: Brevet[] = [];
+
+    snapshot.forEach((doc) => {
+      const d = doc.data();
+      const info = d.info || {};
+      const route = d.route || {};
+      const extra = d.extra || {};
+
+      const km = parseInt(info.distance?.toString() ?? '0') || 0;
+      const ascent = parseInt(route.ascent?.toString() ?? '0') || 0;
+      const wcs = parseFloat(route.wcs?.toString() ?? '0') || 0;
+      const bdi = computeBDI(wcs, km, ascent);
+      const { label, color } = getDifficultyLabel(bdi);
+
+      // Parse date
+      let dateStr = info.date?.toString() ?? '';
+      let parsedDate = '';
+      try {
+        const d2 = new Date(dateStr.split('+')[0]);
+        if (!isNaN(d2.getTime())) {
+          parsedDate = d2.toISOString();
+        }
+      } catch { parsedDate = ''; }
+
+      data.push({
+        id: doc.id,
+        title: info.title?.toString() ?? doc.id,
+        distance: km,
+        date: parsedDate,
+        organizer: extra.organizer?.toString() ?? '',
+        start: route.start?.toString() ?? '',
+        ascent,
+        certification: info.certification?.toString() ?? '',
+        type: info.type?.toString() ?? 'BRM',
+        gpxUrl: route.gpxUrl?.toString() ?? '',
+        difficultyLabel: label,
+        difficultyColor: color,
+      });
+    });
+
+    // Sort by date
+    data.sort((a, b) => {
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+
+    setBrevets(data);
+  } catch (e) {
+    console.error('Error fetching brevets:', e);
+  } finally {
+    setLoading(false);
+  }
+}
+
+    fetchBrevets();
+  }, []);
+
+  const filtered = brevets.filter((b) => {
+    const matchDist = filter === null || b.distance === filter;
+    const matchSearch = search === '' ||
+      b.title.toLowerCase().includes(search.toLowerCase()) ||
+      b.start.toLowerCase().includes(search.toLowerCase());
+    return matchDist && matchSearch;
+  });
+
+  return (
+    <div className="min-h-screen bg-[#0A1628] px-6 py-12">
+      <div className="max-w-5xl mx-auto">
+
+        {/* ── HEADER ─────────────────────────────────── */}
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold text-white mb-2">
+            📅 Ημερολόγιο Brevet
+          </h1>
+          <p className="text-white/50">
+            Όλα τα προγραμματισμένα brevets της σεζόν
+          </p>
+        </div>
+
+        {/* ── FILTERS ────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          {/* Search */}
+          <input
+            type="text"
+            placeholder="Αναζήτηση brevet..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 bg-white/5 border border-white/10 text-white placeholder-white/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
+          />
+          {/* Distance filter */}
+          <div className="flex gap-2">
+            {[null, 200, 300, 400, 600, 1000].map((d) => (
+              <button
+                key={d ?? 'all'}
+                onClick={() => setFilter(d)}
+                className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${
+                  filter === d
+                    ? 'bg-cyan-500 text-black'
+                    : 'bg-white/5 text-white/60 hover:text-white border border-white/10'
+                }`}
+              >
+                {d === null ? 'Όλα' : `${d}km`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── CONTENT ────────────────────────────────── */}
+        {loading ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-white/50 text-sm">Φόρτωση brevets...</p>
+            </div>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-24">
+            <p className="text-white/30 text-lg">Δεν βρέθηκαν brevets</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {filtered.map((b) => (
+              <div
+                key={b.id}
+                className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/30 transition-colors"
+              >
+                {/* Top row */}
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="text-white font-bold text-base leading-tight">
+                      {b.title}
+                    </h3>
+                    <p className="text-white/40 text-xs mt-1">
+                      {b.start}
+                    </p>
+                  </div>
+                  {/* Distance badge */}
+                  <span className="bg-cyan-500/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/20 ml-2 shrink-0">
+                    {b.distance}km
+                  </span>
+                </div>
+
+                {/* Date + Organizer */}
+                <div className="flex items-center gap-4 mb-4">
+                  <span className="text-white/50 text-xs">
+                    📅 {b.date ? new Date(b.date).toLocaleDateString('el-GR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    }) : '—'}
+                  </span>
+                </div>
+
+                {/* Stats row */}
+                <div className="flex items-center gap-4 mb-4">
+                  {b.ascent > 0 && (
+                    <span className="text-white/40 text-xs">
+                      ⛰️ {b.ascent.toLocaleString()}m+
+                    </span>
+                  )}
+                  <span className="text-white/40 text-xs">
+                    {b.certification}
+                  </span>
+                  <span className="text-white/40 text-xs">
+                    {b.type}
+                  </span>
+                </div>
+
+                {/* Difficulty badge */}
+                <div className="flex items-center justify-between">
+                  <span
+                    className="text-xs font-bold px-3 py-1 rounded-full"
+                    style={{
+                      backgroundColor: b.difficultyColor + '20',
+                      color: b.difficultyColor,
+                      border: `1px solid ${b.difficultyColor}40`
+                    }}
+                  >
+                    {b.difficultyLabel}
+                  </span>
+{b.gpxUrl && (
+                    <a
+                      href={b.gpxUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
+                    >
+                      GPX →
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Count */}
+        {!loading && (
+          <p className="text-white/30 text-xs text-center mt-8">
+            {filtered.length} brevets
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
