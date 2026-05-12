@@ -43,6 +43,7 @@ export default function BrevetsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<number | null>(null);
   const [search, setSearch] = useState('');
+  const [yearFilter, setYearFilter] = useState<number | null>(2026);
 
 useEffect(() => {
   console.log('useEffect fired');
@@ -111,13 +112,15 @@ useEffect(() => {
     fetchBrevets();
   }, []);
 
-  const filtered = brevets.filter((b) => {
-    const matchDist = filter === null || b.distance === filter;
-    const matchSearch = search === '' ||
-      b.title.toLowerCase().includes(search.toLowerCase()) ||
-      b.start.toLowerCase().includes(search.toLowerCase());
-    return matchDist && matchSearch;
-  });
+const filtered = brevets.filter((b) => {
+  const matchDist = filter === null || b.distance === filter;
+  const matchYear = yearFilter === null || 
+    new Date(b.date).getFullYear() === yearFilter;
+  const matchSearch = search === '' ||
+    b.title.toLowerCase().includes(search.toLowerCase()) ||
+    b.start.toLowerCase().includes(search.toLowerCase());
+  return matchDist && matchYear && matchSearch;
+});
 
   return (
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
@@ -143,6 +146,17 @@ useEffect(() => {
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 bg-white/5 border border-white/10 text-white placeholder-white/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
           />
+          <select
+  onChange={(e) => setYearFilter(parseInt(e.target.value) || null)}
+  defaultValue="2026"
+  className="bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
+>
+  <option value="">Όλα τα χρόνια</option>
+  <option value="2026">2026</option>
+  <option value="2025">2025</option>
+  <option value="2024">2024</option>
+  <option value="2023">2023</option>
+</select>
           {/* Distance filter */}
           <div className="flex gap-2">
             {[null, 200, 300, 400, 600, 1000].map((d) => (
