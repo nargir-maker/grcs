@@ -20,12 +20,12 @@ interface Brevet {
 }
 
 function getDifficultyLabel(bdi: number): { label: string; color: string } {
-  if (bdi < 4)  return { label: 'ΕΥΚΟΛΟ',        color: '#2E7D32' };
-  if (bdi < 7)  return { label: 'ΜΕΤΡΙΟ',         color: '#F9A825' };
-  if (bdi < 10) return { label: 'ΔΥΣΚΟΛΟ',        color: '#E65100' };
-  if (bdi < 14) return { label: 'ΠΟΛΥ ΔΥΣΚΟΛΟ',  color: '#D32F2F' };
-  if (bdi < 19) return { label: 'ΑΚΡΑΙΟ',         color: '#6A1B9A' };
-  return         { label: 'ΘΡΥΛΙΚΟ',              color: '#1A1A1A' };
+  if (bdi < 4)  return { label: 'ΕΥΚΟΛΟ',       color: '#2E7D32' };
+  if (bdi < 7)  return { label: 'ΜΕΤΡΙΟ',        color: '#F9A825' };
+  if (bdi < 10) return { label: 'ΔΥΣΚΟΛΟ',       color: '#E65100' };
+  if (bdi < 14) return { label: 'ΠΟΛΥ ΔΥΣΚΟΛΟ', color: '#D32F2F' };
+  if (bdi < 19) return { label: 'ΑΚΡΑΙΟ',        color: '#6A1B9A' };
+  return         { label: 'ΘΡΥΛΙΚΟ',             color: '#1A1A1A' };
 }
 
 function computeBDI(wcs: number, km: number, ascent: number): number {
@@ -34,7 +34,6 @@ function computeBDI(wcs: number, km: number, ascent: number): number {
     const distBase = Math.log(km / 100 + 1) * 2.2;
     return distBase + wcs / 1403;
   }
-  // Fallback
   return (km / 100) * (1 + ascent / (km * 8));
 }
 
@@ -45,82 +44,87 @@ export default function BrevetsPage() {
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState<number | null>(2026);
 
-useEffect(() => {
-  console.log('useEffect fired');
-  console.log('db:', db);
-  async function fetchBrevets() {
-    console.log('fetchBrevets started');
-    try {
-      console.log('calling getDocs...');
-      const snapshot = await getDocs(collection(db, 'all_brevets'));
-      console.log('SNAPSHOT SIZE:', snapshot.size);
-    const data: Brevet[] = [];
-
-    snapshot.forEach((doc) => {
-      const d = doc.data();
-      const info = d.info || {};
-      const route = d.route || {};
-      const extra = d.extra || {};
-
-      const km = parseInt(info.distance?.toString() ?? '0') || 0;
-      const ascent = parseInt(route.ascent?.toString() ?? '0') || 0;
-      const wcs = parseFloat(route.wcs?.toString() ?? '0') || 0;
-      const bdi = computeBDI(wcs, km, ascent);
-      const { label, color } = getDifficultyLabel(bdi);
-
-      // Parse date
-      let dateStr = info.date?.toString() ?? '';
-      let parsedDate = '';
+  useEffect(() => {
+    async function fetchAll() {
       try {
-        const d2 = new Date(dateStr.split('+')[0]);
-        if (!isNaN(d2.getTime())) {
-          parsedDate = d2.toISOString();
-        }
-      } catch { parsedDate = ''; }
+        // ── 1. Fetch clubs lookup map ─────────────────
+        const clubsSnapshot = await getDocs(collection(db, 'clubs'));
+        const clubsMap: Record<string, string> = {};
+        clubsSnapshot.forEach((doc) => {
+          const d = doc.data();
+          clubsMap[doc.id] =
+            d.CLUB_NAME_SHORT_EN ||
+            d.CLUB_NAME_SHORT_GR ||
+            doc.id;
+        });
 
-      data.push({
-        id: doc.id,
-        title: info.title?.toString() ?? doc.id,
-        distance: km,
-        date: parsedDate,
-        organizer: extra.organizer?.toString() ?? '',
-        start: route.start?.toString() ?? '',
-        ascent,
-        certification: info.certification?.toString() ?? '',
-        type: info.type?.toString() ?? 'BRM',
-        gpxUrl: route.gpxUrl?.toString() ?? '',
-        difficultyLabel: label,
-        difficultyColor: color,
-      });
-    });
+        // ── 2. Fetch brevets ──────────────────────────
+        const snapshot = await getDocs(collection(db, 'all_brevets'));
+        const data: Brevet[] = [];
 
-    // Sort by date
-    data.sort((a, b) => {
-      if (!a.date) return 1;
-      if (!b.date) return -1;
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
-    });
+        snapshot.forEach((doc) => {
+          const d = doc.data();
+          const info  = d.info  || {};
+          const route = d.route || {};
 
-    setBrevets(data);
-  } catch (e) {
-    console.error('Error fetching brevets:', e);
-  } finally {
-    setLoading(false);
-  }
-}
+          const km     = parseInt(info.distance?.toString()  ?? '0') || 0;
+          const ascent = parseInt(route.ascent?.toString()   ?? '0') || 0;
+          const wcs    = parseFloat(route.wcs?.toString()    ?? '0') || 0;
+          const bdi    = computeBDI(wcs, km, ascent);
+          const { label, color } = getDifficultyLabel(bdi);
 
-    fetchBrevets();
+          // Parse date
+          let parsedDate = '';
+          try {
+            const dateStr = info.date?.toString() ?? '';
+            const d2 = new Date(dateStr.split('+')[0]);
+            if (!isNaN(d2.getTime())) parsedDate = d2.toISOString();
+          } catch { parsedDate = ''; }
+
+          data.push({
+            id:              doc.id,
+            title:           info.title?.toString() ?? doc.id,
+            distance:        km,
+            date:            parsedDate,
+            organizer:       clubsMap[info.organizerId?.toString() ?? ''] ?? '',
+            start:           route.start?.toString() ?? '',
+            ascent,
+            certification:   info.certification?.toString() ?? '',
+            type:            info.type?.toString() ?? 'BRM',
+            gpxUrl:          route.gpxUrl?.toString() ?? '',
+            difficultyLabel: label,
+            difficultyColor: color,
+          });
+        });
+
+        // Sort by date ascending
+        data.sort((a, b) => {
+          if (!a.date) return 1;
+          if (!b.date) return -1;
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        });
+
+        setBrevets(data);
+      } catch (e) {
+        console.error('Error fetching data:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchAll();
   }, []);
 
-const filtered = brevets.filter((b) => {
-  const matchDist = filter === null || b.distance === filter;
-  const matchYear = yearFilter === null || 
-    new Date(b.date).getFullYear() === yearFilter;
-  const matchSearch = search === '' ||
-    b.title.toLowerCase().includes(search.toLowerCase()) ||
-    b.start.toLowerCase().includes(search.toLowerCase());
-  return matchDist && matchYear && matchSearch;
-});
+  const filtered = brevets.filter((b) => {
+    const matchDist   = filter === null || b.distance === filter;
+    const matchYear   = yearFilter === null ||
+      new Date(b.date).getFullYear() === yearFilter;
+    const matchSearch = search === '' ||
+      b.title.toLowerCase().includes(search.toLowerCase()) ||
+      b.start.toLowerCase().includes(search.toLowerCase()) ||
+      b.organizer.toLowerCase().includes(search.toLowerCase());
+    return matchDist && matchYear && matchSearch;
+  });
 
   return (
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
@@ -141,24 +145,29 @@ const filtered = brevets.filter((b) => {
           {/* Search */}
           <input
             type="text"
-            placeholder="Αναζήτηση brevet..."
+            placeholder="Αναζήτηση brevet, πόλη, διοργανωτή..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 bg-white/5 border border-white/10 text-white placeholder-white/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
           />
+
+          {/* Year filter */}
           <select
-  onChange={(e) => setYearFilter(parseInt(e.target.value) || null)}
-  defaultValue="2026"
-  className="bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
->
-  <option value="">Όλα τα χρόνια</option>
-  <option value="2026">2026</option>
-  <option value="2025">2025</option>
-  <option value="2024">2024</option>
-  <option value="2023">2023</option>
-</select>
+            onChange={(e) =>
+              setYearFilter(parseInt(e.target.value) || null)
+            }
+            defaultValue="2026"
+            className="bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
+          >
+            <option value="">Όλα τα χρόνια</option>
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+          </select>
+
           {/* Distance filter */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {[null, 200, 300, 400, 600, 1000].map((d) => (
               <button
                 key={d ?? 'all'}
@@ -192,7 +201,7 @@ const filtered = brevets.filter((b) => {
             {filtered.map((b) => (
               <div
                 key={b.id}
-                className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/30 transition-colors"
+                className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/30 transition-colors cursor-pointer"
               >
                 {/* Top row */}
                 <div className="flex items-start justify-between mb-3">
@@ -201,24 +210,30 @@ const filtered = brevets.filter((b) => {
                       {b.title}
                     </h3>
                     <p className="text-white/40 text-xs mt-1">
-                      {b.start}
+                      📍 {b.start}
                     </p>
                   </div>
-                  {/* Distance badge */}
                   <span className="bg-cyan-500/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/20 ml-2 shrink-0">
                     {b.distance}km
                   </span>
                 </div>
 
                 {/* Date + Organizer */}
-                <div className="flex items-center gap-4 mb-4">
+                <div className="flex flex-wrap items-center gap-3 mb-4">
                   <span className="text-white/50 text-xs">
-                    📅 {b.date ? new Date(b.date).toLocaleDateString('el-GR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    }) : '—'}
+                    📅 {b.date
+                      ? new Date(b.date).toLocaleDateString('el-GR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })
+                      : '—'}
                   </span>
+                  {b.organizer && (
+                    <span className="text-white/50 text-xs">
+                      🏛️ {b.organizer}
+                    </span>
+                  )}
                 </div>
 
                 {/* Stats row */}
@@ -228,32 +243,37 @@ const filtered = brevets.filter((b) => {
                       ⛰️ {b.ascent.toLocaleString()}m+
                     </span>
                   )}
-                  <span className="text-white/40 text-xs">
-                    {b.certification}
-                  </span>
-                  <span className="text-white/40 text-xs">
-                    {b.type}
-                  </span>
+                  {b.certification && (
+                    <span className="text-white/40 text-xs">
+                      {b.certification}
+                    </span>
+                  )}
+                  {b.type && (
+                    <span className="text-white/40 text-xs">
+                      {b.type}
+                    </span>
+                  )}
                 </div>
 
-                {/* Difficulty badge */}
+                {/* Bottom row — difficulty + GPX */}
                 <div className="flex items-center justify-between">
                   <span
                     className="text-xs font-bold px-3 py-1 rounded-full"
                     style={{
                       backgroundColor: b.difficultyColor + '20',
                       color: b.difficultyColor,
-                      border: `1px solid ${b.difficultyColor}40`
+                      border: `1px solid ${b.difficultyColor}40`,
                     }}
                   >
                     {b.difficultyLabel}
                   </span>
-{b.gpxUrl && (
+                  {b.gpxUrl && (
                     <a
                       href={b.gpxUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       GPX →
                     </a>
