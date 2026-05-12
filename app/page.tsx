@@ -9,7 +9,7 @@ export default function Home() {
           <img
             src="/grc-logo.png"
             alt="GRC Logo"
-            className="w-32 h-32 object-contain drop-shadow-2xl"
+            className="w-64 h-64 object-contain drop-shadow-2xl"
           />
         </div>
         <div className="inline-block bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-bold px-4 py-2 rounded-full mb-8 tracking-widest">
