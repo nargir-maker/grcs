@@ -222,15 +222,24 @@ if (organizerId) {
           climbCount:      parseInt(route.climbCount?.toString() ?? '0') || 0,
           duration:        getTimeLimit(km),
           organizerLogo: organizerLogo,
-          climbProfile: Array.isArray(d.climbProfile) 
-  ? d.climbProfile.map((c: any) => ({
-      startKm:       parseFloat(c.startKm?.toString() ?? '0') || 0,
-      endKm:         parseFloat(c.endKm?.toString() ?? '0') || 0,
-      category:      c.category?.toString() ?? 'C4',
-      avgGrade:      parseFloat(c.avgGrade?.toString() ?? '0') || 0,
-      maxGrade:      parseFloat(c.maxGrade?.toString() ?? '0') || 0,
-      elevationGain: parseInt(c.elevationGain?.toString() ?? '0') || 0,
-    }))
+climbProfile: Array.isArray(d.climbProfile)
+  ? d.climbProfile.map((c: any) => {
+      const avgGrad = parseFloat(c.avgGrad?.toString() ?? '0') || 0;
+      // Calculate category from grade — same logic as app
+      const category = avgGrad >= 10 ? 'HC'
+        : avgGrad >= 8  ? 'C1'
+        : avgGrad >= 6  ? 'C2'
+        : avgGrad >= 4  ? 'C3'
+        : 'C4';
+      return {
+        startKm:       parseFloat(c.startKm?.toString() ?? '0') || 0,
+        endKm:         parseFloat(c.endKm?.toString() ?? '0') || 0,
+        category,
+        avgGrade:      avgGrad,
+        maxGrade:      parseFloat(c.maxGrad?.toString() ?? '0') || 0,
+        elevationGain: parseFloat(c.gainM?.toString() ?? '0') || 0,
+      };
+    })
   : [],
         });
     } catch (e) {
