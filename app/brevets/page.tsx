@@ -199,8 +199,8 @@ export default function BrevetsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filtered.map((b) => (
-              <div
-                key={b.id}
+              <a
+                key={b.id}  href={`/brevets/${b.id}`}
                 className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/30 transition-colors cursor-pointer"
               >
                 {/* Top row */}
@@ -267,19 +267,20 @@ export default function BrevetsPage() {
                   >
                     {b.difficultyLabel}
                   </span>
-                  {b.gpxUrl && (
-                    <a
-                      href={b.gpxUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      GPX →
-                    </a>
-                  )}
+{b.gpxUrl && (
+  <button
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.open(b.gpxUrl, '_blank');
+    }}
+    className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
+  >
+    GPX →
+  </button>
+)}
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         )}
