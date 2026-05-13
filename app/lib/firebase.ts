@@ -4,7 +4,7 @@ import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAzAnwhtM-YkAK2HAfWWgYvcbTnczdSN8U',
-  authDomain: 'grcs-vert.vercel.app',
+  authDomain: 'greek-brevets-tracker.firebaseapp.com',
   projectId: 'greek-brevets-tracker',
   storageBucket: 'greek-brevets-tracker.firebasestorage.app',
   messagingSenderId: '268041728617',
