@@ -3,9 +3,12 @@
 import { useEffect, useState } from 'react';
 import { db } from '../../lib/firebase';
 import { useParams } from 'next/navigation';
-
 import { doc, getDoc, getDocFromCache } from 'firebase/firestore';
 import dynamic from 'next/dynamic';
+import { useSession ,signIn} from 'next-auth/react';
+import RegistrationForm from '@/app/components/RegistrationForm';
+
+
 
 const BrevetMap = dynamic(() => import('../../components/BrevetMap'), {
   ssr: false,
@@ -114,6 +117,8 @@ export default function BrevetDetailPage() {
   const id = params.id as string;
   const [brevet, setBrevet] = useState<BrevetDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const { data: session } = useSession();
+  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     async function fetchBrevet() {
@@ -543,7 +548,44 @@ try {
             </div>
           </div>
         )}
-
+{/* ── REGISTRATION ───────────────────────────── */}
+<div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+  <h2 className="text-white font-bold text-lg mb-2">
+    🚴 Εγγραφή στο Brevet
+  </h2>
+  
+  {!session ? (
+    <div className="text-center py-6">
+      <p className="text-white/50 text-sm mb-4">
+        Συνδέσου για να εγγραφείς στο brevet
+      </p>
+      <button
+        onClick={() => signIn('google')}
+        className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-6 py-3 rounded-full text-sm transition-colors"
+      >
+        Σύνδεση με Google
+      </button>
+    </div>
+  ) : !showForm ? (
+    <div className="flex items-center justify-between">
+      <p className="text-white/50 text-sm">
+        Συνδεδεμένος ως {session.user?.name}
+      </p>
+      <button
+        onClick={() => setShowForm(true)}
+        className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-6 py-3 rounded-full text-sm transition-colors"
+      >
+        Εγγραφή →
+      </button>
+    </div>
+  ) : (
+    <RegistrationForm
+      brevet={brevet}
+      session={session}
+      onClose={() => setShowForm(false)}
+    />
+  )}
+</div>
       </div>
     </div>
   );
