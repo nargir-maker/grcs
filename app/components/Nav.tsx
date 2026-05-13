@@ -43,15 +43,15 @@ export default function Nav() {
             <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
           ) : user ? (
             <div className="flex items-center gap-3">
-              {user.photoURL && (
+              {user.image && (
                 <img
-                  src={user.photoURL}
-                  alt={user.displayName ?? ''}
+                  src={user.image}
+                  alt={user.name ?? ''}
                   className="w-8 h-8 rounded-full border border-white/20"
                 />
               )}
               <span className="text-white/60 text-sm">
-                {user.displayName?.split(' ')[0]}
+                {user.name?.split(' ')[0]}
               </span>
               <button
                 onClick={logout}
@@ -120,7 +120,7 @@ export default function Nav() {
                 onClick={logout}
                 className="text-white/40 hover:text-white text-sm transition-colors"
               >
-                Έξοδος ({user.displayName?.split(' ')[0]})
+                Έξοδος ({user.name?.split(' ')[0]})
               </button>
             ) : (
               <button

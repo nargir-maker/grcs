@@ -1,17 +1,10 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useRef } from 'react';
-import {
-  User,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged,
-} from 'firebase/auth';
-import { auth } from './firebase';
+import { createContext, useContext } from 'react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 
 interface AuthContextType {
-  user: User | null;
+  user: { name?: string | null; email?: string | null; image?: string | null } | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
@@ -25,39 +18,23 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const signingIn = useRef(false);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
+  const { data: session, status } = useSession();
 
   const signInWithGoogle = async () => {
-    if (signingIn.current) return;
-    signingIn.current = true;
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (error: any) {
-      if (error.code !== 'auth/cancelled-popup-request') {
-        console.error('Sign in error:', error.code);
-      }
-    } finally {
-      signingIn.current = false;
-    }
+    await signIn('google');
   };
 
   const logout = async () => {
-    await signOut(auth);
+    await signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={{
+      user: session?.user ?? null,
+      loading: status === 'loading',
+      signInWithGoogle,
+      logout,
+    }}>
       {children}
     </AuthContext.Provider>
   );
