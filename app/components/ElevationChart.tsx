@@ -49,6 +49,8 @@ export default function ElevationChart({
   climbProfile = [],
   storedAscent,
 }: ElevationChartProps) {
+  console.log('ElevationChart climbProfile:', climbProfile);
+  console.log('ElevationChart climbProfile length:', climbProfile.length);
   const [points, setPoints] = useState<ElevationPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -195,8 +197,8 @@ export default function ElevationChart({
       </div>
 
       {/* ── ELEVATION CHART ───────────────────────── */}
-      <div className="h-52 w-full">
-        <ResponsiveContainer width="100%" height="100%">
+<div style={{ width: '100%', height: '220px' }}>
+  <ResponsiveContainer width="100%" height={220}>
           <AreaChart
             data={points}
             margin={{ top: 10, right: 5, bottom: 5, left: 40 }}
