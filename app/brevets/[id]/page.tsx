@@ -249,54 +249,54 @@ if (organizerId) {
           ← Πίσω στα Brevets
         </a>
 
-        {/* ── HERO IMAGE ─────────────────────────────── */}
-        {brevet.imageUrl && (
-          <div className="rounded-2xl overflow-hidden mb-8 h-48 bg-white/5">
-            <img
-              src={brevet.imageUrl}
-              alt={brevet.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
 
-        {/* ── TITLE BLOCK ────────────────────────────── */}
-        <div className="mb-8">
-          <div className="flex items-start justify-between gap-4 mb-3">
-            <h1 className="text-3xl font-bold text-white leading-tight">
-              {brevet.title}
-            </h1>
-            <span className="bg-cyan-500/10 text-cyan-400 text-sm font-bold px-4 py-2 rounded-full border border-cyan-500/20 shrink-0">
-              {brevet.distance}km
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-4 text-white/50 text-sm">
-            {startDate && (
-              <span>
-                📅 {startDate.toLocaleDateString('el-GR', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              </span>
-            )}
-{brevet.organizer && (
-  <div className="flex items-center gap-2">
+
+
+{/* ── FLOATING LOGO + TITLE ──────────────────── */}
+<div className="relative mb-8">
+  {/* Hero background */}
+  <div className="h-24 bg-white/5 rounded-2xl border border-white/10" />
+  
+  {/* Floating logo */}
+  <div className="absolute left-1/2 -translate-x-1/2 -bottom-8 z-10">
     <img
       src={brevet.organizerLogo}
       alt={brevet.organizer}
-      className="w-8 h-8 object-contain rounded-full"
+      className="w-16 h-16 object-contain rounded-full border-2 border-white/10 drop-shadow-2xl"
       onError={(e) => {
         (e.target as HTMLImageElement).src = '/logos/000000.png';
       }}
     />
-    <span>{brevet.organizer}</span>
   </div>
-)}
-            <span>🏷️ {brevet.certification} {brevet.type}</span>
-          </div>
-        </div>
+</div>
+
+{/* Title block — pushed down to make room for floating logo */}
+<div className="mt-10 mb-8 text-center">
+  {brevet.organizer && (
+    <p className="text-white/40 text-sm mb-2">{brevet.organizer}</p>
+  )}
+  <div className="flex items-center justify-center gap-4 mb-3">
+    <h1 className="text-3xl font-bold text-white leading-tight">
+      {brevet.title}
+    </h1>
+    <span className="bg-cyan-500/10 text-cyan-400 text-sm font-bold px-4 py-2 rounded-full border border-cyan-500/20 shrink-0">
+      {brevet.distance}km
+    </span>
+  </div>
+  <div className="flex flex-wrap justify-center gap-4 text-white/50 text-sm">
+    {startDate && (
+      <span>
+        📅 {startDate.toLocaleDateString('el-GR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })}
+      </span>
+    )}
+    <span>🏷️ {brevet.certification} {brevet.type}</span>
+  </div>
+</div>
 
         {/* ── STATS GRID ─────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">

@@ -303,90 +303,91 @@ export default function BrevetsPage() {
                 className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/30 transition-colors cursor-pointer block no-underline"
               >
                 {/* Top row */}
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="text-white font-bold text-base leading-tight">
-                      {b.title}
-                    </h3>
-                    <p className="text-white/40 text-xs mt-1">
-                      📍 {b.start}
-                    </p>
-                  </div>
-                  <span className="bg-cyan-500/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/20 ml-2 shrink-0">
-                    {b.distance}km
-                  </span>
-                </div>
+{/* Organizer row — TOP */}
+<div className="flex items-center justify-between mb-4">
+  <div className="flex items-center gap-2">
+    <img
+      src={b.organizerLogo}
+      alt={b.organizer}
+      className="w-10 h-10 object-contain rounded-full"
+      onError={(e) => {
+        (e.target as HTMLImageElement).src = '/logos/000000.png';
+      }}
+    />
+    <span className="text-white/60 text-xs font-medium">
+      {b.organizer}
+    </span>
+  </div>
+  <span className="bg-cyan-500/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/20">
+    {b.distance}km
+  </span>
+</div>
 
-                {/* Date + Organizer */}
-                <div className="flex flex-wrap items-center gap-3 mb-4">
-                  <span className="text-white/50 text-xs">
-                    📅 {b.date
-                      ? new Date(b.date).toLocaleDateString('el-GR', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })
-                      : '—'}
-                  </span>
-                  {b.organizer && (
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={b.organizerLogo}
-                        alt={b.organizer}
-                        className="w-16 h-16 object-contain rounded-full"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/logos/000000.png';
-                        }}
-                      />
-                      <span className="text-white/50 text-xs">{b.organizer}</span>
-                    </div>
-                  )}
-                </div>
+{/* Brevet title */}
+<h3 className="text-white font-bold text-base leading-tight mb-1">
+  {b.title}
+</h3>
+<p className="text-white/40 text-xs mb-4">
+  📍 {b.start}
+</p>
 
-                {/* Stats row */}
-                <div className="flex items-center gap-4 mb-4">
-                  {b.ascent > 0 && (
-                    <span className="text-white/40 text-xs">
-                      ⛰️ {b.ascent.toLocaleString()}m+
-                    </span>
-                  )}
-                  {b.certification && (
-                    <span className="text-white/40 text-xs">
-                      {b.certification}
-                    </span>
-                  )}
-                  {b.type && (
-                    <span className="text-white/40 text-xs">
-                      {b.type}
-                    </span>
-                  )}
-                </div>
+{/* Date */}
+<div className="mb-4">
+  <span className="text-white/50 text-xs">
+    📅 {b.date
+      ? new Date(b.date).toLocaleDateString('el-GR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      : '—'}
+  </span>
+</div>
 
-                {/* Bottom row — difficulty + GPX */}
-                <div className="flex items-center justify-between">
-                  <span
-                    className="text-xs font-bold px-3 py-1 rounded-full"
-                    style={{
-                      backgroundColor: b.difficultyColor + '20',
-                      color: b.difficultyColor,
-                      border: `1px solid ${b.difficultyColor}40`,
-                    }}
-                  >
-                    {b.difficultyLabel}
-                  </span>
-                  {b.gpxUrl && (
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.open(b.gpxUrl, '_blank');
-                      }}
-                      className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
-                    >
-                      GPX →
-                    </button>
-                  )}
-                </div>
+{/* Stats row */}
+<div className="flex items-center gap-4 mb-4">
+  {b.ascent > 0 && (
+    <span className="text-white/40 text-xs">
+      ⛰️ {b.ascent.toLocaleString()}m+
+    </span>
+  )}
+  {b.certification && (
+    <span className="text-white/40 text-xs">
+      {b.certification}
+    </span>
+  )}
+  {b.type && (
+    <span className="text-white/40 text-xs">
+      {b.type}
+    </span>
+  )}
+</div>
+
+{/* Bottom row — difficulty + GPX */}
+<div className="flex items-center justify-between">
+  <span
+    className="text-xs font-bold px-3 py-1 rounded-full"
+    style={{
+      backgroundColor: b.difficultyColor + '20',
+      color: b.difficultyColor,
+      border: `1px solid ${b.difficultyColor}40`,
+    }}
+  >
+    {b.difficultyLabel}
+  </span>
+  {b.gpxUrl && (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open(b.gpxUrl, '_blank');
+      }}
+      className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
+    >
+      GPX →
+    </button>
+  )}
+</div>
               </a>
             ))}
           </div>
