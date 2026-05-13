@@ -7,7 +7,14 @@ import { doc, getDoc, getDocFromCache } from 'firebase/firestore';
 import dynamic from 'next/dynamic';
 import { useSession ,signIn} from 'next-auth/react';
 import RegistrationForm from '@/app/components/RegistrationForm';
-
+const ElevationChart = dynamic(() => import('../../components/ElevationChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-48 bg-white/5 rounded-xl border border-white/10 flex items-center justify-center">
+      <p className="text-white/30 text-sm">Φόρτωση γραφήματος...</p>
+    </div>
+  ),
+});
 
 
 const BrevetMap = dynamic(() => import('../../components/BrevetMap'), {

@@ -1,0 +1,294 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from 'recharts';
+
+interface ClimbSegment {
+  startKm: number;
+  endKm: number;
+  category: string;
+  avgGrade: number;
+  maxGrade: number;
+  elevationGain: number;
+}
+
+interface ElevationPoint {
+  km: number;
+  elevation: number;
+}
+
+interface ElevationChartProps {
+  gpxUrl: string;
+  climbProfile?: ClimbSegment[];
+}
+
+const CLIMB_COLORS: Record<string, string> = {
+  'HC': '#6A1B9A',
+  'C1': '#D32F2F',
+  'C2': '#E65100',
+  'C3': '#F9A825',
+  'C4': '#2E7D32',
+};
+
+const CLIMB_LABELS: Record<string, string> = {
+  'HC': 'HC',
+  'C1': 'C1',
+  'C2': 'C2',
+  'C3': 'C3',
+  'C4': 'C4',
+};
+
+function getCategoryColor(cat: string): string {
+  return CLIMB_COLORS[cat] ?? '#06b6d4';
+}
+
+export default function ElevationChart({ gpxUrl, climbProfile = [] }: ElevationChartProps) {
+  const [points, setPoints] = useState<ElevationPoint[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [totalAscent, setTotalAscent] = useState(0);
+  const [maxElevation, setMaxElevation] = useState(0);
+  const [minElevation, setMinElevation] = useState(0);
+
+  useEffect(() => {
+    async function parseGpx() {
+      try {
+        const response = await fetch(gpxUrl);
+        const gpxText = await response.text();
+
+        const parser = new DOMParser();
+        const gpxDoc = parser.parseFromString(gpxText, 'text/xml');
+        const trackPoints = gpxDoc.querySelectorAll('trkpt');
+
+        if (trackPoints.length === 0) {
+          setError(true);
+          return;
+        }
+
+        // Sample points for performance (max 500 points)
+        const total = trackPoints.length;
+        const step = Math.max(1, Math.floor(total / 500));
+
+        let distanceKm = 0;
+        let prevLat = 0;
+        let prevLng = 0;
+        let ascent = 0;
+        let prevEle = 0;
+        const data: ElevationPoint[] = [];
+
+        trackPoints.forEach((pt, i) => {
+          if (i % step !== 0 && i !== total - 1) return;
+
+          const lat = parseFloat(pt.getAttribute('lat') ?? '0');
+          const lng = parseFloat(pt.getAttribute('lon') ?? '0');
+          const eleEl = pt.querySelector('ele');
+          const ele = eleEl ? parseFloat(eleEl.textContent ?? '0') : 0;
+
+          if (i > 0 && prevLat !== 0) {
+            // Haversine distance
+            const R = 6371;
+            const dLat = (lat - prevLat) * Math.PI / 180;
+            const dLng = (lng - prevLng) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(prevLat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            distanceKm += R * c;
+
+            if (ele > prevEle) ascent += ele - prevEle;
+          }
+
+          prevLat = lat;
+          prevLng = lng;
+          prevEle = ele;
+
+          data.push({
+            km: Math.round(distanceKm * 10) / 10,
+            elevation: Math.round(ele),
+          });
+        });
+
+        setPoints(data);
+        setTotalAscent(Math.round(ascent));
+        setMaxElevation(Math.max(...data.map(p => p.elevation)));
+        setMinElevation(Math.min(...data.map(p => p.elevation)));
+
+      } catch (e) {
+        console.error('Elevation parse error:', e);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    parseGpx();
+  }, [gpxUrl]);
+
+  if (loading) {
+    return (
+      <div className="h-48 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-white/30 text-xs">Φόρτωση προφίλ υψομέτρου...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || points.length === 0) return null;
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const point = payload[0].payload;
+      return (
+        <div className="bg-[#0A1628] border border-white/20 rounded-lg px-3 py-2 text-xs">
+          <p className="text-cyan-400 font-bold">{point.km} km</p>
+          <p className="text-white">{point.elevation}m</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="mt-6">
+
+      {/* ── STATS ROW ─────────────────────────────── */}
+      <div className="flex gap-6 mb-4">
+        <div>
+          <div className="text-cyan-400 font-bold text-lg">{totalAscent.toLocaleString()}m</div>
+          <div className="text-white/40 text-xs">Συνολική ανάβαση</div>
+        </div>
+        <div>
+          <div className="text-cyan-400 font-bold text-lg">{maxElevation}m</div>
+          <div className="text-white/40 text-xs">Μέγιστο υψόμετρο</div>
+        </div>
+        <div>
+          <div className="text-cyan-400 font-bold text-lg">{minElevation}m</div>
+          <div className="text-white/40 text-xs">Ελάχιστο υψόμετρο</div>
+        </div>
+      </div>
+
+      {/* ── ELEVATION CHART ───────────────────────── */}
+      <div className="h-48 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={points} margin={{ top: 5, right: 5, bottom: 5, left: 40 }}>
+            <defs>
+              <linearGradient id="elevGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.05} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="km"
+              tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}km`}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}m`}
+              width={40}
+            />
+            <Tooltip content={<CustomTooltip />} />
+
+            {/* Climb zone reference lines */}
+            {climbProfile.map((climb, i) => (
+              <ReferenceLine
+                key={i}
+                x={climb.startKm}
+                stroke={getCategoryColor(climb.category)}
+                strokeOpacity={0.6}
+                strokeWidth={2}
+                strokeDasharray="4 2"
+                label={{
+                  value: CLIMB_LABELS[climb.category] ?? climb.category,
+                  fill: getCategoryColor(climb.category),
+                  fontSize: 9,
+                  position: 'top',
+                }}
+              />
+            ))}
+
+            <Area
+              type="monotone"
+              dataKey="elevation"
+              stroke="#06b6d4"
+              strokeWidth={2}
+              fill="url(#elevGradient)"
+              dot={false}
+              activeDot={{ r: 4, fill: '#06b6d4', stroke: '#0A1628', strokeWidth: 2 }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* ── CLIMB CARDS ───────────────────────────── */}
+      {climbProfile.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider mb-3">
+            Ανηφόρες
+          </h3>
+          <div className="flex flex-col gap-2">
+            {climbProfile.map((climb, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3 border border-white/5"
+              >
+                {/* Category badge */}
+                <span
+                  className="text-xs font-bold px-2 py-1 rounded-lg shrink-0"
+                  style={{
+                    backgroundColor: getCategoryColor(climb.category) + '25',
+                    color: getCategoryColor(climb.category),
+                    border: `1px solid ${getCategoryColor(climb.category)}40`,
+                  }}
+                >
+                  {climb.category}
+                </span>
+
+                {/* Info */}
+                <div className="flex-1 flex items-center gap-4 text-xs">
+                  <span className="text-white/60">
+                    km {climb.startKm} → {climb.endKm}
+                  </span>
+                  <span className="text-white/40">
+                    {(climb.endKm - climb.startKm).toFixed(1)}km
+                  </span>
+                  <span className="text-white/40">
+                    ↑{climb.elevationGain}m
+                  </span>
+                </div>
+
+                {/* Grade */}
+                <div className="text-right shrink-0">
+                  <div
+                    className="text-sm font-bold"
+                    style={{ color: getCategoryColor(climb.category) }}
+                  >
+                    {climb.avgGrade.toFixed(1)}%
+                  </div>
+                  <div className="text-white/30 text-xs">
+                    max {climb.maxGrade.toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
