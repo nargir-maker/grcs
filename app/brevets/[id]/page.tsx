@@ -252,17 +252,27 @@ if (organizerId) {
 
 
 
-{/* ── FLOATING LOGO + TITLE ──────────────────── */}
+{/* ── FLOATING LOGO + HERO ───────────────────── */}
 <div className="relative mb-8">
-  {/* Hero background */}
-  <div className="h-24 bg-white/5 rounded-2xl border border-white/10" />
-  
-  {/* Floating logo */}
+  {/* Hero image or fallback background */}
+  {brevet.imageUrl ? (
+    <div className="h-48 rounded-2xl overflow-hidden border border-white/10">
+      <img
+        src={brevet.imageUrl}
+        alt={brevet.title}
+        className="w-full h-full object-cover"
+      />
+    </div>
+  ) : (
+    <div className="h-32 bg-white/5 rounded-2xl border border-white/10" />
+  )}
+
+  {/* Floating logo — half over hero, half below */}
   <div className="absolute left-1/2 -translate-x-1/2 -bottom-8 z-10">
     <img
       src={brevet.organizerLogo}
       alt={brevet.organizer}
-      className="w-16 h-16 object-contain rounded-full border-2 border-white/10 drop-shadow-2xl"
+      className="w-16 h-16 object-contain rounded-full border-2 border-white/10 drop-shadow-2xl bg-[#0A1628]"
       onError={(e) => {
         (e.target as HTMLImageElement).src = '/logos/000000.png';
       }}
