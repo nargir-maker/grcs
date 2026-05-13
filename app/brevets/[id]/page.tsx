@@ -7,6 +7,7 @@ import { doc, getDoc, getDocFromCache } from 'firebase/firestore';
 import dynamic from 'next/dynamic';
 import { useSession ,signIn} from 'next-auth/react';
 import RegistrationForm from '@/app/components/RegistrationForm';
+
 const ElevationChart = dynamic(() => import('../../components/ElevationChart'), {
   ssr: false,
   loading: () => (
@@ -26,6 +27,14 @@ const BrevetMap = dynamic(() => import('../../components/BrevetMap'), {
   ),
 });
 
+interface ClimbSegment {
+  startKm: number;
+  endKm: number;
+  category: string;
+  avgGrade: number;
+  maxGrade: number;
+  elevationGain: number;
+}
 
 interface ControlPoint {
   km: number;
@@ -61,6 +70,7 @@ interface BrevetDetail {
   climbCount: number;
   duration: string;
   organizerLogo: string;
+  climbProfile: ClimbSegment[];
 }
 
 function getDifficultyInfo(bdi: number): {
@@ -212,6 +222,16 @@ if (organizerId) {
           climbCount:      parseInt(route.climbCount?.toString() ?? '0') || 0,
           duration:        getTimeLimit(km),
           organizerLogo: organizerLogo,
+          climbProfile: Array.isArray(d.climbProfile) 
+  ? d.climbProfile.map((c: any) => ({
+      startKm:       parseFloat(c.startKm?.toString() ?? '0') || 0,
+      endKm:         parseFloat(c.endKm?.toString() ?? '0') || 0,
+      category:      c.category?.toString() ?? 'C4',
+      avgGrade:      parseFloat(c.avgGrade?.toString() ?? '0') || 0,
+      maxGrade:      parseFloat(c.maxGrade?.toString() ?? '0') || 0,
+      elevationGain: parseInt(c.elevationGain?.toString() ?? '0') || 0,
+    }))
+  : [],
         });
     } catch (e) {
         console.error('Error fetching brevet:', e);
@@ -553,30 +573,18 @@ if (organizerId) {
           </div>
         )}
 
-        {/* ── CLIMB INFO ─────────────────────────────── */}
-        {brevet.climbCount > 0 && (
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
-            <h2 className="text-white font-bold text-lg mb-4">
-              ⛰️ Ανάλυση Ανηφόρων
-            </h2>
-            <div className="flex gap-6">
-              <div>
-                <div className="text-2xl font-bold text-cyan-400">
-                  {brevet.climbCount}
-                </div>
-                <div className="text-white/40 text-xs mt-1">ανηφόρες</div>
-              </div>
-              {brevet.wcs > 0 && (
-                <div>
-                  <div className="text-2xl font-bold text-cyan-400">
-                    {brevet.wcs.toFixed(0)}
-                  </div>
-                  <div className="text-white/40 text-xs mt-1">WCS score</div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+{/* ── ELEVATION & CLIMBS ─────────────────────── */}
+{brevet.gpxUrl && (
+  <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+    <h2 className="text-white font-bold text-lg mb-2">
+      ⛰️ Προφίλ Υψομέτρου & Ανηφόρες
+    </h2>
+    <ElevationChart
+      gpxUrl={brevet.gpxUrl}
+      climbProfile={brevet.climbProfile}
+    />
+  </div>
+)}
 {/* ── REGISTRATION ───────────────────────────── */}
 <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
   <h2 className="text-white font-bold text-lg mb-2">
