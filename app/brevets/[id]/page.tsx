@@ -367,7 +367,20 @@ export default function BrevetDetailPage() {
                   {/* Start */}
                   <tr className="border-b border-white/5">
                     <td className="py-3 text-cyan-400 font-bold">START</td>
-                    <td className="py-3 text-white">{brevet.start}</td>
+                    <td className="py-3">
+  {brevet.startCoords ? (
+    <a
+      href={`https://www.google.com/maps?q=${brevet.startCoords}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-white hover:text-cyan-400 transition-colors flex items-center gap-1"
+    >
+      {brevet.start} <span className="text-white/30 text-xs">📍</span>
+    </a>
+  ) : (
+    <span className="text-white">{brevet.start}</span>
+  )}
+</td>
                     <td className="py-3 text-center text-white/60">0</td>
                     <td className="py-3 text-center text-green-400">
                       {startDate
@@ -391,7 +404,21 @@ export default function BrevetDetailPage() {
                   {brevet.controls.map((cp, i) => (
                     <tr key={i} className="border-b border-white/5">
                       <td className="py-3 text-cyan-400 font-bold">CP{i + 1}</td>
-                      <td className="py-3 text-white">{cp.name}</td>
+<td className="py-3">
+  {cp.lat && cp.lng ? (
+   <a 
+      href={`https://www.google.com/maps?q=${cp.lat},${cp.lng}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-white hover:text-cyan-400 transition-colors flex items-center gap-1"
+    >
+      {cp.name}
+      <span className="text-white/30 text-xs">📍</span>
+    </a>
+  ) : (
+    <span className="text-white">{cp.name}</span>
+  )}
+</td>
                       <td className="py-3 text-center text-white/60">{cp.km}</td>
                       <td className="py-3 text-center text-green-400">
                         {startDate ? getOpenTime(cp.km, startDate) : '—'}
@@ -416,9 +443,20 @@ export default function BrevetDetailPage() {
                   {/* Finish */}
                   <tr>
                     <td className="py-3 text-amber-400 font-bold">FINISH</td>
-                    <td className="py-3 text-white">
-                      {brevet.finish || brevet.start}
-                    </td>
+<td className="py-3">
+  {brevet.finishCoords ? (
+    <a
+      href={`https://www.google.com/maps?q=${brevet.finishCoords}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-white hover:text-cyan-400 transition-colors flex items-center gap-1"
+    >
+      {brevet.finish || brevet.start} <span className="text-white/30 text-xs">📍</span>
+    </a>
+  ) : (
+    <span className="text-white">{brevet.finish || brevet.start}</span>
+  )}
+</td>
                     <td className="py-3 text-center text-white/60">
                       {brevet.distance}
                     </td>
