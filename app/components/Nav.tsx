@@ -2,14 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '../lib/AuthContext';
 
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, signInWithGoogle, logout, loading } = useAuth();
 
   return (
     <nav className="border-b border-white/10 px-6 py-4 bg-[#0A1628] sticky top-0 z-50">
       <div className="max-w-5xl mx-auto flex items-center justify-between">
-        
+
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
           <img
@@ -35,14 +37,45 @@ export default function Nav() {
           </Link>
         </div>
 
-        {/* Desktop buttons */}
+        {/* Desktop auth buttons */}
         <div className="hidden sm:flex items-center gap-3">
-          <button className="text-white/60 hover:text-white text-sm px-4 py-2 transition-colors">
-            Σύνδεση
-          </button>
-          <button className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm px-4 py-2 rounded-full transition-colors">
-            Εγγραφή
-          </button>
+          {loading ? (
+            <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+          ) : user ? (
+            <div className="flex items-center gap-3">
+              {user.photoURL && (
+                <img
+                  src={user.photoURL}
+                  alt={user.displayName ?? ''}
+                  className="w-8 h-8 rounded-full border border-white/20"
+                />
+              )}
+              <span className="text-white/60 text-sm">
+                {user.displayName?.split(' ')[0]}
+              </span>
+              <button
+                onClick={logout}
+                className="text-white/40 hover:text-white text-sm transition-colors"
+              >
+                Έξοδος
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={signInWithGoogle}
+                className="text-white/60 hover:text-white text-sm px-4 py-2 transition-colors"
+              >
+                Σύνδεση
+              </button>
+              <button
+                onClick={signInWithGoogle}
+                className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm px-4 py-2 rounded-full transition-colors"
+              >
+                Εγγραφή
+              </button>
+            </>
+          )}
         </div>
 
         {/* Mobile hamburger */}
@@ -82,12 +115,21 @@ export default function Nav() {
             Σχετικά
           </Link>
           <div className="flex gap-3 pt-2">
-            <button className="text-white/60 hover:text-white text-sm transition-colors">
-              Σύνδεση
-            </button>
-            <button className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm px-4 py-2 rounded-full transition-colors">
-              Εγγραφή
-            </button>
+            {user ? (
+              <button
+                onClick={logout}
+                className="text-white/40 hover:text-white text-sm transition-colors"
+              >
+                Έξοδος ({user.displayName?.split(' ')[0]})
+              </button>
+            ) : (
+              <button
+                onClick={signInWithGoogle}
+                className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm px-4 py-2 rounded-full transition-colors"
+              >
+                Σύνδεση με Google
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -1,19 +1,21 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+  apiKey: 'AIzaSyAzAnwhtM-YkAK2HAfWWgYvcbTnczdSN8U',
+  authDomain: 'greek-brevets-tracker.firebaseapp.com',
+  projectId: 'greek-brevets-tracker',
+  storageBucket: 'greek-brevets-tracker.firebasestorage.app',
+  messagingSenderId: '268041728617',
+  appId: '1:268041728617:web:28e85bbdd27174181f28f8',
+  databaseURL: 'https://greek-brevets-tracker-default-rtdb.europe-west1.firebasedatabase.app',
 };
 
-const app = getApps().length === 0 
-  ? initializeApp(firebaseConfig) 
+const app = getApps().length === 0
+  ? initializeApp(firebaseConfig)
   : getApps()[0];
 
 export const db = getFirestore(app);
+export const auth = getAuth(app);
 export default app;
