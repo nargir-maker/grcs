@@ -333,7 +333,7 @@ export default function BrevetsPage() {
                       <img
                         src={b.organizerLogo}
                         alt={b.organizer}
-                        className="w-6 h-6 object-contain rounded-full"
+                        className="w-16 h-16 object-contain rounded-full"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = '/logos/000000.png';
                         }}
