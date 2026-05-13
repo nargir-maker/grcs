@@ -579,10 +579,11 @@ if (organizerId) {
     <h2 className="text-white font-bold text-lg mb-2">
       ⛰️ Προφίλ Υψομέτρου & Ανηφόρες
     </h2>
-    <ElevationChart
-      gpxUrl={brevet.gpxUrl}
-      climbProfile={brevet.climbProfile}
-    />
+<ElevationChart
+  gpxUrl={brevet.gpxUrl}
+  climbProfile={brevet.climbProfile}
+  storedAscent={brevet.ascent}
+/>
   </div>
 )}
 {/* ── REGISTRATION ───────────────────────────── */}
