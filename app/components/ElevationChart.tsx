@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceArea,
 } from 'recharts';
 
 interface ClimbSegment {
@@ -28,6 +29,7 @@ interface ElevationPoint {
 interface ElevationChartProps {
   gpxUrl: string;
   climbProfile?: ClimbSegment[];
+  storedAscent?: number;
 }
 
 const CLIMB_COLORS: Record<string, string> = {
@@ -38,19 +40,15 @@ const CLIMB_COLORS: Record<string, string> = {
   'C4': '#2E7D32',
 };
 
-const CLIMB_LABELS: Record<string, string> = {
-  'HC': 'HC',
-  'C1': 'C1',
-  'C2': 'C2',
-  'C3': 'C3',
-  'C4': 'C4',
-};
-
 function getCategoryColor(cat: string): string {
   return CLIMB_COLORS[cat] ?? '#06b6d4';
 }
 
-export default function ElevationChart({ gpxUrl, climbProfile = [] }: ElevationChartProps) {
+export default function ElevationChart({
+  gpxUrl,
+  climbProfile = [],
+  storedAscent,
+}: ElevationChartProps) {
   const [points, setPoints] = useState<ElevationPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -73,7 +71,6 @@ export default function ElevationChart({ gpxUrl, climbProfile = [] }: ElevationC
           return;
         }
 
-        // Sample points for performance (max 500 points)
         const total = trackPoints.length;
         const step = Math.max(1, Math.floor(total / 500));
 
@@ -93,14 +90,16 @@ export default function ElevationChart({ gpxUrl, climbProfile = [] }: ElevationC
           const ele = eleEl ? parseFloat(eleEl.textContent ?? '0') : 0;
 
           if (i > 0 && prevLat !== 0) {
-            // Haversine distance
             const R = 6371;
             const dLat = (lat - prevLat) * Math.PI / 180;
             const dLng = (lng - prevLng) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(prevLat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
-              Math.sin(dLng/2) * Math.sin(dLng/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const a =
+              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(prevLat * Math.PI / 180) *
+                Math.cos(lat * Math.PI / 180) *
+                Math.sin(dLng / 2) *
+                Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             distanceKm += R * c;
 
             if (ele > prevEle) ascent += ele - prevEle;
@@ -118,9 +117,8 @@ export default function ElevationChart({ gpxUrl, climbProfile = [] }: ElevationC
 
         setPoints(data);
         setTotalAscent(Math.round(ascent));
-        setMaxElevation(Math.max(...data.map(p => p.elevation)));
-        setMinElevation(Math.min(...data.map(p => p.elevation)));
-
+        setMaxElevation(Math.max(...data.map((p) => p.elevation)));
+        setMinElevation(Math.min(...data.map((p) => p.elevation)));
       } catch (e) {
         console.error('Elevation parse error:', e);
         setError(true);
@@ -145,13 +143,30 @@ export default function ElevationChart({ gpxUrl, climbProfile = [] }: ElevationC
 
   if (error || points.length === 0) return null;
 
+  const displayAscent =
+    storedAscent && storedAscent > 0 ? storedAscent : totalAscent;
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const point = payload[0].payload;
+
+      // Find which climb zone this point is in
+      const climb = climbProfile.find(
+        (c) => point.km >= c.startKm && point.km <= c.endKm
+      );
+
       return (
         <div className="bg-[#0A1628] border border-white/20 rounded-lg px-3 py-2 text-xs">
           <p className="text-cyan-400 font-bold">{point.km} km</p>
           <p className="text-white">{point.elevation}m</p>
+          {climb && (
+            <p
+              className="font-bold mt-1"
+              style={{ color: getCategoryColor(climb.category) }}
+            >
+              {climb.category} — {climb.avgGrade.toFixed(1)}%
+            </p>
+          )}
         </div>
       );
     }
@@ -159,12 +174,14 @@ export default function ElevationChart({ gpxUrl, climbProfile = [] }: ElevationC
   };
 
   return (
-    <div className="mt-6">
+    <div className="mt-4">
 
       {/* ── STATS ROW ─────────────────────────────── */}
       <div className="flex gap-6 mb-4">
         <div>
-          <div className="text-cyan-400 font-bold text-lg">{totalAscent.toLocaleString()}m</div>
+          <div className="text-cyan-400 font-bold text-lg">
+            {displayAscent.toLocaleString()}m
+          </div>
           <div className="text-white/40 text-xs">Συνολική ανάβαση</div>
         </div>
         <div>
@@ -178,15 +195,19 @@ export default function ElevationChart({ gpxUrl, climbProfile = [] }: ElevationC
       </div>
 
       {/* ── ELEVATION CHART ───────────────────────── */}
-      <div className="h-48 w-full">
+      <div className="h-52 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={points} margin={{ top: 5, right: 5, bottom: 5, left: 40 }}>
+          <AreaChart
+            data={points}
+            margin={{ top: 10, right: 5, bottom: 5, left: 40 }}
+          >
             <defs>
               <linearGradient id="elevGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
                 <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.05} />
               </linearGradient>
             </defs>
+
             <XAxis
               dataKey="km"
               tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
@@ -204,21 +225,36 @@ export default function ElevationChart({ gpxUrl, climbProfile = [] }: ElevationC
             />
             <Tooltip content={<CustomTooltip />} />
 
-            {/* Climb zone reference lines */}
+            {/* ── CLIMB ZONE BACKGROUNDS ────────────── */}
+            {climbProfile.map((climb, i) => (
+              <ReferenceArea
+                key={`zone-${i}`}
+                x1={climb.startKm}
+                x2={climb.endKm}
+                fill={getCategoryColor(climb.category)}
+                fillOpacity={0.15}
+                stroke={getCategoryColor(climb.category)}
+                strokeOpacity={0.4}
+                strokeWidth={1}
+                label={{
+                  value: climb.category,
+                  fill: getCategoryColor(climb.category),
+                  fontSize: 9,
+                  fontWeight: 'bold',
+                  position: 'insideTop',
+                }}
+              />
+            ))}
+
+            {/* ── START OF EACH CLIMB — vertical line ── */}
             {climbProfile.map((climb, i) => (
               <ReferenceLine
-                key={i}
+                key={`line-${i}`}
                 x={climb.startKm}
                 stroke={getCategoryColor(climb.category)}
                 strokeOpacity={0.6}
-                strokeWidth={2}
-                strokeDasharray="4 2"
-                label={{
-                  value: CLIMB_LABELS[climb.category] ?? climb.category,
-                  fill: getCategoryColor(climb.category),
-                  fontSize: 9,
-                  position: 'top',
-                }}
+                strokeWidth={1.5}
+                strokeDasharray="3 2"
               />
             ))}
 
@@ -229,15 +265,43 @@ export default function ElevationChart({ gpxUrl, climbProfile = [] }: ElevationC
               strokeWidth={2}
               fill="url(#elevGradient)"
               dot={false}
-              activeDot={{ r: 4, fill: '#06b6d4', stroke: '#0A1628', strokeWidth: 2 }}
+              activeDot={{
+                r: 4,
+                fill: '#06b6d4',
+                stroke: '#0A1628',
+                strokeWidth: 2,
+              }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
+      {/* ── CLIMB LEGEND ──────────────────────────── */}
+      {climbProfile.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-3 mb-4">
+          {['HC', 'C1', 'C2', 'C3', 'C4'].map((cat) => {
+            const exists = climbProfile.some((c) => c.category === cat);
+            if (!exists) return null;
+            return (
+              <span
+                key={cat}
+                className="text-xs font-bold px-2 py-1 rounded-lg"
+                style={{
+                  backgroundColor: getCategoryColor(cat) + '25',
+                  color: getCategoryColor(cat),
+                  border: `1px solid ${getCategoryColor(cat)}40`,
+                }}
+              >
+                {cat}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── CLIMB CARDS ───────────────────────────── */}
       {climbProfile.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-4">
           <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider mb-3">
             Ανηφόρες
           </h3>
@@ -245,15 +309,19 @@ export default function ElevationChart({ gpxUrl, climbProfile = [] }: ElevationC
             {climbProfile.map((climb, i) => (
               <div
                 key={i}
-                className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3 border border-white/5"
+                className="flex items-center gap-3 rounded-xl px-4 py-3 border"
+                style={{
+                  backgroundColor: getCategoryColor(climb.category) + '10',
+                  borderColor: getCategoryColor(climb.category) + '30',
+                }}
               >
                 {/* Category badge */}
                 <span
-                  className="text-xs font-bold px-2 py-1 rounded-lg shrink-0"
+                  className="text-xs font-bold px-2 py-1 rounded-lg shrink-0 min-w-8 text-center"
                   style={{
                     backgroundColor: getCategoryColor(climb.category) + '25',
                     color: getCategoryColor(climb.category),
-                    border: `1px solid ${getCategoryColor(climb.category)}40`,
+                    border: `1px solid ${getCategoryColor(climb.category)}50`,
                   }}
                 >
                   {climb.category}
