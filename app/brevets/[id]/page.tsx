@@ -222,25 +222,32 @@ if (organizerId) {
           climbCount:      parseInt(route.climbCount?.toString() ?? '0') || 0,
           duration:        getTimeLimit(km),
           organizerLogo: organizerLogo,
-climbProfile: Array.isArray(d.climbProfile)
-  ? d.climbProfile.map((c: any) => {
-      const avgGrad = parseFloat(c.avgGrad?.toString() ?? '0') || 0;
-      // Calculate category from grade — same logic as app
-      const category = avgGrad >= 10 ? 'HC'
-        : avgGrad >= 8  ? 'C1'
-        : avgGrad >= 6  ? 'C2'
-        : avgGrad >= 4  ? 'C3'
-        : 'C4';
-      return {
-        startKm:       parseFloat(c.startKm?.toString() ?? '0') || 0,
-        endKm:         parseFloat(c.endKm?.toString() ?? '0') || 0,
-        category,
-        avgGrade:      avgGrad,
-        maxGrade:      parseFloat(c.maxGrad?.toString() ?? '0') || 0,
-        elevationGain: parseFloat(c.gainM?.toString() ?? '0') || 0,
-      };
-    })
-  : [],
+climbProfile: (() => {
+  const raw = d.climbProfile;
+  if (!raw) return [];
+  
+  // Handle both array and object with numeric keys
+  const entries = Array.isArray(raw) 
+    ? raw 
+    : Object.values(raw);
+  
+  return entries.map((c: any) => {
+    const avgGrad = parseFloat(c.avgGrad?.toString() ?? '0') || 0;
+    const category = avgGrad >= 10 ? 'HC'
+      : avgGrad >= 8  ? 'C1'
+      : avgGrad >= 6  ? 'C2'
+      : avgGrad >= 4  ? 'C3'
+      : 'C4';
+    return {
+      startKm:       parseFloat(c.startKm?.toString() ?? '0') || 0,
+      endKm:         parseFloat(c.endKm?.toString() ?? '0') || 0,
+      category,
+      avgGrade:      avgGrad,
+      maxGrade:      parseFloat(c.maxGrad?.toString() ?? '0') || 0,
+      elevationGain: parseFloat(c.gainM?.toString() ?? '0') || 0,
+    };
+  });
+})(),
         });
     } catch (e) {
         console.error('Error fetching brevet:', e);
