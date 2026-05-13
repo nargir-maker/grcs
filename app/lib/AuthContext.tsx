@@ -4,10 +4,9 @@ import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import {
   User,
   GoogleAuthProvider,
-  signInWithRedirect,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
-  getRedirectResult,
 } from 'firebase/auth';
 import { auth } from './firebase';
 
@@ -31,26 +30,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signingIn = useRef(false);
 
   useEffect(() => {
-    async function handleRedirect() {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result?.user) {
-          setUser(result.user);
-        }
-      } catch (e) {
-        console.error('Redirect result error:', e);
-      } finally {
-        setLoading(false);
-      }
-    }
-
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
     });
-
-    handleRedirect();
-
     return unsubscribe;
   }, []);
 
@@ -59,9 +42,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signingIn.current = true;
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (error: any) {
-      console.error('Sign in error:', error);
+      if (error.code !== 'auth/cancelled-popup-request') {
+        console.error('Sign in error:', error.code);
+      }
+    } finally {
       signingIn.current = false;
     }
   };
