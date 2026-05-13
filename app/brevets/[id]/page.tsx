@@ -53,6 +53,7 @@ interface BrevetDetail {
   wcs: number;
   climbCount: number;
   duration: string;
+  organizerLogo: string;
 }
 
 function getDifficultyInfo(bdi: number): {
@@ -144,15 +145,17 @@ try {
         const extra = d.extra || {};
 
         const organizerId = info.organizerId?.toString() ?? '';
-        let organizerName = '';
-        if (organizerId) {
-          const clubDoc = await getDoc(doc(db, 'clubs', organizerId));
-          if (clubDoc.exists()) {
-            const cd = clubDoc.data();
-            organizerName =
-              cd.CLUB_NAME_SHORT_EN || cd.CLUB_NAME_SHORT_GR || organizerId;
-          }
-        }
+let organizerName = '';
+let organizerLogo = '/logos/000000.png';
+if (organizerId) {
+  const clubDoc = await getDoc(doc(db, 'clubs', organizerId));
+  if (clubDoc.exists()) {
+    const cd = clubDoc.data();
+    organizerName =
+      cd.CLUB_NAME_SHORT_EN || cd.CLUB_NAME_SHORT_GR || organizerId;
+    organizerLogo = `/logos/${organizerId}.png`;
+  }
+}
 
         const rawControls = Array.isArray(d.controls) ? d.controls : [];
         const controls: ControlPoint[] = rawControls.map((c: any) => ({
@@ -201,8 +204,9 @@ try {
           wcs,
           climbCount:      parseInt(route.climbCount?.toString() ?? '0') || 0,
           duration:        getTimeLimit(km),
+          organizerLogo: organizerLogo,
         });
-      } catch (e) {
+    } catch (e) {
         console.error('Error fetching brevet:', e);
       } finally {
         setLoading(false);
@@ -277,9 +281,19 @@ try {
                 })}
               </span>
             )}
-            {brevet.organizer && (
-              <span>🏛️ {brevet.organizer}</span>
-            )}
+{brevet.organizer && (
+  <div className="flex items-center gap-2">
+    <img
+      src={brevet.organizerLogo}
+      alt={brevet.organizer}
+      className="w-8 h-8 object-contain rounded-full"
+      onError={(e) => {
+        (e.target as HTMLImageElement).src = '/logos/000000.png';
+      }}
+    />
+    <span>{brevet.organizer}</span>
+  </div>
+)}
             <span>🏷️ {brevet.certification} {brevet.type}</span>
           </div>
         </div>
