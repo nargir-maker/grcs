@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { db } from '../../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 import { useParams } from 'next/navigation';
+
+import { doc, getDoc, getDocFromCache } from 'firebase/firestore';
+
+
 
 interface ControlPoint {
   km: number;
@@ -106,8 +109,15 @@ export default function BrevetDetailPage() {
   useEffect(() => {
     async function fetchBrevet() {
       try {
-        const docRef = doc(db, 'all_brevets', id);
-        const docSnap = await getDoc(docRef);
+// ── Try cache first ───────────────────────────
+let docSnap;
+try {
+  docSnap = await getDocFromCache(doc(db, 'all_brevets', id));
+  console.log('Detail: loaded from cache');
+} catch {
+  docSnap = await getDoc(doc(db, 'all_brevets', id));
+  console.log('Detail: loaded from server');
+}
 
         if (!docSnap.exists()) {
           setLoading(false);
