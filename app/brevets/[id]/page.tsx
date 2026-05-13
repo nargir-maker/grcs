@@ -5,7 +5,16 @@ import { db } from '../../lib/firebase';
 import { useParams } from 'next/navigation';
 
 import { doc, getDoc, getDocFromCache } from 'firebase/firestore';
+import dynamic from 'next/dynamic';
 
+const BrevetMap = dynamic(() => import('../../components/BrevetMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-96 bg-white/5 rounded-xl border border-white/10 flex items-center justify-center">
+      <p className="text-white/30 text-sm">Φόρτωση χάρτη...</p>
+    </div>
+  ),
+});
 
 
 interface ControlPoint {
@@ -329,7 +338,17 @@ try {
               </div>
             </div>
           </div>
-
+{/* Interactive Map */}
+{brevet.gpxUrl && (
+  <div className="mt-6">
+    <BrevetMap
+      gpxUrl={brevet.gpxUrl}
+      startCoords={brevet.startCoords}
+      finishCoords={brevet.finishCoords}
+      controls={brevet.controls}
+    />
+  </div>
+)}
           {/* Action buttons */}
           <div className="flex gap-3 mt-6">
             {brevet.mapUrl && (
