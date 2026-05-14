@@ -32,6 +32,7 @@ interface ElevationChartProps {
   // Optional controlled scrubber — when provided by parent, chart syncs with map
   scrubberKm?: number | null;
   onScrub?: (km: number | null) => void;
+    defaultZoomed?: boolean; // ← ADD
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -393,6 +394,7 @@ export default function ElevationChart({
   gpxUrl, climbProfile = [], storedAscent,
   scrubberKm: controlledScrubberKm,
   onScrub: controlledOnScrub,
+   defaultZoomed = false, // ← ADD
 }: ElevationChartProps) {
   const [displayPoints, setDisplayPoints] = useState<ElevationPoint[]>([]);
   const [allRaw, setAllRaw] = useState<RawPoint[]>([]);
@@ -402,7 +404,7 @@ export default function ElevationChart({
   const [maxElevation, setMaxElevation] = useState(0);
   const [minElevation, setMinElevation] = useState(0);
   const [selectedClimb, setSelectedClimb] = useState<ClimbSegment | null>(null);
-  const [zoomed, setZoomed] = useState(false);
+  const [zoomed, setZoomed] = useState(defaultZoomed);
 
   // Internal scrubber state — used when no controlled props provided
   const [internalScrubberKm, setInternalScrubberKm] = useState<number | null>(null);
