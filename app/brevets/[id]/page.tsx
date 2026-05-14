@@ -157,9 +157,7 @@ try {
         }
 
         const d = docSnap.data();
-console.log('RAW climbProfile:', JSON.stringify(d.climbProfile).substring(0, 200));
-console.log('climbProfile type:', typeof d.climbProfile);
-console.log('Is array:', Array.isArray(d.climbProfile));
+
         const info  = d.info  || {};
         const route = d.route || {};
         const extra = d.extra || {};
