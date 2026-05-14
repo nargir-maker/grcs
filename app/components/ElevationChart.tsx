@@ -29,24 +29,20 @@ interface ElevationChartProps {
   gpxUrl: string;
   climbProfile?: ClimbSegment[];
   storedAscent?: number;
+  // Optional controlled scrubber — when provided by parent, chart syncs with map
+  scrubberKm?: number | null;
+  onScrub?: (km: number | null) => void;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const CLIMB_COLORS: Record<string, string> = {
-  HC: '#6A1B9A',
-  C1: '#D32F2F',
-  C2: '#E65100',
-  C3: '#F9A825',
-  C4: '#2E7D32',
+  HC: '#6A1B9A', C1: '#D32F2F', C2: '#E65100', C3: '#F9A825', C4: '#2E7D32',
 };
-
 const PAD = { top: 24, right: 16, bottom: 32, left: 44 };
 const CHART_H = 280;
 const ZOOMED_PX_PER_KM = 6;
 
-function getCategoryColor(cat: string): string {
-  return CLIMB_COLORS[cat] ?? '#06b6d4';
-}
+function getCategoryColor(cat: string): string { return CLIMB_COLORS[cat] ?? '#06b6d4'; }
 
 function gradeColor(grade: number): string {
   const abs = Math.abs(grade);
@@ -57,61 +53,47 @@ function gradeColor(grade: number): string {
   return '#FF1744';
 }
 
-// ── Haversine ─────────────────────────────────────────────────────────────
 function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) *
-    Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// ── Savitzky-Golay ────────────────────────────────────────────────────────
 function savitzkyGolay(points: RawPoint[], windowM = 300): number[] {
   const n = points.length;
   const elevations = points.map(p => p.ele);
   if (n < 5) return elevations;
-
-  const totalDistM = points[n - 1].distKm * 1000;
-  const avgSpacingM = totalDistM / (n - 1);
+  const totalDistM = points[n-1].distKm * 1000;
+  const avgSpacingM = totalDistM / (n-1);
   let halfW = Math.round(windowM / (2 * avgSpacingM));
   halfW = Math.max(2, halfW);
-
   function sgCoeffs(hw: number): number[] {
     const m = hw;
     const coeffs: number[] = [];
     for (let j = -m; j <= m; j++) {
-      coeffs.push(
-        (3.0 * (2 * m + 1) * (2 * m + 1) / 4.0 - j * j * 5.0 / 4.0) *
-        3.0 / ((2 * m + 1) * (2 * m - 1) * (2 * m + 3) / 3.0)
-      );
+      coeffs.push((3*(2*m+1)*(2*m+1)/4 - j*j*5/4)*3/((2*m+1)*(2*m-1)*(2*m+3)/3));
     }
-    const sum = coeffs.reduce((a, b) => a + b, 0);
-    return coeffs.map(c => c / sum);
+    const sum = coeffs.reduce((a,b) => a+b, 0);
+    return coeffs.map(c => c/sum);
   }
-
   const coeffs = sgCoeffs(halfW);
   const result: number[] = new Array(n);
-
   for (let i = 0; i < n; i++) {
     let val = 0;
     for (let j = -halfW; j <= halfW; j++) {
-      let idx = i + j;
+      let idx = i+j;
       if (idx < 0) idx = -idx;
-      if (idx >= n) idx = 2 * n - 2 - idx;
-      idx = Math.max(0, Math.min(n - 1, idx));
-      val += coeffs[j + halfW] * elevations[idx];
+      if (idx >= n) idx = 2*n-2-idx;
+      idx = Math.max(0, Math.min(n-1, idx));
+      val += coeffs[j+halfW] * elevations[idx];
     }
     result[i] = val;
   }
   return result;
 }
 
-// ── Parse full GPX ────────────────────────────────────────────────────────
 async function parseGpxFull(gpxUrl: string): Promise<RawPoint[]> {
   const response = await fetch(gpxUrl);
   const gpxText = await response.text();
@@ -119,45 +101,33 @@ async function parseGpxFull(gpxUrl: string): Promise<RawPoint[]> {
   const gpxDoc = parser.parseFromString(gpxText, 'text/xml');
   const trackPoints = gpxDoc.querySelectorAll('trkpt');
   if (trackPoints.length === 0) return [];
-
   const raw: RawPoint[] = [];
-  let distKm = 0;
-  let prevLat = 0, prevLng = 0;
-
+  let distKm = 0, prevLat = 0, prevLng = 0;
   trackPoints.forEach((pt, i) => {
     const lat = parseFloat(pt.getAttribute('lat') ?? '0');
     const lng = parseFloat(pt.getAttribute('lon') ?? '0');
-    const eleEl = pt.querySelector('ele');
-    const ele = eleEl ? parseFloat(eleEl.textContent ?? '0') : 0;
-    if (i > 0 && prevLat !== 0) {
-      distKm += haversineM(prevLat, prevLng, lat, lng) / 1000;
-    }
+    const ele = parseFloat(pt.querySelector('ele')?.textContent ?? '0');
+    if (i > 0 && prevLat !== 0) distKm += haversineM(prevLat, prevLng, lat, lng) / 1000;
     prevLat = lat; prevLng = lng;
     raw.push({ lat, lng, ele, distKm });
   });
   return raw;
 }
 
-// ── Build display points ──────────────────────────────────────────────────
 function buildDisplayPoints(raw: RawPoint[], smoothed: number[], targetCount: number): ElevationPoint[] {
   const n = raw.length;
   const step = Math.max(1, Math.floor(n / targetCount));
   const result: ElevationPoint[] = [];
-
   for (let i = 0; i < n; i += step) {
     const prevI = Math.max(0, i - step);
     const dM = (raw[i].distKm - raw[prevI].distKm) * 1000;
     const grade = i > 0 && dM > 0
       ? Math.max(-30, Math.min(30, ((smoothed[i] - smoothed[prevI]) / dM) * 100))
       : 0;
-    result.push({
-      km: Math.round(raw[i].distKm * 10) / 10,
-      elevation: Math.round(smoothed[i]),
-      grade,
-    });
+    result.push({ km: Math.round(raw[i].distKm * 10) / 10, elevation: Math.round(smoothed[i]), grade });
   }
-  const last = raw[n - 1];
-  result.push({ km: Math.round(last.distKm * 10) / 10, elevation: Math.round(smoothed[n - 1]), grade: 0 });
+  const last = raw[n-1];
+  result.push({ km: Math.round(last.distKm * 10) / 10, elevation: Math.round(smoothed[n-1]), grade: 0 });
   return result;
 }
 
@@ -173,15 +143,12 @@ interface SvgElevationProps {
 }
 
 function SvgElevationChart({
-  points, width, height,
-  climbSegments = [], showClimbLabels = true,
+  points, width, height, climbSegments = [], showClimbLabels = true,
   scrubberKm, onScrub,
 }: SvgElevationProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-
-  const cw = width  - PAD.left - PAD.right;
-  const ch = height - PAD.top  - PAD.bottom;
-
+  const cw = width - PAD.left - PAD.right;
+  const ch = height - PAD.top - PAD.bottom;
   if (points.length < 2) return null;
 
   const minElev = Math.min(...points.map(p => p.elevation));
@@ -195,37 +162,31 @@ function SvgElevationChart({
   const toY = (elev: number) => PAD.top + ch - ((elev - minElev) / elevRange) * ch;
   const yBase = toY(minElev);
 
-  // Grade-coloured polygons
   const segments: React.ReactElement[] = [];
   for (let i = 1; i < points.length; i++) {
-    const prev = points[i - 1];
-    const curr = points[i];
+    const prev = points[i-1], curr = points[i];
     const x1 = toX(prev.km), y1 = toY(prev.elevation);
     const x2 = toX(curr.km), y2 = toY(curr.elevation);
     const col = gradeColor(curr.grade);
     segments.push(
       <polygon key={i}
         points={`${x1},${yBase} ${x1},${y1} ${x2},${y2} ${x2},${yBase}`}
-        fill={col} fillOpacity={0.55}
-        stroke={col} strokeWidth={1.2} strokeOpacity={0.9}
+        fill={col} fillOpacity={0.55} stroke={col} strokeWidth={1.2} strokeOpacity={0.9}
       />
     );
   }
 
-  // Y axis
   const yLabels = [0, 0.25, 0.5, 0.75, 1].map(f => ({
     elev: Math.round(minElev + elevRange * f),
     y: toY(minElev + elevRange * f),
   }));
 
-  // X axis — adaptive step
   const xStep = kmRange <= 100 ? 10 : kmRange <= 300 ? 25 : kmRange <= 600 ? 50 : 100;
   const xLabels: { km: number; x: number }[] = [];
   for (let km = Math.ceil(minKm / xStep) * xStep; km <= maxKm; km += xStep) {
     xLabels.push({ km, x: toX(km) });
   }
 
-  // Climb zones
   const climbZones = climbSegments.map((c, i) => {
     const zx1 = toX(Math.max(c.startKm, minKm));
     const zx2 = toX(Math.min(c.endKm, maxKm));
@@ -233,12 +194,11 @@ function SvgElevationChart({
     const col = getCategoryColor(c.category);
     return (
       <g key={`zone-${i}`}>
-        <rect x={zx1} y={PAD.top} width={zx2 - zx1} height={ch}
-          fill={col} fillOpacity={0.10} />
-        <line x1={zx1} y1={PAD.top} x2={zx1} y2={PAD.top + ch}
+        <rect x={zx1} y={PAD.top} width={zx2-zx1} height={ch} fill={col} fillOpacity={0.10} />
+        <line x1={zx1} y1={PAD.top} x2={zx1} y2={PAD.top+ch}
           stroke={col} strokeWidth={1.5} strokeOpacity={0.7} strokeDasharray="4 2" />
-        {showClimbLabels && zx2 - zx1 > 18 && (
-          <text x={zx1 + (zx2 - zx1) / 2} y={PAD.top - 6}
+        {showClimbLabels && zx2-zx1 > 18 && (
+          <text x={zx1+(zx2-zx1)/2} y={PAD.top-6}
             textAnchor="middle" fill={col} fontSize={9} fontWeight="bold">
             {c.category}
           </text>
@@ -247,7 +207,6 @@ function SvgElevationChart({
     );
   });
 
-  // Scrubber cursor
   const scrubberX = scrubberKm !== null ? toX(scrubberKm) : null;
   const scrubPoint = scrubberKm !== null
     ? points.reduce((best, p) =>
@@ -258,7 +217,6 @@ function SvgElevationChart({
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
-    // Account for rendered width vs viewBox width
     const scaleX = width / rect.width;
     const xPx = (e.clientX - rect.left) * scaleX - PAD.left;
     const km = minKm + (xPx / cw) * kmRange;
@@ -269,52 +227,33 @@ function SvgElevationChart({
 
   return (
     <svg ref={svgRef}
-      viewBox={`0 0 ${width} ${height}`}
-      width={width} height={height}
+      viewBox={`0 0 ${width} ${height}`} width={width} height={height}
       style={{ display: 'block', cursor: 'crosshair', touchAction: 'pan-x' }}
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
+      onPointerMove={handlePointerMove} onPointerLeave={handlePointerLeave}
     >
-      {/* Grid lines */}
       {yLabels.map(({ y }, i) => (
-        <line key={i} x1={PAD.left} y1={y} x2={PAD.left + cw} y2={y}
+        <line key={i} x1={PAD.left} y1={y} x2={PAD.left+cw} y2={y}
           stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
       ))}
-
-      {/* Climb zones */}
       {climbZones}
-
-      {/* Elevation fill */}
       {segments}
-
-      {/* Baseline */}
-      <line x1={PAD.left} y1={yBase} x2={PAD.left + cw} y2={yBase}
+      <line x1={PAD.left} y1={yBase} x2={PAD.left+cw} y2={yBase}
         stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
-
-      {/* Y labels */}
       {yLabels.map(({ elev, y }) => (
-        <text key={elev} x={PAD.left - 4} y={y + 4}
-          textAnchor="end" fill="rgba(255,255,255,0.45)" fontSize={10}>
-          {elev}m
-        </text>
+        <text key={elev} x={PAD.left-4} y={y+4}
+          textAnchor="end" fill="rgba(255,255,255,0.45)" fontSize={10}>{elev}m</text>
       ))}
-
-      {/* X labels */}
       {xLabels.map(({ km, x }) => (
-        <text key={km} x={x} y={height - PAD.bottom + 14}
-          textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize={10}>
-          {km}km
-        </text>
+        <text key={km} x={x} y={height-PAD.bottom+14}
+          textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize={10}>{km}km</text>
       ))}
-
-      {/* Scrubber */}
       {scrubberX !== null && scrubPoint && (() => {
         const dotX = toX(scrubPoint.km);
         const dotY = toY(scrubPoint.elevation);
         const col = gradeColor(scrubPoint.grade);
         return (
           <g>
-            <line x1={scrubberX} y1={PAD.top} x2={scrubberX} y2={PAD.top + ch}
+            <line x1={scrubberX} y1={PAD.top} x2={scrubberX} y2={PAD.top+ch}
               stroke="rgba(255,255,255,0.75)" strokeWidth={1.5} strokeDasharray="3 2" />
             <circle cx={dotX} cy={dotY} r={5} fill="white" />
             <circle cx={dotX} cy={dotY} r={3.5} fill={col} />
@@ -357,7 +296,6 @@ function ClimbModal({ climb, allRaw, onClose }: {
   const [loading, setLoading] = useState(true);
   const [scrubberKm, setScrubberKm] = useState<number | null>(null);
   const color = getCategoryColor(climb.category);
-
   const buffer = (climb.endKm - climb.startKm) * 0.15;
   const fromKm = Math.max(0, climb.startKm - buffer);
   const toKm = climb.endKm + buffer;
@@ -366,25 +304,19 @@ function ClimbModal({ climb, allRaw, onClose }: {
     if (allRaw.length === 0) return;
     const slice = allRaw.filter(p => p.distKm >= fromKm && p.distKm <= toKm);
     if (slice.length < 5) { setLoading(false); return; }
-
     const sliceRel: RawPoint[] = slice.map(p => ({ ...p, distKm: p.distKm - slice[0].distKm }));
     const smoothed = savitzkyGolay(sliceRel, 150);
-
     const pts: ElevationPoint[] = sliceRel.map((p, i) => {
-      const dM = i > 0 ? (p.distKm - sliceRel[i - 1].distKm) * 1000 : 0;
-      const grade = dM > 0
-        ? Math.max(-30, Math.min(30, ((smoothed[i] - smoothed[i - 1]) / dM) * 100))
-        : 0;
+      const dM = i > 0 ? (p.distKm - sliceRel[i-1].distKm) * 1000 : 0;
+      const grade = dM > 0 ? Math.max(-30, Math.min(30, ((smoothed[i]-smoothed[i-1])/dM)*100)) : 0;
       return { km: slice[0].distKm + p.distKm, elevation: smoothed[i], grade };
     });
-
     setPoints(pts);
     setLoading(false);
   }, [allRaw, fromKm, toKm]);
 
   const scrubPoint = scrubberKm !== null && points.length > 0
-    ? points.reduce((best, p) =>
-        Math.abs(p.km - scrubberKm) < Math.abs(best.km - scrubberKm) ? p : best)
+    ? points.reduce((best, p) => Math.abs(p.km-scrubberKm) < Math.abs(best.km-scrubberKm) ? p : best)
     : null;
 
   return (
@@ -392,18 +324,12 @@ function ClimbModal({ climb, allRaw, onClose }: {
       onClick={onClose}>
       <div className="bg-[#0A1628] border border-white/10 rounded-2xl p-6 w-full max-w-2xl mx-4 shadow-2xl"
         onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <span className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-              style={{ backgroundColor: color }}>
-              {climb.category}
-            </span>
+              style={{ backgroundColor: color }}>{climb.category}</span>
             <div>
-              <p className="text-white font-bold">
-                km {climb.startKm.toFixed(1)} → {climb.endKm.toFixed(1)}
-              </p>
+              <p className="text-white font-bold">km {climb.startKm.toFixed(1)} → {climb.endKm.toFixed(1)}</p>
               <p className="text-white/50 text-xs">
                 {(climb.endKm - climb.startKm).toFixed(1)}km ·
                 +{climb.elevationGain.toFixed(0)}m ·
@@ -412,16 +338,11 @@ function ClimbModal({ climb, allRaw, onClose }: {
               </p>
             </div>
           </div>
-          <button onClick={onClose}
-            className="text-white/40 hover:text-white text-2xl leading-none transition-colors">×</button>
+          <button onClick={onClose} className="text-white/40 hover:text-white text-2xl leading-none">×</button>
         </div>
-
-        {/* Scrubber bar */}
         <div className="bg-white/5 rounded-lg border border-white/10 mb-2">
           <ScrubberBar point={scrubPoint} />
         </div>
-
-        {/* Chart */}
         {loading ? (
           <div className="h-48 flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
@@ -429,23 +350,16 @@ function ClimbModal({ climb, allRaw, onClose }: {
         ) : (
           <div className="w-full overflow-hidden rounded-lg">
             <SvgElevationChart
-              points={points}
-              width={568} height={200}
-              climbSegments={[climb]}
-              showClimbLabels={false}
-              scrubberKm={scrubberKm}
-              onScrub={setScrubberKm}
+              points={points} width={568} height={200}
+              climbSegments={[climb]} showClimbLabels={false}
+              scrubberKm={scrubberKm} onScrub={setScrubberKm}
             />
           </div>
         )}
-
-        {/* Grade legend */}
         <div className="flex gap-4 justify-center mt-3 flex-wrap">
           {[
-            { label: '0-3%', color: '#FFFFFF' },
-            { label: '3-6%', color: '#00E5FF' },
-            { label: '6-9%', color: '#FFD600' },
-            { label: '9-12%', color: '#FF6D00' },
+            { label: '0-3%', color: '#FFFFFF' }, { label: '3-6%', color: '#00E5FF' },
+            { label: '6-9%', color: '#FFD600' }, { label: '9-12%', color: '#FF6D00' },
             { label: '>12%', color: '#FF1744' },
           ].map(({ label, color: c }) => (
             <div key={label} className="flex items-center gap-1">
@@ -461,7 +375,11 @@ function ClimbModal({ climb, allRaw, onClose }: {
 }
 
 // ── Main component ────────────────────────────────────────────────────────
-export default function ElevationChart({ gpxUrl, climbProfile = [], storedAscent }: ElevationChartProps) {
+export default function ElevationChart({
+  gpxUrl, climbProfile = [], storedAscent,
+  scrubberKm: controlledScrubberKm,
+  onScrub: controlledOnScrub,
+}: ElevationChartProps) {
   const [displayPoints, setDisplayPoints] = useState<ElevationPoint[]>([]);
   const [allRaw, setAllRaw] = useState<RawPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -471,7 +389,20 @@ export default function ElevationChart({ gpxUrl, climbProfile = [], storedAscent
   const [minElevation, setMinElevation] = useState(0);
   const [selectedClimb, setSelectedClimb] = useState<ClimbSegment | null>(null);
   const [zoomed, setZoomed] = useState(false);
-  const [scrubberKm, setScrubberKm] = useState<number | null>(null);
+
+  // Internal scrubber state — used when no controlled props provided
+  const [internalScrubberKm, setInternalScrubberKm] = useState<number | null>(null);
+
+  // Use controlled or internal — controlled wins when both present
+  const isControlled = controlledOnScrub !== undefined;
+  const scrubberKm = isControlled ? (controlledScrubberKm ?? null) : internalScrubberKm;
+  const onScrub = useCallback((km: number | null) => {
+    if (isControlled) {
+      controlledOnScrub?.(km);
+    } else {
+      setInternalScrubberKm(km);
+    }
+  }, [isControlled, controlledOnScrub]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(600);
@@ -489,15 +420,12 @@ export default function ElevationChart({ gpxUrl, climbProfile = [], storedAscent
       try {
         const raw = await parseGpxFull(gpxUrl);
         if (raw.length === 0) { setError(true); return; }
-
         const smoothed = savitzkyGolay(raw, 300);
-
         let ascent = 0;
         for (let i = 1; i < smoothed.length; i++) {
-          const diff = smoothed[i] - smoothed[i - 1];
+          const diff = smoothed[i] - smoothed[i-1];
           if (diff > 0) ascent += diff;
         }
-
         setAllRaw(raw);
         setDisplayPoints(buildDisplayPoints(raw, smoothed, 1200));
         setTotalAscent(Math.round(ascent));
@@ -513,14 +441,14 @@ export default function ElevationChart({ gpxUrl, climbProfile = [], storedAscent
   }, [gpxUrl]);
 
   const displayAscent = storedAscent && storedAscent > 0 ? storedAscent : totalAscent;
-  const totalKm = displayPoints.length > 0 ? displayPoints[displayPoints.length - 1].km : 0;
+  const totalKm = displayPoints.length > 0 ? displayPoints[displayPoints.length-1].km : 0;
   const svgWidth = zoomed
     ? Math.round(totalKm * ZOOMED_PX_PER_KM) + PAD.left + PAD.right
     : Math.max(containerW, 300);
 
   const scrubPoint = scrubberKm !== null && displayPoints.length > 0
     ? displayPoints.reduce((best, p) =>
-        Math.abs(p.km - scrubberKm) < Math.abs(best.km - scrubberKm) ? p : best)
+        Math.abs(p.km-scrubberKm) < Math.abs(best.km-scrubberKm) ? p : best)
     : null;
 
   if (loading) return (
@@ -531,7 +459,6 @@ export default function ElevationChart({ gpxUrl, climbProfile = [], storedAscent
       </div>
     </div>
   );
-
   if (error || displayPoints.length === 0) return null;
 
   return (
@@ -556,7 +483,7 @@ export default function ElevationChart({ gpxUrl, climbProfile = [], storedAscent
         </div>
         <div className="ml-auto">
           <button
-            onClick={() => { setZoomed(z => !z); setScrubberKm(null); }}
+            onClick={() => { setZoomed(z => !z); onScrub(null); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
               zoomed
                 ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400'
@@ -591,10 +518,8 @@ export default function ElevationChart({ gpxUrl, climbProfile = [], storedAscent
       {/* Grade legend */}
       <div className="flex gap-3 flex-wrap mb-2 items-center">
         {[
-          { label: '0-3%', color: '#FFFFFF' },
-          { label: '3-6%', color: '#00E5FF' },
-          { label: '6-9%', color: '#FFD600' },
-          { label: '9-12%', color: '#FF6D00' },
+          { label: '0-3%', color: '#FFFFFF' }, { label: '3-6%', color: '#00E5FF' },
+          { label: '6-9%', color: '#FFD600' }, { label: '9-12%', color: '#FF6D00' },
           { label: '>12%', color: '#FF1744' },
         ].map(({ label, color: c }) => (
           <div key={label} className="flex items-center gap-1">
@@ -610,20 +535,16 @@ export default function ElevationChart({ gpxUrl, climbProfile = [], storedAscent
         className="rounded-xl border border-white/10 overflow-x-auto"
         style={{ background: 'rgba(255,255,255,0.03)' }}>
         <SvgElevationChart
-          points={displayPoints}
-          width={svgWidth}
-          height={CHART_H}
-          climbSegments={climbProfile}
-          showClimbLabels={true}
-          scrubberKm={scrubberKm}
-          onScrub={setScrubberKm}
+          points={displayPoints} width={svgWidth} height={CHART_H}
+          climbSegments={climbProfile} showClimbLabels={true}
+          scrubberKm={scrubberKm} onScrub={onScrub}
         />
       </div>
 
       {/* Category pills */}
       {climbProfile.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-4 mb-3">
-          {['HC', 'C1', 'C2', 'C3', 'C4'].map(cat => {
+          {['HC','C1','C2','C3','C4'].map(cat => {
             const count = climbProfile.filter(c => c.category === cat).length;
             if (count === 0) return null;
             return (
@@ -650,9 +571,7 @@ export default function ElevationChart({ gpxUrl, climbProfile = [], storedAscent
             ].map(({ cat, label }) => (
               <div key={cat} className="flex items-center gap-2">
                 <span className="text-white text-xs font-bold px-2 py-0.5 rounded"
-                  style={{ backgroundColor: getCategoryColor(cat) }}>
-                  {cat}
-                </span>
+                  style={{ backgroundColor: getCategoryColor(cat) }}>{cat}</span>
                 <span className="text-white/50 text-xs">{label}</span>
               </div>
             ))}
@@ -679,9 +598,7 @@ export default function ElevationChart({ gpxUrl, climbProfile = [], storedAscent
                     backgroundColor: getCategoryColor(climb.category) + '25',
                     color: getCategoryColor(climb.category),
                     border: `1px solid ${getCategoryColor(climb.category)}50`,
-                  }}>
-                  {climb.category}
-                </span>
+                  }}>{climb.category}</span>
                 <div className="flex-1 flex items-center gap-4 text-xs">
                   <span className="text-white/60">km {climb.startKm} → {climb.endKm}</span>
                   <span className="text-white/40">{(climb.endKm - climb.startKm).toFixed(1)}km</span>
