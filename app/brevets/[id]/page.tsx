@@ -224,7 +224,7 @@ if (organizerId) {
           duration:        getTimeLimit(km),
           organizerLogo: organizerLogo,
 climbProfile: (() => {
-  const raw = d.climbProfile;
+  const raw = route.climbProfile;
   if (!raw) return [];
   
   // Handle both array and object with numeric keys
