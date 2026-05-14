@@ -33,11 +33,11 @@ interface ElevationChartProps {
 }
 
 const CLIMB_COLORS: Record<string, string> = {
-  'HC': '#6A1B9A',
-  'C1': '#D32F2F',
-  'C2': '#E65100',
-  'C3': '#F9A825',
-  'C4': '#2E7D32',
+  'HC': '#9C27B0', // purple/magenta
+  'C1': '#F44336', // red
+  'C2': '#FF9800', // orange  
+  'C3': '#FFEB3B', // yellow
+  'C4': '#4CAF50', // green
 };
 
 function getCategoryColor(cat: string): string {
@@ -210,14 +210,16 @@ export default function ElevationChart({
               </linearGradient>
             </defs>
 
-            <XAxis
-              dataKey="km"
-              tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(v) => `${v}km`}
-              interval="preserveStartEnd"
-            />
+<XAxis
+  dataKey="km"
+  type="number"
+  domain={['dataMin', 'dataMax']}
+  tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
+  tickLine={false}
+  axisLine={false}
+  tickFormatter={(v) => `${v}km`}
+  interval="preserveStartEnd"
+/>
             <YAxis
               tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
               tickLine={false}

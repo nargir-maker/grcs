@@ -226,26 +226,24 @@ if (organizerId) {
 climbProfile: (() => {
   const raw = route.climbProfile;
   if (!raw) return [];
-  
-  // Handle both array and object with numeric keys
-  const entries = Array.isArray(raw) 
-    ? raw 
-    : Object.values(raw);
-  
+  const entries = Array.isArray(raw) ? raw : Object.values(raw);
   return entries.map((c: any) => {
     const avgGrad = parseFloat(c.avgGrad?.toString() ?? '0') || 0;
-    const category = avgGrad >= 10 ? 'HC'
-      : avgGrad >= 8  ? 'C1'
-      : avgGrad >= 6  ? 'C2'
-      : avgGrad >= 4  ? 'C3'
+    const distKm  = parseFloat(c.distKm?.toString()  ?? '0') || 0;
+    const gainM   = parseFloat(c.gainM?.toString()   ?? '0') || 0;
+    const score   = distKm > 0 ? (gainM * gainM) / (distKm * 1000) : 0;
+    const category = (score >= 64 || gainM >= 800) ? 'HC'
+      : score >= 32 ? 'C1'
+      : score >= 16 ? 'C2'
+      : score >= 8  ? 'C3'
       : 'C4';
     return {
       startKm:       parseFloat(c.startKm?.toString() ?? '0') || 0,
-      endKm:         parseFloat(c.endKm?.toString() ?? '0') || 0,
+      endKm:         parseFloat(c.endKm?.toString()   ?? '0') || 0,
       category,
       avgGrade:      avgGrad,
       maxGrade:      parseFloat(c.maxGrad?.toString() ?? '0') || 0,
-      elevationGain: parseFloat(c.gainM?.toString() ?? '0') || 0,
+      elevationGain: gainM,
     };
   });
 })(),
