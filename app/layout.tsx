@@ -3,6 +3,7 @@ import './globals.css';
 import Nav from './components/Nav';
 import { AuthProvider } from './lib/AuthContext';
 import { SessionProviderWrapper } from './lib/SessionProviderWrapper';
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: 'GRC — Greek Randonneuring Community',
@@ -38,6 +39,7 @@ export default function RootLayout({
             </footer>
           </AuthProvider>
         </SessionProviderWrapper>
+        <Analytics />
       </body>
     </html>
   );
