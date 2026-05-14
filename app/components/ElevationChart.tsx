@@ -380,13 +380,13 @@ function ClimbModal({ climb, allRaw, onClose }: {
           <ScrubberBar point={scrubPoint} />
         </div>
 
-        {/* Chart — full width, 2:1 ratio */}
-        {loading ? (
-          <div className="h-48 flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
-          <div ref={chartContainerRef} className="w-full overflow-hidden rounded-lg">
+{/* Chart — ref always mounted so ResizeObserver measures correctly */}
+        <div ref={chartContainerRef} className="w-full overflow-hidden rounded-lg">
+          {loading ? (
+            <div className="h-48 flex items-center justify-center">
+              <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
             <SvgElevationChart
               points={points}
               width={chartW}
@@ -396,8 +396,8 @@ function ClimbModal({ climb, allRaw, onClose }: {
               scrubberKm={scrubberKm}
               onScrub={setScrubberKm}
             />
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Grade legend */}
         <div className="flex gap-4 justify-center mt-3 flex-wrap">
