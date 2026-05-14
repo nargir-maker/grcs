@@ -338,7 +338,7 @@ function ClimbModal({ climb, allRaw, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={onClose}>
-      <div className="bg-[#0A1628] border border-white/10 rounded-2xl p-6 w-full max-w-2xl mx-4 shadow-2xl"
+      <div className="bg-[#0A1628] border border-white/10 rounded-2xl p-6 w-full max-w-3xl mx-4 shadow-2xl"
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -366,7 +366,7 @@ function ClimbModal({ climb, allRaw, onClose }: {
         ) : (
           <div className="w-full overflow-hidden rounded-lg">
             <SvgElevationChart
-              points={points} width={640} height={320}
+              points={points} width={568} height={320}
               climbSegments={[climb]} showClimbLabels={false}
               scrubberKm={scrubberKm} onScrub={setScrubberKm}
             />
