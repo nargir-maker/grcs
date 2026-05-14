@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface BrevetMapProps {
   gpxUrl: string;
@@ -18,6 +18,30 @@ export default function BrevetMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const initializedRef = useRef(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Invalidate map size whenever fullscreen changes so Leaflet redraws tiles
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    // Small delay lets the CSS transition finish before invalidating
+    const t = setTimeout(() => {
+      mapInstanceRef.current?.invalidateSize();
+    }, 320);
+    return () => clearTimeout(t);
+  }, [isFullscreen]);
+
+  // Close fullscreen with Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isFullscreen]);
+
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen(f => !f);
+  }, []);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -27,11 +51,8 @@ export default function BrevetMap({
     async function initMap() {
       const L = (await import('leaflet')).default;
 
-      // If container already has a map — destroy it first
       if ((mapRef.current as any)._leaflet_id) {
-        try {
-          mapInstanceRef.current?.remove();
-        } catch {}
+        try { mapInstanceRef.current?.remove(); } catch {}
         delete (mapRef.current as any)._leaflet_id;
       }
 
@@ -60,7 +81,6 @@ export default function BrevetMap({
       try {
         const response = await fetch(gpxUrl);
         const gpxText = await response.text();
-
         const parser = new DOMParser();
         const gpxDoc = parser.parseFromString(gpxText, 'text/xml');
         const trackPoints = gpxDoc.querySelectorAll('trkpt');
@@ -149,19 +169,71 @@ export default function BrevetMap({
   }, [gpxUrl]);
 
   return (
-    <div className="relative">
+    <>
       <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
       />
+
+      {/* ── Fullscreen overlay backdrop ───────────────────────────────── */}
+      {isFullscreen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          onClick={toggleFullscreen}
+        />
+      )}
+
+      {/* ── Map container ─────────────────────────────────────────────── */}
       <div
-        ref={mapRef}
-        style={{ height: '400px', width: '100%' }}
-        className="rounded-xl overflow-hidden border border-white/10"
-      />
-      <p className="text-white/20 text-xs text-right mt-1">
-        © OpenStreetMap contributors
-      </p>
-    </div>
+        className={`relative transition-all duration-300 ${
+          isFullscreen
+            ? 'fixed inset-4 z-50 rounded-2xl shadow-2xl'
+            : 'relative'
+        }`}
+      >
+        {/* Map tile */}
+        <div
+          ref={mapRef}
+          style={{ height: isFullscreen ? '100%' : '400px', width: '100%' }}
+          className="rounded-xl overflow-hidden border border-white/10"
+        />
+
+        {/* ── Fullscreen toggle button ───────────────────────────────── */}
+        <button
+          onClick={toggleFullscreen}
+          title={isFullscreen ? 'Κλείσιμο (Esc)' : 'Πλήρης οθόνη'}
+          className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all backdrop-blur-sm"
+          style={{
+            backgroundColor: 'rgba(10,22,40,0.85)',
+            borderColor: 'rgba(6,182,212,0.4)',
+            color: '#06b6d4',
+          }}
+        >
+          {isFullscreen ? (
+            // Compress icon
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M9 9L4 4m0 0h5m-5 0v5M15 9l5-5m0 0h-5m5 0v5M9 15l-5 5m0 0h5m-5 0v-5M15 15l5 5m0 0h-5m5 0v-5" />
+            </svg>
+          ) : (
+            // Expand icon
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M4 8V4m0 0h4M4 4l5 5M20 8V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5M20 16v4m0 0h-4m4 0l-5-5" />
+            </svg>
+          )}
+          {isFullscreen ? 'Κλείσιμο' : 'Πλήρης οθόνη'}
+        </button>
+
+        {/* Attribution — hidden in fullscreen to save space */}
+        {!isFullscreen && (
+          <p className="text-white/20 text-xs text-right mt-1">
+            © OpenStreetMap contributors
+          </p>
+        )}
+      </div>
+    </>
   );
 }
