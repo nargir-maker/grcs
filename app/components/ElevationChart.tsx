@@ -291,7 +291,7 @@ function ScrubberBar({ point }: { point: ElevationPoint | null }) {
   return (
     <div className="h-8 flex items-center justify-around px-4 gap-4">
       <span className="text-cyan-400 text-xs font-bold">📍 {point.km.toFixed(1)} km</span>
-      <span className="text-blue-300 text-xs font-bold">⛰️ {point.elevation} m</span>
+      <span className="text-blue-300 text-xs font-bold">⛰️ {point.elevation.toFixed(1)} m</span>
       <div className="flex items-center gap-1.5">
         <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: col }} />
         <span className="text-xs font-bold" style={{ color: col }}>
@@ -341,7 +341,7 @@ function ClimbModal({ climb, allRaw, onClose }: {
       const grade = dM > 0
         ? Math.round(Math.max(-30, Math.min(30, ((smoothed[i]-smoothed[i-1])/dM)*100)) * 10) / 10
         : 0;
-      return { km: slice[0].distKm + p.distKm, elevation: smoothed[i], grade };
+      return { km: slice[0].distKm + p.distKm, elevation: Math.round(smoothed[i]), grade };
     });
     setPoints(pts);
     setLoading(false);
@@ -354,7 +354,7 @@ function ClimbModal({ climb, allRaw, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={onClose}>
-      <div className="bg-[#0A1628] border border-white/10 rounded-2xl p-6 w-full max-w-3xl mx-4 shadow-2xl"
+      <div className="bg-[#0A1628] border border-white/10 rounded-2xl p-6 w-full max-w-4xl mx-4 shadow-2xl"
         onClick={e => e.stopPropagation()}>
 
         {/* Header */}
