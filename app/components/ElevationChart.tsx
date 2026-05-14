@@ -234,18 +234,25 @@ function SvgElevationChart({
 
   const handlePointerLeave = useCallback(() => onScrub(null), [onScrub]);
 
-  return (
+return (
     <svg ref={svgRef}
       viewBox={`0 0 ${width} ${height}`} width={width} height={height}
       style={{ display: 'block', cursor: 'crosshair', touchAction: 'pan-x' }}
       onPointerMove={handlePointerMove} onPointerLeave={handlePointerLeave}
     >
+      <defs>
+        <clipPath id={`chart-clip-${width}`}>
+          <rect x={PAD.left} y={PAD.top} width={cw} height={ch} />
+        </clipPath>
+      </defs>
       {yLabels.map(({ y }, i) => (
         <line key={i} x1={PAD.left} y1={y} x2={PAD.left+cw} y2={y}
           stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
       ))}
-      {climbZones}
-      {segments}
+      <g clipPath={`url(#chart-clip-${width})`}>
+        {climbZones}
+        {segments}
+      </g>
       <line x1={PAD.left} y1={yBase} x2={PAD.left+cw} y2={yBase}
         stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
       {yLabels.map(({ elev, y }) => (
