@@ -304,11 +304,50 @@ export default function ElevationChart({
       )}
 
       {/* ── CLIMB CARDS ───────────────────────────── */}
-      {climbProfile.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider mb-3">
-            Ανηφόρες
-          </h3>
+{climbProfile.length > 0 && (
+  <div className="mt-4">
+    {/* Count summary */}
+    <div className="flex flex-wrap gap-2 mb-3">
+      {['HC', 'C1', 'C2', 'C3', 'C4'].map((cat) => {
+        const count = climbProfile.filter(c => c.category === cat).length;
+        if (count === 0) return null;
+        return (
+          <span
+            key={cat}
+            className="text-xs font-bold px-3 py-1 rounded-full text-white"
+            style={{ backgroundColor: getCategoryColor(cat) }}
+          >
+            {count}×{cat}
+          </span>
+        );
+      })}
+    </div>
+
+    {/* Legend */}
+    <div className="bg-white/5 rounded-xl p-3 mb-4 flex flex-col gap-1">
+      <p className="text-white/40 text-xs font-bold mb-1">Κατηγορίες ανηφόρων:</p>
+      {[
+        { cat: 'HC', label: 'Hors Catégorie — Ακραία' },
+        { cat: 'C1', label: 'Cat. 1 — Πολύ δύσκολη' },
+        { cat: 'C2', label: 'Cat. 2 — Δύσκολη' },
+        { cat: 'C3', label: 'Cat. 3 — Μέτρια' },
+        { cat: 'C4', label: 'Cat. 4 — Μικρή' },
+      ].map(({ cat, label }) => (
+        <div key={cat} className="flex items-center gap-2">
+          <span
+            className="text-white text-xs font-bold px-2 py-0.5 rounded"
+            style={{ backgroundColor: getCategoryColor(cat) }}
+          >
+            {cat}
+          </span>
+          <span className="text-white/50 text-xs">{label}</span>
+        </div>
+      ))}
+    </div>
+
+    <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider mb-3">
+      Ανηφόρες
+    </h3>
           <div className="flex flex-col gap-2">
             {climbProfile.map((climb, i) => (
               <div

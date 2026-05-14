@@ -418,29 +418,28 @@ climbProfile: (() => {
     />
   </div>
 )}
-          {/* Action buttons */}
-          <div className="flex gap-3 mt-6">
-            {brevet.mapUrl && (
-             <a 
-                href={brevet.mapUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-bold py-3 rounded-xl text-center transition-colors"
-              >
-                🗺️ Χάρτης
-              </a>
-            )}
-            {brevet.gpxUrl && (
-              <a
-                href={brevet.gpxUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-sm font-bold py-3 rounded-xl text-center transition-colors"
-              >
-                📥 GPX
-              </a>
-            )}
-          </div>
+{/* Action buttons */}
+<div className="flex gap-3 mt-6">
+  {brevet.mapUrl && (
+    <a
+      href={brevet.mapUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex-1 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-sm font-bold py-3 rounded-xl text-center transition-colors"
+    >
+      📥 GPX
+    </a>
+  )}
+  <button
+    onClick={() => {
+      const el = document.getElementById('registration-section');
+      el?.scrollIntoView({ behavior: 'smooth' });
+    }}
+    className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-black text-sm font-bold py-3 rounded-xl text-center transition-colors"
+  >
+    🚴 Εγγραφή →
+  </button>
+</div>
         </div>
 
         {/* ── CONTROL POINTS ─────────────────────────── */}
@@ -602,7 +601,7 @@ climbProfile: (() => {
   </div>
 )}
 {/* ── REGISTRATION ───────────────────────────── */}
-<div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+<div id="registration-section" className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
   <h2 className="text-white font-bold text-lg mb-2">
     🚴 Εγγραφή στο Brevet
   </h2>
