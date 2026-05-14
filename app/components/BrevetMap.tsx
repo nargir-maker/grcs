@@ -21,14 +21,25 @@ export default function BrevetMap({
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Invalidate map size whenever fullscreen changes so Leaflet redraws tiles
-  useEffect(() => {
-    if (!mapInstanceRef.current) return;
-    // Small delay lets the CSS transition finish before invalidating
-    const t = setTimeout(() => {
-      mapInstanceRef.current?.invalidateSize();
-    }, 320);
-    return () => clearTimeout(t);
-  }, [isFullscreen]);
+useEffect(() => {
+  if (!mapInstanceRef.current) return;
+  const t = setTimeout(() => {
+    const map = mapInstanceRef.current;
+    map.invalidateSize();
+    // Re-enable scroll zoom in fullscreen, disable when not
+    if (isFullscreen) {
+      map.scrollWheelZoom.enable();
+    } else {
+      map.scrollWheelZoom.disable();
+    }
+    // Force a bounds refresh so tiles repaint
+    const bounds = map.getBounds();
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [20, 20], animate: false });
+    }
+  }, 350);
+  return () => clearTimeout(t);
+}, [isFullscreen]);
 
   // Close fullscreen with Escape key
   useEffect(() => {
