@@ -327,7 +327,7 @@ function ClimbModal({ climb, allRaw, onClose }: {
   const color = getCategoryColor(climb.category);
   const buffer = (climb.endKm - climb.startKm) * 0.15;
   const fromKm = Math.max(0, climb.startKm - buffer);
-  const toKm = climb.endKm + buffer;
+  const toKm = climb.endKm ;
 
   useEffect(() => {
     if (allRaw.length === 0) return;
