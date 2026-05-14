@@ -1,6 +1,6 @@
 'use client';
 
-import  React,{ useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   AreaChart,
   Area,
@@ -40,12 +40,18 @@ const CLIMB_COLORS: Record<string, string> = {
   'C4': '#2E7D32',
 };
 
-
-
 function getCategoryColor(cat: string): string {
   return CLIMB_COLORS[cat] ?? '#06b6d4';
 }
 
+function gradeColor(grade: number): string {
+  const abs = Math.abs(grade);
+  if (abs < 3)  return '#FFFFFF';
+  if (abs < 6)  return '#00E5FF';
+  if (abs < 9)  return '#FFD600';
+  if (abs < 12) return '#FF6D00';
+  return '#FF1744';
+}
 
 async function parseGpxPoints(gpxUrl: string): Promise<ElevationPoint[]> {
   const response = await fetch(gpxUrl);
@@ -84,32 +90,73 @@ async function parseGpxPoints(gpxUrl: string): Promise<ElevationPoint[]> {
   return data;
 }
 
-// ── Mini chart inside modal ───────────────────────────────────────────────
-function gradeColor(grade: number): string {
-  const abs = Math.abs(grade);
-  if (abs < 3)  return '#FFFFFF';
-  if (abs < 6)  return '#00E5FF';
-  if (abs < 9)  return '#FFD600';
-  if (abs < 12) return '#FF6D00';
-  return '#FF1744';
+async function parseGpxPointsDetailed(
+  gpxUrl: string,
+  fromKm: number,
+  toKm: number
+): Promise<ElevationPoint[]> {
+  const response = await fetch(gpxUrl);
+  const gpxText = await response.text();
+  const parser = new DOMParser();
+  const gpxDoc = parser.parseFromString(gpxText, 'text/xml');
+  const trackPoints = gpxDoc.querySelectorAll('trkpt');
+  if (trackPoints.length === 0) return [];
+
+  let distanceKm = 0;
+  let prevLat = 0, prevLng = 0;
+  const data: ElevationPoint[] = [];
+
+  trackPoints.forEach((pt, i) => {
+    const lat = parseFloat(pt.getAttribute('lat') ?? '0');
+    const lng = parseFloat(pt.getAttribute('lon') ?? '0');
+    const eleEl = pt.querySelector('ele');
+    const ele = eleEl ? parseFloat(eleEl.textContent ?? '0') : 0;
+
+    if (i > 0 && prevLat !== 0) {
+      const R = 6371;
+      const dLat = (lat - prevLat) * Math.PI / 180;
+      const dLng = (lng - prevLng) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 +
+        Math.cos(prevLat * Math.PI/180) * Math.cos(lat * Math.PI/180) *
+        Math.sin(dLng/2)**2;
+      distanceKm += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+    prevLat = lat; prevLng = lng;
+
+    if (distanceKm >= fromKm && distanceKm <= toKm) {
+      data.push({
+        km: Math.round(distanceKm * 100) / 100,
+        elevation: Math.round(ele * 10) / 10,
+      });
+    }
+  });
+
+  return data;
 }
 
+// ── Climb Modal ───────────────────────────────────────────────────────────
 function ClimbModal({
   climb,
-  allPoints,
+  gpxUrl,
   onClose,
 }: {
   climb: ClimbSegment;
-  allPoints: ElevationPoint[];
+  gpxUrl: string;
   onClose: () => void;
 }) {
+  const [points, setPoints] = useState<ElevationPoint[]>([]);
+  const [loading, setLoading] = useState(true);
   const color = getCategoryColor(climb.category);
   const buffer = (climb.endKm - climb.startKm) * 0.15;
   const fromKm = Math.max(0, climb.startKm - buffer);
   const toKm = climb.endKm + buffer;
-  const points = allPoints.filter(p => p.km >= fromKm && p.km <= toKm);
 
-  // Calculate grade for each point
+  useEffect(() => {
+    parseGpxPointsDetailed(gpxUrl, fromKm, toKm)
+      .then(setPoints)
+      .finally(() => setLoading(false));
+  }, [gpxUrl, fromKm, toKm]);
+
   const pointsWithGrade = points.map((p, i) => {
     if (i === 0) return { ...p, grade: 0 };
     const dKm = p.km - points[i-1].km;
@@ -118,25 +165,21 @@ function ClimbModal({
     return { ...p, grade: Math.max(-30, Math.min(30, grade)) };
   });
 
-  if (points.length === 0) return null;
-
-  const minElev = Math.min(...points.map(p => p.elevation));
-  const maxElev = Math.max(...points.map(p => p.elevation));
-  const elevRange = Math.max(1, maxElev - minElev);
-  const minKm = points[0].km;
-  const maxKm = points[points.length - 1].km;
-  const kmRange = Math.max(0.1, maxKm - minKm);
-
-  // SVG dimensions
   const W = 600, H = 200, PAD = 40;
   const cw = W - PAD * 2;
   const ch = H - PAD * 2;
 
+  const minElev = points.length > 0 ? Math.min(...points.map(p => p.elevation)) : 0;
+  const maxElev = points.length > 0 ? Math.max(...points.map(p => p.elevation)) : 100;
+  const elevRange = Math.max(1, maxElev - minElev);
+  const minKm = points.length > 0 ? points[0].km : fromKm;
+  const maxKm = points.length > 0 ? points[points.length - 1].km : toKm;
+  const kmRange = Math.max(0.1, maxKm - minKm);
+
   const toX = (km: number) => PAD + ((km - minKm) / kmRange) * cw;
   const toY = (elev: number) => PAD + ch - ((elev - minElev) / elevRange) * ch;
 
-  // Build grade-colored polygon segments
-const segments: React.ReactElement[] = [];
+  const segments: React.ReactElement[] = [];
   for (let i = 1; i < pointsWithGrade.length; i++) {
     const prev = pointsWithGrade[i-1];
     const curr = pointsWithGrade[i];
@@ -157,23 +200,18 @@ const segments: React.ReactElement[] = [];
     );
   }
 
-  // Climb zone highlight
   const zoneX1 = toX(climb.startKm);
   const zoneX2 = toX(climb.endKm);
 
-  // Y axis labels
-  const yLabels = [0, 0.25, 0.5, 0.75, 1].map(f => {
-    const elev = minElev + elevRange * f;
-    const y = toY(elev);
-    return { elev: Math.round(elev), y };
-  });
+  const yLabels = [0, 0.25, 0.5, 0.75, 1].map(f => ({
+    elev: Math.round(minElev + elevRange * f),
+    y: toY(minElev + elevRange * f),
+  }));
 
-  // X axis labels
-  const xLabels = [0, 0.25, 0.5, 0.75, 1].map(f => {
-    const km = minKm + kmRange * f;
-    const x = toX(km);
-    return { km: km.toFixed(1), x };
-  });
+  const xLabels = [0, 0.25, 0.5, 0.75, 1].map(f => ({
+    km: (minKm + kmRange * f).toFixed(1),
+    x: toX(minKm + kmRange * f),
+  }));
 
   return (
     <div
@@ -213,68 +251,35 @@ const segments: React.ReactElement[] = [];
           </button>
         </div>
 
-        {/* Grade-colored SVG chart */}
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          width="100%"
-          style={{ background: 'transparent' }}
-        >
-          {/* Climb zone background */}
-          <rect
-            x={zoneX1} y={PAD}
-            width={zoneX2 - zoneX1} height={ch}
-            fill={color} fillOpacity={0.08}
-          />
-          <line
-            x1={zoneX1} y1={PAD} x2={zoneX1} y2={PAD + ch}
-            stroke={color} strokeWidth={1} strokeOpacity={0.5}
-            strokeDasharray="4 2"
-          />
-          <line
-            x1={zoneX2} y1={PAD} x2={zoneX2} y2={PAD + ch}
-            stroke={color} strokeWidth={1} strokeOpacity={0.5}
-            strokeDasharray="4 2"
-          />
-
-          {/* Grade-colored segments */}
-          {segments}
-
-          {/* Y axis labels */}
-          {yLabels.map(({ elev, y }) => (
-            <text
-              key={elev}
-              x={PAD - 4} y={y + 4}
-              textAnchor="end"
-              fill="rgba(255,255,255,0.4)"
-              fontSize={10}
-            >
-              {elev}m
-            </text>
-          ))}
-
-          {/* X axis labels */}
-          {xLabels.map(({ km, x }) => (
-            <text
-              key={km}
-              x={x} y={H - PAD + 14}
-              textAnchor="middle"
-              fill="rgba(255,255,255,0.4)"
-              fontSize={10}
-            >
-              {km}km
-            </text>
-          ))}
-
-          {/* Base line */}
-          <line
-            x1={PAD} y1={PAD + ch}
-            x2={PAD + cw} y2={PAD + ch}
-            stroke="rgba(255,255,255,0.1)" strokeWidth={1}
-          />
-        </svg>
+        {/* Chart */}
+        {loading ? (
+          <div className="h-48 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ background: 'transparent' }}>
+            <rect x={zoneX1} y={PAD} width={zoneX2 - zoneX1} height={ch}
+              fill={color} fillOpacity={0.08} />
+            <line x1={zoneX1} y1={PAD} x2={zoneX1} y2={PAD + ch}
+              stroke={color} strokeWidth={1} strokeOpacity={0.5} strokeDasharray="4 2" />
+            <line x1={zoneX2} y1={PAD} x2={zoneX2} y2={PAD + ch}
+              stroke={color} strokeWidth={1} strokeOpacity={0.5} strokeDasharray="4 2" />
+            {segments}
+            {yLabels.map(({ elev, y }) => (
+              <text key={elev} x={PAD - 4} y={y + 4} textAnchor="end"
+                fill="rgba(255,255,255,0.4)" fontSize={10}>{elev}m</text>
+            ))}
+            {xLabels.map(({ km, x }) => (
+              <text key={km} x={x} y={H - PAD + 14} textAnchor="middle"
+                fill="rgba(255,255,255,0.4)" fontSize={10}>{km}km</text>
+            ))}
+            <line x1={PAD} y1={PAD + ch} x2={PAD + cw} y2={PAD + ch}
+              stroke="rgba(255,255,255,0.1)" strokeWidth={1} />
+          </svg>
+        )}
 
         {/* Grade legend */}
-        <div className="flex gap-4 justify-center mt-3">
+        <div className="flex gap-4 justify-center mt-3 flex-wrap">
           {[
             { label: '0-3%', color: '#FFFFFF' },
             { label: '3-6%', color: '#00E5FF' },
@@ -283,18 +288,13 @@ const segments: React.ReactElement[] = [];
             { label: '>12%', color: '#FF1744' },
           ].map(({ label, color: c }) => (
             <div key={label} className="flex items-center gap-1">
-              <div
-                className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: c, boxShadow: `0 0 4px ${c}80` }}
-              />
+              <div className="w-3 h-3 rounded-sm"
+                style={{ backgroundColor: c, boxShadow: `0 0 4px ${c}80` }} />
               <span className="text-white/50 text-xs">{label}</span>
             </div>
           ))}
         </div>
-
-        <p className="text-white/20 text-xs text-center mt-3">
-          Κλικ έξω για κλείσιμο
-        </p>
+        <p className="text-white/20 text-xs text-center mt-3">Κλικ έξω για κλείσιμο</p>
       </div>
     </div>
   );
@@ -378,7 +378,7 @@ export default function ElevationChart({
       {selectedClimb && (
         <ClimbModal
           climb={selectedClimb}
-          allPoints={points}
+          gpxUrl={gpxUrl}
           onClose={() => setSelectedClimb(null)}
         />
       )}
@@ -514,7 +514,7 @@ export default function ElevationChart({
         </div>
       )}
 
-      {/* Climb cards — tap to expand */}
+      {/* Climb cards */}
       {climbProfile.length > 0 && (
         <div className="mt-2">
           <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider mb-3">
@@ -531,9 +531,8 @@ export default function ElevationChart({
                   borderColor: getCategoryColor(climb.category) + '30',
                 }}
               >
-                {/* Category badge */}
                 <span
-                  className="text-xs font-bold px-2 py-1 rounded-lg shrink-0 min-w-8 text-center text-white"
+                  className="text-xs font-bold px-2 py-1 rounded-lg shrink-0 min-w-8 text-center"
                   style={{
                     backgroundColor: getCategoryColor(climb.category) + '25',
                     color: getCategoryColor(climb.category),
@@ -542,34 +541,18 @@ export default function ElevationChart({
                 >
                   {climb.category}
                 </span>
-
-                {/* Info */}
                 <div className="flex-1 flex items-center gap-4 text-xs">
-                  <span className="text-white/60">
-                    km {climb.startKm} → {climb.endKm}
-                  </span>
-                  <span className="text-white/40">
-                    {(climb.endKm - climb.startKm).toFixed(1)}km
-                  </span>
-                  <span className="text-white/40">
-                    ↑{climb.elevationGain.toFixed(0)}m
-                  </span>
+                  <span className="text-white/60">km {climb.startKm} → {climb.endKm}</span>
+                  <span className="text-white/40">{(climb.endKm - climb.startKm).toFixed(1)}km</span>
+                  <span className="text-white/40">↑{climb.elevationGain.toFixed(0)}m</span>
                 </div>
-
-                {/* Grade */}
                 <div className="text-right shrink-0">
                   <div className="text-sm font-bold" style={{ color: getCategoryColor(climb.category) }}>
                     {climb.avgGrade.toFixed(1)}%
                   </div>
-                  <div className="text-white/30 text-xs">
-                    max {climb.maxGrade.toFixed(1)}%
-                  </div>
+                  <div className="text-white/30 text-xs">max {climb.maxGrade.toFixed(1)}%</div>
                 </div>
-
-                {/* Tap indicator */}
-                <span className="text-white/20 group-hover:text-white/50 transition-colors text-lg ml-1">
-                  ›
-                </span>
+                <span className="text-white/20 group-hover:text-white/50 transition-colors text-lg ml-1">›</span>
               </button>
             ))}
           </div>
