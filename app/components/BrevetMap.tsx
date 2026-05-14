@@ -197,11 +197,11 @@ export default function BrevetMap({
 
       {/* Inline map — stays put */}
       <div className="relative">
-        <div
-          ref={mapRef}
-          style={{ height: '400px', width: '100%' }}
-          className="rounded-xl overflow-hidden border border-white/10"
-        />
+<div
+  ref={mapRef}
+  style={{ height: '400px', width: '100%', visibility: isFullscreen ? 'hidden' : 'visible' }}
+  className="rounded-xl overflow-hidden border border-white/10"
+/>
 
         <button
           onClick={toggleFullscreen}
