@@ -116,18 +116,32 @@ async function parseGpxFull(gpxUrl: string): Promise<RawPoint[]> {
 
 function buildDisplayPoints(raw: RawPoint[], smoothed: number[], targetCount: number): ElevationPoint[] {
   const n = raw.length;
+  if (n === 0) return [];
+
   const step = Math.max(1, Math.floor(n / targetCount));
   const result: ElevationPoint[] = [];
+
   for (let i = 0; i < n; i += step) {
     const prevI = Math.max(0, i - step);
     const dM = (raw[i].distKm - raw[prevI].distKm) * 1000;
     const grade = i > 0 && dM > 0
       ? Math.max(-30, Math.min(30, ((smoothed[i] - smoothed[prevI]) / dM) * 100))
       : 0;
-    result.push({ km: Math.round(raw[i].distKm * 10) / 10, elevation: Math.round(smoothed[i]), grade });
+    result.push({
+      km: Math.round(raw[i].distKm * 10) / 10,
+      elevation: Math.round(smoothed[i]),
+      grade,
+    });
   }
-  const last = raw[n-1];
-  result.push({ km: Math.round(last.distKm * 10) / 10, elevation: Math.round(smoothed[n-1]), grade: 0 });
+
+  // ── Always include the very last point exactly ──────────────
+  // Prevents the chart from stopping short of the actual total distance
+  const lastRaw = raw[n - 1];
+  const lastKm = Math.round(lastRaw.distKm * 10) / 10;
+  if (result.length === 0 || result[result.length - 1].km !== lastKm) {
+    result.push({ km: lastKm, elevation: Math.round(smoothed[n - 1]), grade: 0 });
+  }
+
   return result;
 }
 
