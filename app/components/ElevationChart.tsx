@@ -366,7 +366,7 @@ function ClimbModal({ climb, allRaw, onClose }: {
         ) : (
           <div className="w-full overflow-hidden rounded-lg">
             <SvgElevationChart
-              points={points} width={568} height={200}
+              points={points} width={640} height={320}
               climbSegments={[climb]} showClimbLabels={false}
               scrubberKm={scrubberKm} onScrub={setScrubberKm}
             />

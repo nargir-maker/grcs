@@ -237,7 +237,7 @@ function FullscreenMap({
         <div className="border-t border-white/10" />
 
         {/* Elevation chart — takes remaining ~45% */}
-        <div className="flex-1 overflow-y-auto px-4 py-2" style={{ background: '#0A1628' }}>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2" style={{ background: '#0A1628' }}>
           <ElevationChart
             gpxUrl={gpxUrl}
             climbProfile={climbProfile}
