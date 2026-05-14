@@ -17,6 +17,7 @@ interface Brevet {
   distance: number;
   date: string;
   organizer: string;
+  organizerId: string;
   organizerLogo: string;
   start: string;
   ascent: number;
@@ -27,13 +28,20 @@ interface Brevet {
   difficultyColor: string;
 }
 
+// ── Organizer option derived from loaded brevets ───────────────────
+interface OrganizerOption {
+  id: string;
+  name: string;
+  logo: string;
+}
+
 function getDifficultyLabel(bdi: number): { label: string; color: string } {
-  if (bdi < 4)  return { label: 'ΕΥΚΟΛΟ',       color: '#2E7D32' };
-  if (bdi < 7)  return { label: 'ΜΕΤΡΙΟ',        color: '#F9A825' };
-  if (bdi < 10) return { label: 'ΔΥΣΚΟΛΟ',       color: '#E65100' };
-  if (bdi < 14) return { label: 'ΠΟΛΥ ΔΥΣΚΟΛΟ', color: '#D32F2F' };
-  if (bdi < 19) return { label: 'ΑΚΡΑΙΟ',        color: '#6A1B9A' };
-  return         { label: 'ΘΡΥΛΙΚΟ',             color: '#1A1A1A' };
+  if (bdi < 4)  return { label: 'ΕΥΚΟΛΟ',        color: '#2E7D32' };
+  if (bdi < 7)  return { label: 'ΜΕΤΡΙΟ',         color: '#F9A825' };
+  if (bdi < 10) return { label: 'ΔΥΣΚΟΛΟ',        color: '#E65100' };
+  if (bdi < 14) return { label: 'ΠΟΛΥ ΔΥΣΚΟΛΟ',  color: '#D32F2F' };
+  if (bdi < 19) return { label: 'ΑΚΡΑΙΟ',         color: '#6A1B9A' };
+  return         { label: 'ΘΡΥΛΙΚΟ',              color: '#1A1A1A' };
 }
 
 function computeBDI(wcs: number, km: number, ascent: number): number {
@@ -53,18 +61,21 @@ export default function BrevetsPage() {
   const [yearFilter, setYearFilter] = useState<number | null>(2026);
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
   const [monthFilter, setMonthFilter] = useState<number | null>(null);
+  const [organizerFilter, setOrganizerFilter] = useState<string | null>(null);
+
+  // ── Derived list of organizers present in loaded brevets ──────────
+  const [organizers, setOrganizers] = useState<OrganizerOption[]>([]);
 
   useEffect(() => {
     async function fetchAll() {
       try {
-        // ── Check cache first ─────────────────────────
         if (cachedBrevets.length > 0 && Date.now() - cacheTimestamp < CACHE_TTL) {
           setBrevets(cachedBrevets);
+          setOrganizers(deriveOrganizers(cachedBrevets));
           setLoading(false);
           return;
         }
 
-        // ── 1. Fetch clubs ────────────────────────────
         if (Object.keys(cachedClubs).length === 0) {
           const clubsSnapshot = await getDocs(collection(db, 'clubs'));
           clubsSnapshot.forEach((doc) => {
@@ -75,7 +86,6 @@ export default function BrevetsPage() {
           });
         }
 
-        // ── 2. Fetch current year brevets ─────────────
         const currentYear = new Date().getFullYear();
         const startDate = `${currentYear}-01-01`;
         const endDate   = `${currentYear}-12-31`;
@@ -115,6 +125,7 @@ export default function BrevetsPage() {
             distance:        km,
             date:            parsedDate,
             organizer:       cachedClubs[orgId] ?? '',
+            organizerId:     orgId,
             organizerLogo:   cachedLogos[orgId] ?? '/logos/000000.png',
             start:           route.start?.toString() ?? '',
             ascent,
@@ -135,6 +146,7 @@ export default function BrevetsPage() {
         cachedBrevets  = data;
         cacheTimestamp = Date.now();
         setBrevets(data);
+        setOrganizers(deriveOrganizers(data));
 
       } catch (e) {
         console.error('Error fetching data:', e);
@@ -146,19 +158,38 @@ export default function BrevetsPage() {
     fetchAll();
   }, []);
 
+  // ── Build unique sorted organizer list from brevets ───────────────
+  function deriveOrganizers(data: Brevet[]): OrganizerOption[] {
+    const seen = new Map<string, OrganizerOption>();
+    data.forEach((b) => {
+      if (b.organizerId && !seen.has(b.organizerId)) {
+        seen.set(b.organizerId, {
+          id:   b.organizerId,
+          name: b.organizer,
+          logo: b.organizerLogo,
+        });
+      }
+    });
+    return Array.from(seen.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }
+
   const filtered = brevets.filter((b) => {
-    const matchDist   = filter === null || b.distance === filter;
-    const matchYear   = yearFilter === null ||
+    const matchDist       = filter === null || b.distance === filter;
+    const matchYear       = yearFilter === null ||
       new Date(b.date).getFullYear() === yearFilter;
-    const matchMonth  = monthFilter === null ||
+    const matchMonth      = monthFilter === null ||
       new Date(b.date).getMonth() + 1 === monthFilter;
-    const matchDiff   = difficultyFilter === null ||
+    const matchDiff       = difficultyFilter === null ||
       b.difficultyLabel === difficultyFilter;
-    const matchSearch = search === '' ||
+    const matchOrganizer  = organizerFilter === null ||
+      b.organizerId === organizerFilter;
+    const matchSearch     = search === '' ||
       b.title.toLowerCase().includes(search.toLowerCase()) ||
       b.start.toLowerCase().includes(search.toLowerCase()) ||
       b.organizer.toLowerCase().includes(search.toLowerCase());
-    return matchDist && matchYear && matchMonth && matchDiff && matchSearch;
+    return matchDist && matchYear && matchMonth && matchDiff && matchOrganizer && matchSearch;
   });
 
   return (
@@ -222,12 +253,12 @@ export default function BrevetsPage() {
           <div className="flex gap-2 flex-wrap items-center">
             <span className="text-white/30 text-xs w-16">Δυσκολία:</span>
             {[
-              { label: null,            display: 'Όλες',            color: null },
-              { label: 'ΕΥΚΟΛΟ',       display: '🟢 Εύκολο',       color: '#2E7D32' },
-              { label: 'ΜΕΤΡΙΟ',       display: '🟡 Μέτριο',       color: '#F9A825' },
-              { label: 'ΔΥΣΚΟΛΟ',      display: '🟠 Δύσκολο',      color: '#E65100' },
+              { label: null,             display: 'Όλες',            color: null },
+              { label: 'ΕΥΚΟΛΟ',        display: '🟢 Εύκολο',       color: '#2E7D32' },
+              { label: 'ΜΕΤΡΙΟ',        display: '🟡 Μέτριο',       color: '#F9A825' },
+              { label: 'ΔΥΣΚΟΛΟ',       display: '🟠 Δύσκολο',      color: '#E65100' },
               { label: 'ΠΟΛΥ ΔΥΣΚΟΛΟ', display: '🔴 Πολύ Δύσκολο', color: '#D32F2F' },
-              { label: 'ΑΚΡΑΙΟ',       display: '💀 Ακραίο',       color: '#6A1B9A' },
+              { label: 'ΑΚΡΑΙΟ',        display: '💀 Ακραίο',       color: '#6A1B9A' },
             ].map((d) => (
               <button
                 key={d.display}
@@ -280,6 +311,52 @@ export default function BrevetsPage() {
             ))}
           </div>
 
+          {/* Row 5 — Organizer (with logos) */}
+          {organizers.length > 1 && (
+            <div className="flex gap-2 flex-wrap items-center">
+              <span className="text-white/30 text-xs w-16">Διοργ.:</span>
+
+              {/* All button */}
+              <button
+                onClick={() => setOrganizerFilter(null)}
+                className={`px-3 py-2 rounded-full text-xs font-bold transition-colors border ${
+                  organizerFilter === null
+                    ? 'bg-cyan-500 text-black border-transparent'
+                    : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                }`}
+              >
+                Όλοι
+              </button>
+
+              {/* One chip per organizer — logo + short name */}
+              {organizers.map((org) => {
+                const isSelected = organizerFilter === org.id;
+                return (
+                  <button
+                    key={org.id}
+                    onClick={() => setOrganizerFilter(isSelected ? null : org.id)}
+                    title={org.name}
+                    className={`flex items-center gap-2 pl-1 pr-3 py-1 rounded-full text-xs font-bold transition-all border ${
+                      isSelected
+                        ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400'
+                        : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                    }`}
+                  >
+                    <img
+                      src={org.logo}
+                      alt={org.name}
+                      className="w-6 h-6 rounded-full object-contain bg-white/10"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/logos/000000.png';
+                      }}
+                    />
+                    <span className="max-w-[100px] truncate">{org.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
         </div>
 
         {/* ── CONTENT ────────────────────────────────── */}
@@ -302,92 +379,87 @@ export default function BrevetsPage() {
                 href={`/brevets/${b.id}`}
                 className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/30 transition-colors cursor-pointer block no-underline"
               >
-                {/* Top row */}
-{/* Organizer row — TOP */}
-<div className="flex items-center justify-between mb-4">
-  <div className="flex items-center gap-2">
-    <img
-      src={b.organizerLogo}
-      alt={b.organizer}
-      className="w-10 h-10 object-contain rounded-full"
-      onError={(e) => {
-        (e.target as HTMLImageElement).src = '/logos/000000.png';
-      }}
-    />
-    <span className="text-white/60 text-xs font-medium">
-      {b.organizer}
-    </span>
-  </div>
-  <span className="bg-cyan-500/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/20">
-    {b.distance}km
-  </span>
-</div>
+                {/* Organizer row */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={b.organizerLogo}
+                      alt={b.organizer}
+                      className="w-10 h-10 object-contain rounded-full"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/logos/000000.png';
+                      }}
+                    />
+                    <span className="text-white/60 text-xs font-medium">
+                      {b.organizer}
+                    </span>
+                  </div>
+                  <span className="bg-cyan-500/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/20">
+                    {b.distance}km
+                  </span>
+                </div>
 
-{/* Brevet title */}
-<h3 className="text-white font-bold text-base leading-tight mb-1">
-  {b.title}
-</h3>
-<p className="text-white/40 text-xs mb-4">
-  📍 {b.start}
-</p>
+                {/* Title */}
+                <h3 className="text-white font-bold text-base leading-tight mb-1">
+                  {b.title}
+                </h3>
+                <p className="text-white/40 text-xs mb-4">
+                  📍 {b.start}
+                </p>
 
-{/* Date */}
-<div className="mb-4">
-  <span className="text-white/50 text-xs">
-    📅 {b.date
-      ? new Date(b.date).toLocaleDateString('el-GR', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        })
-      : '—'}
-  </span>
-</div>
+                {/* Date */}
+                <div className="mb-4">
+                  <span className="text-white/50 text-xs">
+                    📅 {b.date
+                      ? new Date(b.date).toLocaleDateString('el-GR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })
+                      : '—'}
+                  </span>
+                </div>
 
-{/* Stats row */}
-<div className="flex items-center gap-4 mb-4">
-  {b.ascent > 0 && (
-    <span className="text-white/40 text-xs">
-      ⛰️ {b.ascent.toLocaleString()}m+
-    </span>
-  )}
-  {b.certification && (
-    <span className="text-white/40 text-xs">
-      {b.certification}
-    </span>
-  )}
-  {b.type && (
-    <span className="text-white/40 text-xs">
-      {b.type}
-    </span>
-  )}
-</div>
+                {/* Stats */}
+                <div className="flex items-center gap-4 mb-4">
+                  {b.ascent > 0 && (
+                    <span className="text-white/40 text-xs">
+                      ⛰️ {b.ascent.toLocaleString()}m+
+                    </span>
+                  )}
+                  {b.certification && (
+                    <span className="text-white/40 text-xs">{b.certification}</span>
+                  )}
+                  {b.type && (
+                    <span className="text-white/40 text-xs">{b.type}</span>
+                  )}
+                </div>
 
-{/* Bottom row — difficulty + GPX */}
-<div className="flex items-center justify-between">
-  <span
-    className="text-xs font-bold px-3 py-1 rounded-full"
-    style={{
-      backgroundColor: b.difficultyColor + '20',
-      color: b.difficultyColor,
-      border: `1px solid ${b.difficultyColor}40`,
-    }}
-  >
-    {b.difficultyLabel}
-  </span>
-  {b.gpxUrl && (
-    <button
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        window.open(b.gpxUrl, '_blank');
-      }}
-      className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
-    >
-      GPX →
-    </button>
-  )}
-</div>
+                {/* Bottom */}
+                <div className="flex items-center justify-between">
+                  <span
+                    className="text-xs font-bold px-3 py-1 rounded-full"
+                    style={{
+                      backgroundColor: b.difficultyColor + '20',
+                      color: b.difficultyColor,
+                      border: `1px solid ${b.difficultyColor}40`,
+                    }}
+                  >
+                    {b.difficultyLabel}
+                  </span>
+                  {b.gpxUrl && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.open(b.gpxUrl, '_blank');
+                      }}
+                      className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
+                    >
+                      GPX →
+                    </button>
+                  )}
+                </div>
               </a>
             ))}
           </div>
