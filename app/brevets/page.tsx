@@ -53,6 +53,23 @@ function computeBDI(wcs: number, km: number, ascent: number): number {
   return (km / 100) * (1 + ascent / (km * 8));
 }
 
+  // ── Build unique sorted organizer list from brevets ───────────────
+  function deriveOrganizers(data: Brevet[]): OrganizerOption[] {
+    const seen = new Map<string, OrganizerOption>();
+    data.forEach((b) => {
+      if (b.organizerId && !seen.has(b.organizerId)) {
+        seen.set(b.organizerId, {
+          id:   b.organizerId,
+          name: b.organizer,
+          logo: b.organizerLogo,
+        });
+      }
+    });
+    return Array.from(seen.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }
+
 export default function BrevetsPage() {
   const [brevets, setBrevets] = useState<Brevet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,22 +175,6 @@ export default function BrevetsPage() {
     fetchAll();
   }, []);
 
-  // ── Build unique sorted organizer list from brevets ───────────────
-  function deriveOrganizers(data: Brevet[]): OrganizerOption[] {
-    const seen = new Map<string, OrganizerOption>();
-    data.forEach((b) => {
-      if (b.organizerId && !seen.has(b.organizerId)) {
-        seen.set(b.organizerId, {
-          id:   b.organizerId,
-          name: b.organizer,
-          logo: b.organizerLogo,
-        });
-      }
-    });
-    return Array.from(seen.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-  }
 
   const filtered = brevets.filter((b) => {
     const matchDist       = filter === null || b.distance === filter;
