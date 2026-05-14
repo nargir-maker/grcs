@@ -245,6 +245,7 @@ function FullscreenMap({
             scrubberKm={modalScrubberKm}
             onScrub={setModalScrubberKm}
             defaultZoomed={true}  // ← ADD
+            zoomedPxPerKm={10}  // ← ADD
           />
         </div>
       </div>

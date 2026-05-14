@@ -33,6 +33,7 @@ interface ElevationChartProps {
   scrubberKm?: number | null;
   onScrub?: (km: number | null) => void;
     defaultZoomed?: boolean; // ← ADD
+    zoomedPxPerKm?: number; // ← ADD
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -395,6 +396,7 @@ export default function ElevationChart({
   scrubberKm: controlledScrubberKm,
   onScrub: controlledOnScrub,
    defaultZoomed = false, // ← ADD
+   zoomedPxPerKm = 10  // ← ADD
 }: ElevationChartProps) {
   const [displayPoints, setDisplayPoints] = useState<ElevationPoint[]>([]);
   const [allRaw, setAllRaw] = useState<RawPoint[]>([]);
