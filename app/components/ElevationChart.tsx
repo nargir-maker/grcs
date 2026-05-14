@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import  React,{ useEffect, useState, useCallback } from 'react';
 import {
   AreaChart,
   Area,
@@ -40,9 +40,12 @@ const CLIMB_COLORS: Record<string, string> = {
   'C4': '#2E7D32',
 };
 
+
+
 function getCategoryColor(cat: string): string {
   return CLIMB_COLORS[cat] ?? '#06b6d4';
 }
+
 
 async function parseGpxPoints(gpxUrl: string): Promise<ElevationPoint[]> {
   const response = await fetch(gpxUrl);
@@ -82,6 +85,15 @@ async function parseGpxPoints(gpxUrl: string): Promise<ElevationPoint[]> {
 }
 
 // ── Mini chart inside modal ───────────────────────────────────────────────
+function gradeColor(grade: number): string {
+  const abs = Math.abs(grade);
+  if (abs < 3)  return '#FFFFFF';
+  if (abs < 6)  return '#00E5FF';
+  if (abs < 9)  return '#FFD600';
+  if (abs < 12) return '#FF6D00';
+  return '#FF1744';
+}
+
 function ClimbModal({
   climb,
   allPoints,
@@ -92,25 +104,76 @@ function ClimbModal({
   onClose: () => void;
 }) {
   const color = getCategoryColor(climb.category);
-
-  // Slice points for this climb with buffer
-  const buffer = climb.endKm - climb.startKm;
-  const fromKm = Math.max(0, climb.startKm - buffer * 0.15);
-  const toKm = climb.endKm + buffer * 0.15;
+  const buffer = (climb.endKm - climb.startKm) * 0.15;
+  const fromKm = Math.max(0, climb.startKm - buffer);
+  const toKm = climb.endKm + buffer;
   const points = allPoints.filter(p => p.km >= fromKm && p.km <= toKm);
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload?.length) {
-      const pt = payload[0].payload;
-      return (
-        <div className="bg-[#0A1628] border border-white/20 rounded-lg px-3 py-2 text-xs">
-          <p className="text-cyan-400 font-bold">{pt.km} km</p>
-          <p className="text-white">{pt.elevation}m</p>
-        </div>
-      );
-    }
-    return null;
-  };
+  // Calculate grade for each point
+  const pointsWithGrade = points.map((p, i) => {
+    if (i === 0) return { ...p, grade: 0 };
+    const dKm = p.km - points[i-1].km;
+    const dElev = p.elevation - points[i-1].elevation;
+    const grade = dKm > 0 ? (dElev / (dKm * 1000)) * 100 : 0;
+    return { ...p, grade: Math.max(-30, Math.min(30, grade)) };
+  });
+
+  if (points.length === 0) return null;
+
+  const minElev = Math.min(...points.map(p => p.elevation));
+  const maxElev = Math.max(...points.map(p => p.elevation));
+  const elevRange = Math.max(1, maxElev - minElev);
+  const minKm = points[0].km;
+  const maxKm = points[points.length - 1].km;
+  const kmRange = Math.max(0.1, maxKm - minKm);
+
+  // SVG dimensions
+  const W = 600, H = 200, PAD = 40;
+  const cw = W - PAD * 2;
+  const ch = H - PAD * 2;
+
+  const toX = (km: number) => PAD + ((km - minKm) / kmRange) * cw;
+  const toY = (elev: number) => PAD + ch - ((elev - minElev) / elevRange) * ch;
+
+  // Build grade-colored polygon segments
+const segments: React.ReactElement[] = [];
+  for (let i = 1; i < pointsWithGrade.length; i++) {
+    const prev = pointsWithGrade[i-1];
+    const curr = pointsWithGrade[i];
+    const x1 = toX(prev.km), y1 = toY(prev.elevation);
+    const x2 = toX(curr.km), y2 = toY(curr.elevation);
+    const yBase = toY(minElev);
+    const col = gradeColor(curr.grade);
+    segments.push(
+      <polygon
+        key={i}
+        points={`${x1},${yBase} ${x1},${y1} ${x2},${y2} ${x2},${yBase}`}
+        fill={col}
+        fillOpacity={0.6}
+        stroke={col}
+        strokeWidth={1.5}
+        strokeOpacity={0.9}
+      />
+    );
+  }
+
+  // Climb zone highlight
+  const zoneX1 = toX(climb.startKm);
+  const zoneX2 = toX(climb.endKm);
+
+  // Y axis labels
+  const yLabels = [0, 0.25, 0.5, 0.75, 1].map(f => {
+    const elev = minElev + elevRange * f;
+    const y = toY(elev);
+    return { elev: Math.round(elev), y };
+  });
+
+  // X axis labels
+  const xLabels = [0, 0.25, 0.5, 0.75, 1].map(f => {
+    const km = minKm + kmRange * f;
+    const x = toX(km);
+    return { km: km.toFixed(1), x };
+  });
 
   return (
     <div
@@ -150,58 +213,87 @@ function ClimbModal({
           </button>
         </div>
 
-        {/* Chart */}
-        <div style={{ width: '100%', height: '220px' }}>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={points} margin={{ top: 10, right: 5, bottom: 5, left: 40 }}>
-              <defs>
-                <linearGradient id="climbGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.4} />
-                  <stop offset="95%" stopColor={color} stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <XAxis
-                dataKey="km"
-                type="number"
-                domain={['dataMin', 'dataMax']}
-                tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v) => `${v}km`}
-                interval="preserveStartEnd"
+        {/* Grade-colored SVG chart */}
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          width="100%"
+          style={{ background: 'transparent' }}
+        >
+          {/* Climb zone background */}
+          <rect
+            x={zoneX1} y={PAD}
+            width={zoneX2 - zoneX1} height={ch}
+            fill={color} fillOpacity={0.08}
+          />
+          <line
+            x1={zoneX1} y1={PAD} x2={zoneX1} y2={PAD + ch}
+            stroke={color} strokeWidth={1} strokeOpacity={0.5}
+            strokeDasharray="4 2"
+          />
+          <line
+            x1={zoneX2} y1={PAD} x2={zoneX2} y2={PAD + ch}
+            stroke={color} strokeWidth={1} strokeOpacity={0.5}
+            strokeDasharray="4 2"
+          />
+
+          {/* Grade-colored segments */}
+          {segments}
+
+          {/* Y axis labels */}
+          {yLabels.map(({ elev, y }) => (
+            <text
+              key={elev}
+              x={PAD - 4} y={y + 4}
+              textAnchor="end"
+              fill="rgba(255,255,255,0.4)"
+              fontSize={10}
+            >
+              {elev}m
+            </text>
+          ))}
+
+          {/* X axis labels */}
+          {xLabels.map(({ km, x }) => (
+            <text
+              key={km}
+              x={x} y={H - PAD + 14}
+              textAnchor="middle"
+              fill="rgba(255,255,255,0.4)"
+              fontSize={10}
+            >
+              {km}km
+            </text>
+          ))}
+
+          {/* Base line */}
+          <line
+            x1={PAD} y1={PAD + ch}
+            x2={PAD + cw} y2={PAD + ch}
+            stroke="rgba(255,255,255,0.1)" strokeWidth={1}
+          />
+        </svg>
+
+        {/* Grade legend */}
+        <div className="flex gap-4 justify-center mt-3">
+          {[
+            { label: '0-3%', color: '#FFFFFF' },
+            { label: '3-6%', color: '#00E5FF' },
+            { label: '6-9%', color: '#FFD600' },
+            { label: '9-12%', color: '#FF6D00' },
+            { label: '>12%', color: '#FF1744' },
+          ].map(({ label, color: c }) => (
+            <div key={label} className="flex items-center gap-1">
+              <div
+                className="w-3 h-3 rounded-sm"
+                style={{ backgroundColor: c, boxShadow: `0 0 4px ${c}80` }}
               />
-              <YAxis
-                tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v) => `${v}m`}
-                width={40}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <ReferenceArea
-                x1={climb.startKm}
-                x2={climb.endKm}
-                fill={color}
-                fillOpacity={0.15}
-                stroke={color}
-                strokeOpacity={0.4}
-                strokeWidth={1}
-              />
-              <Area
-                type="monotone"
-                dataKey="elevation"
-                stroke={color}
-                strokeWidth={2}
-                fill="url(#climbGradient)"
-                dot={false}
-                activeDot={{ r: 4, fill: color, stroke: '#0A1628', strokeWidth: 2 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+              <span className="text-white/50 text-xs">{label}</span>
+            </div>
+          ))}
         </div>
 
-        <p className="text-white/30 text-xs text-center mt-3">
-          Κλείσιμο με κλικ έξω από το παράθυρο
+        <p className="text-white/20 text-xs text-center mt-3">
+          Κλικ έξω για κλείσιμο
         </p>
       </div>
     </div>
