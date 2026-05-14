@@ -29,11 +29,10 @@ interface ElevationChartProps {
   gpxUrl: string;
   climbProfile?: ClimbSegment[];
   storedAscent?: number;
-  // Optional controlled scrubber — when provided by parent, chart syncs with map
   scrubberKm?: number | null;
   onScrub?: (km: number | null) => void;
-    defaultZoomed?: boolean; // ← ADD
-    zoomedPxPerKm?: number; // ← ADD
+  defaultZoomed?: boolean;
+  zoomedPxPerKm?: number;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -42,7 +41,6 @@ const CLIMB_COLORS: Record<string, string> = {
 };
 const PAD = { top: 24, right: 16, bottom: 32, left: 44 };
 const CHART_H = 280;
-const ZOOMED_PX_PER_KM = 6;
 
 function getCategoryColor(cat: string): string { return CLIMB_COLORS[cat] ?? '#06b6d4'; }
 
@@ -119,15 +117,14 @@ async function parseGpxFull(gpxUrl: string): Promise<RawPoint[]> {
 function buildDisplayPoints(raw: RawPoint[], smoothed: number[], targetCount: number): ElevationPoint[] {
   const n = raw.length;
   if (n === 0) return [];
-
   const step = Math.max(1, Math.floor(n / targetCount));
   const result: ElevationPoint[] = [];
-
   for (let i = 0; i < n; i += step) {
     const prevI = Math.max(0, i - step);
     const dM = (raw[i].distKm - raw[prevI].distKm) * 1000;
+    // ── Round grade to 1 decimal to kill float noise ──
     const grade = i > 0 && dM > 0
-      ? Math.max(-30, Math.min(30, ((smoothed[i] - smoothed[prevI]) / dM) * 100))
+      ? Math.round(Math.max(-30, Math.min(30, ((smoothed[i] - smoothed[prevI]) / dM) * 100)) * 10) / 10
       : 0;
     result.push({
       km: Math.round(raw[i].distKm * 10) / 10,
@@ -135,15 +132,11 @@ function buildDisplayPoints(raw: RawPoint[], smoothed: number[], targetCount: nu
       grade,
     });
   }
-
-  // ── Always include the very last point exactly ──────────────
-  // Prevents the chart from stopping short of the actual total distance
   const lastRaw = raw[n - 1];
   const lastKm = Math.round(lastRaw.distKm * 10) / 10;
   if (result.length === 0 || result[result.length - 1].km !== lastKm) {
     result.push({ km: lastKm, elevation: Math.round(smoothed[n - 1]), grade: 0 });
   }
-
   return result;
 }
 
@@ -197,10 +190,10 @@ function SvgElevationChart({
     y: toY(minElev + elevRange * f),
   }));
 
-  const xStep = kmRange <= 100 ? 10 : kmRange <= 300 ? 25 : kmRange <= 600 ? 50 : 100;
+  const xStep = kmRange <= 5 ? 1 : kmRange <= 20 ? 5 : kmRange <= 100 ? 10 : kmRange <= 300 ? 25 : kmRange <= 600 ? 50 : 100;
   const xLabels: { km: number; x: number }[] = [];
   for (let km = Math.ceil(minKm / xStep) * xStep; km <= maxKm; km += xStep) {
-    xLabels.push({ km, x: toX(km) });
+    xLabels.push({ km: Math.round(km * 10) / 10, x: toX(km) });
   }
 
   const climbZones = climbSegments.map((c, i) => {
@@ -311,6 +304,19 @@ function ClimbModal({ climb, allRaw, onClose }: {
   const [points, setPoints] = useState<ElevationPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [scrubberKm, setScrubberKm] = useState<number | null>(null);
+
+  // ── Measure chart container width for dynamic 2:1 ratio ──────────────
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [chartW, setChartW] = useState(600);
+
+  useEffect(() => {
+    const obs = new ResizeObserver(entries => {
+      setChartW(Math.floor(entries[0].contentRect.width));
+    });
+    if (chartContainerRef.current) obs.observe(chartContainerRef.current);
+    return () => obs.disconnect();
+  }, []);
+
   const color = getCategoryColor(climb.category);
   const buffer = (climb.endKm - climb.startKm) * 0.15;
   const fromKm = Math.max(0, climb.startKm - buffer);
@@ -324,7 +330,10 @@ function ClimbModal({ climb, allRaw, onClose }: {
     const smoothed = savitzkyGolay(sliceRel, 150);
     const pts: ElevationPoint[] = sliceRel.map((p, i) => {
       const dM = i > 0 ? (p.distKm - sliceRel[i-1].distKm) * 1000 : 0;
-      const grade = dM > 0 ? Math.max(-30, Math.min(30, ((smoothed[i]-smoothed[i-1])/dM)*100)) : 0;
+      // ── Round grade to 1 decimal ──────────────────────────────────────
+      const grade = dM > 0
+        ? Math.round(Math.max(-30, Math.min(30, ((smoothed[i]-smoothed[i-1])/dM)*100)) * 10) / 10
+        : 0;
       return { km: slice[0].distKm + p.distKm, elevation: smoothed[i], grade };
     });
     setPoints(pts);
@@ -340,6 +349,8 @@ function ClimbModal({ climb, allRaw, onClose }: {
       onClick={onClose}>
       <div className="bg-[#0A1628] border border-white/10 rounded-2xl p-6 w-full max-w-3xl mx-4 shadow-2xl"
         onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <span className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
@@ -356,22 +367,32 @@ function ClimbModal({ climb, allRaw, onClose }: {
           </div>
           <button onClick={onClose} className="text-white/40 hover:text-white text-2xl leading-none">×</button>
         </div>
+
+        {/* Scrubber bar */}
         <div className="bg-white/5 rounded-lg border border-white/10 mb-2">
           <ScrubberBar point={scrubPoint} />
         </div>
+
+        {/* Chart — full width, 2:1 ratio */}
         {loading ? (
           <div className="h-48 flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="w-full overflow-hidden rounded-lg">
+          <div ref={chartContainerRef} className="w-full overflow-hidden rounded-lg">
             <SvgElevationChart
-              points={points} width={568} height={320}
-              climbSegments={[climb]} showClimbLabels={false}
-              scrubberKm={scrubberKm} onScrub={setScrubberKm}
+              points={points}
+              width={chartW}
+              height={Math.round(chartW / 2)}
+              climbSegments={[climb]}
+              showClimbLabels={false}
+              scrubberKm={scrubberKm}
+              onScrub={setScrubberKm}
             />
           </div>
         )}
+
+        {/* Grade legend */}
         <div className="flex gap-4 justify-center mt-3 flex-wrap">
           {[
             { label: '0-3%', color: '#FFFFFF' }, { label: '3-6%', color: '#00E5FF' },
@@ -395,8 +416,8 @@ export default function ElevationChart({
   gpxUrl, climbProfile = [], storedAscent,
   scrubberKm: controlledScrubberKm,
   onScrub: controlledOnScrub,
-   defaultZoomed = false, // ← ADD
-   zoomedPxPerKm = 10  // ← ADD
+  defaultZoomed = false,
+  zoomedPxPerKm = 6,
 }: ElevationChartProps) {
   const [displayPoints, setDisplayPoints] = useState<ElevationPoint[]>([]);
   const [allRaw, setAllRaw] = useState<RawPoint[]>([]);
@@ -408,18 +429,12 @@ export default function ElevationChart({
   const [selectedClimb, setSelectedClimb] = useState<ClimbSegment | null>(null);
   const [zoomed, setZoomed] = useState(defaultZoomed);
 
-  // Internal scrubber state — used when no controlled props provided
   const [internalScrubberKm, setInternalScrubberKm] = useState<number | null>(null);
-
-  // Use controlled or internal — controlled wins when both present
   const isControlled = controlledOnScrub !== undefined;
   const scrubberKm = isControlled ? (controlledScrubberKm ?? null) : internalScrubberKm;
   const onScrub = useCallback((km: number | null) => {
-    if (isControlled) {
-      controlledOnScrub?.(km);
-    } else {
-      setInternalScrubberKm(km);
-    }
+    if (isControlled) { controlledOnScrub?.(km); }
+    else { setInternalScrubberKm(km); }
   }, [isControlled, controlledOnScrub]);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -460,8 +475,10 @@ export default function ElevationChart({
 
   const displayAscent = storedAscent && storedAscent > 0 ? storedAscent : totalAscent;
   const totalKm = displayPoints.length > 0 ? displayPoints[displayPoints.length-1].km : 0;
+
+  // ── Use the zoomedPxPerKm PROP (not the old constant) ────────────────
   const svgWidth = zoomed
-    ? Math.round(totalKm * ZOOMED_PX_PER_KM) + PAD.left + PAD.right
+    ? Math.round(totalKm * zoomedPxPerKm) + PAD.left + PAD.right
     : Math.max(containerW, 300);
 
   const scrubPoint = scrubberKm !== null && displayPoints.length > 0
@@ -521,7 +538,8 @@ export default function ElevationChart({
                   <path strokeLinecap="round" strokeLinejoin="round"
                     d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
                 </svg>
-                Zoom ({ZOOMED_PX_PER_KM}px/km)
+                {/* Show the actual prop value in the label */}
+                Zoom ({zoomedPxPerKm}px/km)
               </>
             )}
           </button>
