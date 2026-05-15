@@ -104,7 +104,7 @@ function TCModal({
           Παρακαλώ ανοίξτε τον κανονισμό σε νέα καρτέλα, διαβάστε τον
           και επιστρέψτε για να αποδεχτείτε.
         </p>
-        
+        <a
           href={org.url}
           target="_blank"
           rel="noopener noreferrer"
