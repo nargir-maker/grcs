@@ -80,15 +80,41 @@ function TCModal({
             className="text-white/40 hover:text-white text-2xl leading-none transition-colors">×</button>
         </div>
 
-        {/* iframe */}
-        <div className="flex-1 overflow-hidden">
-          <iframe
-            src={org.url}
-            className="w-full h-full border-0"
-            title={`Κανονισμός ${org.name}`}
-            sandbox="allow-same-origin allow-scripts allow-popups"
-          />
-        </div>
+{/* iframe or fallback */}
+<div className="flex-1 overflow-hidden flex flex-col">
+  {org.embeddable ? (
+    <iframe
+      src={org.url}
+      className="w-full h-full border-0"
+      title={`Κανονισμός ${org.name}`}
+      sandbox="allow-same-origin allow-scripts allow-popups"
+    />
+  ) : (
+    <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center">
+      <img src={org.logo} alt={org.name}
+        className="w-20 h-20 object-contain rounded-full bg-white/10"
+        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+      />
+      <div>
+        <p className="text-white font-bold text-lg mb-2">Κανονισμός {org.name}</p>
+        <p className="text-white/50 text-sm leading-relaxed mb-6">
+          Ο ιστότοπος της {org.name} δεν επιτρέπει την προβολή εντός της εφαρμογής.
+          Παρακαλώ ανοίξτε τον κανονισμό σε νέα καρτέλα, διαβάστε τον
+          και επιστρέψτε για να αποδεχτείτε.
+        </p>
+        
+          href={org.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm transition-colors"
+          style={{ backgroundColor: org.color }}
+        >
+          📄 Άνοιγμα Κανονισμού {org.name} →
+        </a>
+      </div>
+    </div>
+  )}
+</div>
 
         {/* Footer */}
         <div className="p-5 border-t border-white/10 shrink-0 flex flex-col sm:flex-row gap-3 items-center justify-between">
