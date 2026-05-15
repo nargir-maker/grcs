@@ -7,16 +7,18 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 // ── T&C sources ───────────────────────────────────────────────────────────
 const TC = {
   LEPOTE: {
-    url: 'https://brevets.gr/brevets/%CE%B8%CE%AD%CE%BB%CE%B5%CF%84%CE%B5-%CE%BD%CE%B1-%CF%80%CE%AC%CF%81%CE%B5%CF%84%CE%B5-%CE%BC%CE%AD%CF%81%CE%BF%CF%82-%CF%83%E2%80%99-%CE%AD%CE%BD%CE%B1-brevet.html',
+    url: '...',
     name: 'ΛΕ.ΠΟ.Τ.Ε.',
     logo: '/logos/650000.png',
     color: '#0077B6',
+    embeddable: true,   // ← works in iframe
   },
   HAR: {
     url: 'https://www.hellenic-autonomous-randonneur.com/kanonismos/',
     name: 'H.A.R.',
     logo: '/logos/659999.png',
     color: '#6A1B9A',
+    embeddable: false,  // ← blocks iframe, use fallback
   },
 };
 
