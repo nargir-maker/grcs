@@ -50,6 +50,7 @@ interface BrevetDetail {
   date: string;
   organizer: string;
   organizerId: string;
+  coOrganizerId: string;       // ← NEW
   start: string;
   finish: string;
   ascent: number;
@@ -108,13 +109,9 @@ function getOpenTime(cpKm: number, startDate: Date): string {
 
 function getCloseTime(cpKm: number, startDate: Date): string {
   let hours: number;
-  if (cpKm === 0) {
-    hours = 1;
-  } else if (cpKm <= 600) {
-    hours = cpKm / 15;
-  } else {
-    hours = cpKm / 11.428;
-  }
+  if (cpKm === 0) { hours = 1; }
+  else if (cpKm <= 600) { hours = cpKm / 15; }
+  else { hours = cpKm / 11.428; }
   const closeTime = new Date(startDate.getTime() + hours * 3600000);
   return closeTime.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
 }
@@ -126,8 +123,6 @@ export default function BrevetDetailPage() {
   const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
   const [showForm, setShowForm] = useState(false);
-
-  // ── Shared scrubber state — drives both map dot and chart cursor ──────────
   const [scrubberKm, setScrubberKm] = useState<number | null>(null);
   const handleScrub = useCallback((km: number | null) => setScrubberKm(km), []);
 
@@ -150,7 +145,9 @@ export default function BrevetDetailPage() {
         const route = d.route || {};
         const extra = d.extra || {};
 
-        const organizerId = info.organizerId?.toString() ?? '';
+        const organizerId   = info.organizerId?.toString()   ?? '';
+        const coOrganizerId = info.coOrganizerId?.toString() ?? ''; // ← NEW
+
         let organizerName = '';
         let organizerLogo = '/logos/000000.png';
         if (organizerId) {
@@ -191,6 +188,7 @@ export default function BrevetDetailPage() {
           date:            parsedDate,
           organizer:       organizerName,
           organizerId,
+          coOrganizerId,                                             // ← NEW
           start:           route.start?.toString()        ?? '',
           finish:          route.finish?.toString()       ?? '',
           ascent,
@@ -264,17 +262,16 @@ export default function BrevetDetailPage() {
     );
   }
 
-  const startDate = brevet.date ? new Date(brevet.date) : null;
+  const startDate  = brevet.date ? new Date(brevet.date) : null;
+  const isCoOrg    = brevet.coOrganizerId && brevet.coOrganizerId !== '' && brevet.coOrganizerId !== '0';
 
   return (
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
       <div className="max-w-3xl mx-auto">
 
         {/* ── BACK ───────────────────────────────────── */}
-        <a
-          href="/brevets"
-          className="inline-flex items-center gap-2 text-white/40 hover:text-white text-sm mb-8 transition-colors"
-        >
+        <a href="/brevets"
+          className="inline-flex items-center gap-2 text-white/40 hover:text-white text-sm mb-8 transition-colors">
           ← Πίσω στα Brevets
         </a>
 
@@ -287,9 +284,10 @@ export default function BrevetDetailPage() {
             )}
           </div>
           <div className="absolute left-1/2 -translate-x-1/2 -bottom-8 z-10">
+            {/* ── Co-org: show both.png, single: organizer logo ── */}
             <img
-              src={brevet.organizerLogo}
-              alt={brevet.organizer}
+              src={isCoOrg ? '/logos/both.png' : brevet.organizerLogo}
+              alt={isCoOrg ? 'Συνδιοργάνωση' : brevet.organizer}
               className="w-40 h-40 object-contain rounded-full border-2 border-white/10 drop-shadow-2xl bg-[#0A1628]"
               onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
             />
@@ -298,9 +296,12 @@ export default function BrevetDetailPage() {
 
         {/* ── TITLE ──────────────────────────────────── */}
         <div className="mt-10 mb-8 text-center">
-          {brevet.organizer && (
+          {/* Co-org label or organizer name */}
+          {isCoOrg ? (
+            <p className="text-cyan-400 text-sm font-bold mb-1">🤝 Συνδιοργάνωση</p>
+          ) : brevet.organizer ? (
             <p className="text-white/40 text-sm mb-2">{brevet.organizer}</p>
-          )}
+          ) : null}
           <div className="flex items-center justify-center gap-4 mb-3">
             <h1 className="text-3xl font-bold text-white leading-tight">{brevet.title}</h1>
             <span className="bg-cyan-500/10 text-cyan-400 text-sm font-bold px-4 py-2 rounded-full border border-cyan-500/20 shrink-0">
@@ -371,7 +372,6 @@ export default function BrevetDetailPage() {
             </div>
           </div>
 
-          {/* Map — receives scrubberKm to show moving dot */}
           {brevet.gpxUrl && (
             <div className="mt-6">
               <BrevetMap
@@ -470,9 +470,7 @@ export default function BrevetDetailPage() {
                       </td>
                       <td className="py-3 text-center">
                         <span className={`text-xs px-2 py-1 rounded-full ${
-                          cp.isManned
-                            ? 'bg-orange-500/10 text-orange-400'
-                            : 'bg-white/5 text-white/40'
+                          cp.isManned ? 'bg-orange-500/10 text-orange-400' : 'bg-white/5 text-white/40'
                         }`}>
                           {cp.isManned ? '👤 Επανδρωμένο' : '📸 Self-check'}
                         </span>
@@ -524,7 +522,6 @@ export default function BrevetDetailPage() {
             <h2 className="text-white font-bold text-lg mb-2">
               ⛰️ Προφίλ Υψομέτρου & Ανηφόρες
             </h2>
-            {/* ElevationChart — controlled scrubber, drives the map dot */}
             <ElevationChart
               gpxUrl={brevet.gpxUrl}
               climbProfile={brevet.climbProfile}
@@ -540,9 +537,7 @@ export default function BrevetDetailPage() {
           <h2 className="text-white font-bold text-lg mb-2">🚴 Εγγραφή στο Brevet</h2>
           {!session ? (
             <div className="text-center py-6">
-              <p className="text-white/50 text-sm mb-4">
-                Συνδέσου για να εγγραφείς στο brevet
-              </p>
+              <p className="text-white/50 text-sm mb-4">Συνδέσου για να εγγραφείς στο brevet</p>
               <button onClick={() => signIn('google')}
                 className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-6 py-3 rounded-full text-sm transition-colors">
                 Σύνδεση με Google

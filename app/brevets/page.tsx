@@ -19,6 +19,7 @@ interface Brevet {
   organizer: string;
   organizerId: string;
   organizerLogo: string;
+  coOrganizerId: string;       // ← NEW
   start: string;
   ascent: number;
   certification: string;
@@ -28,7 +29,6 @@ interface Brevet {
   difficultyColor: string;
 }
 
-// ── Organizer option derived from loaded brevets ───────────────────
 interface OrganizerOption {
   id: string;
   name: string;
@@ -53,22 +53,21 @@ function computeBDI(wcs: number, km: number, ascent: number): number {
   return (km / 100) * (1 + ascent / (km * 8));
 }
 
-  // ── Build unique sorted organizer list from brevets ───────────────
-  function deriveOrganizers(data: Brevet[]): OrganizerOption[] {
-    const seen = new Map<string, OrganizerOption>();
-    data.forEach((b) => {
-      if (b.organizerId && !seen.has(b.organizerId)) {
-        seen.set(b.organizerId, {
-          id:   b.organizerId,
-          name: b.organizer,
-          logo: b.organizerLogo,
-        });
-      }
-    });
-    return Array.from(seen.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-  }
+function deriveOrganizers(data: Brevet[]): OrganizerOption[] {
+  const seen = new Map<string, OrganizerOption>();
+  data.forEach((b) => {
+    if (b.organizerId && !seen.has(b.organizerId)) {
+      seen.set(b.organizerId, {
+        id:   b.organizerId,
+        name: b.organizer,
+        logo: b.organizerLogo,
+      });
+    }
+  });
+  return Array.from(seen.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+}
 
 export default function BrevetsPage() {
   const [brevets, setBrevets] = useState<Brevet[]>([]);
@@ -79,8 +78,6 @@ export default function BrevetsPage() {
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
   const [monthFilter, setMonthFilter] = useState<number | null>(null);
   const [organizerFilter, setOrganizerFilter] = useState<string | null>(null);
-
-  // ── Derived list of organizers present in loaded brevets ──────────
   const [organizers, setOrganizers] = useState<OrganizerOption[]>([]);
 
   useEffect(() => {
@@ -134,7 +131,8 @@ export default function BrevetsPage() {
             if (!isNaN(d2.getTime())) parsedDate = d2.toISOString();
           } catch { parsedDate = ''; }
 
-          const orgId = info.organizerId?.toString() ?? '';
+          const orgId      = info.organizerId?.toString()   ?? '';
+          const coOrgId    = info.coOrganizerId?.toString() ?? '';  // ← NEW
 
           data.push({
             id:              doc.id,
@@ -144,6 +142,7 @@ export default function BrevetsPage() {
             organizer:       cachedClubs[orgId] ?? '',
             organizerId:     orgId,
             organizerLogo:   cachedLogos[orgId] ?? '/logos/000000.png',
+            coOrganizerId:   coOrgId,                               // ← NEW
             start:           route.start?.toString() ?? '',
             ascent,
             certification:   info.certification?.toString() ?? '',
@@ -175,23 +174,26 @@ export default function BrevetsPage() {
     fetchAll();
   }, []);
 
-
   const filtered = brevets.filter((b) => {
-    const matchDist       = filter === null || b.distance === filter;
-    const matchYear       = yearFilter === null ||
+    const matchDist      = filter === null || b.distance === filter;
+    const matchYear      = yearFilter === null ||
       new Date(b.date).getFullYear() === yearFilter;
-    const matchMonth      = monthFilter === null ||
+    const matchMonth     = monthFilter === null ||
       new Date(b.date).getMonth() + 1 === monthFilter;
-    const matchDiff       = difficultyFilter === null ||
+    const matchDiff      = difficultyFilter === null ||
       b.difficultyLabel === difficultyFilter;
-    const matchOrganizer  = organizerFilter === null ||
+    const matchOrganizer = organizerFilter === null ||
       b.organizerId === organizerFilter;
-    const matchSearch     = search === '' ||
+    const matchSearch    = search === '' ||
       b.title.toLowerCase().includes(search.toLowerCase()) ||
       b.start.toLowerCase().includes(search.toLowerCase()) ||
       b.organizer.toLowerCase().includes(search.toLowerCase());
     return matchDist && matchYear && matchMonth && matchDiff && matchOrganizer && matchSearch;
   });
+
+  // ── Helper: does this brevet have a co-organizer? ──────────────────
+  const hasCoOrg = (b: Brevet) =>
+    b.coOrganizerId && b.coOrganizerId !== '' && b.coOrganizerId !== '0';
 
   return (
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
@@ -199,12 +201,8 @@ export default function BrevetsPage() {
 
         {/* ── HEADER ─────────────────────────────────── */}
         <div className="mb-10">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            📅 Ημερολόγιο Brevet
-          </h1>
-          <p className="text-white/50">
-            Όλα τα προγραμματισμένα brevets της σεζόν
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-2">📅 Ημερολόγιο Brevet</h1>
+          <p className="text-white/50">Όλα τα προγραμματισμένα brevets της σεζόν</p>
         </div>
 
         {/* ── FILTERS ────────────────────────────────── */}
@@ -269,11 +267,7 @@ export default function BrevetsPage() {
                     ? 'border-transparent text-white'
                     : 'bg-white/5 text-white/60 hover:text-white border-white/10'
                 }`}
-                style={
-                  difficultyFilter === d.label
-                    ? { backgroundColor: d.color ?? '#06b6d4' }
-                    : {}
-                }
+                style={difficultyFilter === d.label ? { backgroundColor: d.color ?? '#06b6d4' } : {}}
               >
                 {d.display}
               </button>
@@ -285,18 +279,12 @@ export default function BrevetsPage() {
             <span className="text-white/30 text-xs w-16">Μήνας:</span>
             {[
               { value: null, label: 'Όλοι' },
-              { value: 1,  label: 'Ιαν' },
-              { value: 2,  label: 'Φεβ' },
-              { value: 3,  label: 'Μαρ' },
-              { value: 4,  label: 'Απρ' },
-              { value: 5,  label: 'Μαϊ' },
-              { value: 6,  label: 'Ιουν' },
-              { value: 7,  label: 'Ιουλ' },
-              { value: 8,  label: 'Αυγ' },
-              { value: 9,  label: 'Σεπ' },
-              { value: 10, label: 'Οκτ' },
-              { value: 11, label: 'Νοε' },
-              { value: 12, label: 'Δεκ' },
+              { value: 1,  label: 'Ιαν' }, { value: 2,  label: 'Φεβ' },
+              { value: 3,  label: 'Μαρ' }, { value: 4,  label: 'Απρ' },
+              { value: 5,  label: 'Μαϊ' }, { value: 6,  label: 'Ιουν' },
+              { value: 7,  label: 'Ιουλ' }, { value: 8,  label: 'Αυγ' },
+              { value: 9,  label: 'Σεπ' }, { value: 10, label: 'Οκτ' },
+              { value: 11, label: 'Νοε' }, { value: 12, label: 'Δεκ' },
             ].map((m) => (
               <button
                 key={m.label}
@@ -312,12 +300,10 @@ export default function BrevetsPage() {
             ))}
           </div>
 
-          {/* Row 5 — Organizer (with logos) */}
+          {/* Row 5 — Organizer */}
           {organizers.length > 1 && (
             <div className="flex gap-2 flex-wrap items-center">
               <span className="text-white/30 text-xs w-16">Διοργ.:</span>
-
-              {/* All button */}
               <button
                 onClick={() => setOrganizerFilter(null)}
                 className={`px-3 py-2 rounded-full text-xs font-bold transition-colors border ${
@@ -328,8 +314,6 @@ export default function BrevetsPage() {
               >
                 Όλοι
               </button>
-
-              {/* One chip per organizer — logo + short name */}
               {organizers.map((org) => {
                 const isSelected = organizerFilter === org.id;
                 return (
@@ -343,13 +327,9 @@ export default function BrevetsPage() {
                         : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/30'
                     }`}
                   >
-                    <img
-                      src={org.logo}
-                      alt={org.name}
+                    <img src={org.logo} alt={org.name}
                       className="w-6 h-6 rounded-full object-contain bg-white/10"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/logos/000000.png';
-                      }}
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                     />
                     <span className="max-w-[100px] truncate">{org.name}</span>
                   </button>
@@ -374,103 +354,117 @@ export default function BrevetsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {filtered.map((b) => (
-              <a
-                key={b.id}
-                href={`/brevets/${b.id}`}
-                className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/30 transition-colors cursor-pointer block no-underline"
-              >
-                {/* Organizer row */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={b.organizerLogo}
-                      alt={b.organizer}
-                      className="w-10 h-10 object-contain rounded-full"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/logos/000000.png';
-                      }}
-                    />
-                    <span className="text-white/60 text-xs font-medium">
-                      {b.organizer}
+            {filtered.map((b) => {
+              const isCoOrg = hasCoOrg(b);
+              return (
+                <a
+                  key={b.id}
+                  href={`/brevets/${b.id}`}
+                  className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/30 transition-colors cursor-pointer block no-underline"
+                >
+                  {/* ── Organizer row ───────────────────── */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      {isCoOrg ? (
+                        // Co-organized — show both.png logo
+                        <>
+                          <img
+                            src="/logos/both.png"
+                            alt="Συνδιοργάνωση"
+                            className="w-10 h-10 object-contain rounded-full bg-white/5"
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-cyan-400 text-xs font-bold leading-tight">
+                              Συνδιοργάνωση
+                            </span>
+                            <span className="text-white/40 text-xs leading-tight">
+                              {b.organizer}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        // Single organizer
+                        <>
+                          <img
+                            src={b.organizerLogo}
+                            alt={b.organizer}
+                            className="w-10 h-10 object-contain rounded-full"
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
+                          />
+                          <span className="text-white/60 text-xs font-medium">
+                            {b.organizer}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <span className="bg-cyan-500/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/20">
+                      {b.distance}km
                     </span>
                   </div>
-                  <span className="bg-cyan-500/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/20">
-                    {b.distance}km
-                  </span>
-                </div>
 
-                {/* Title */}
-                <h3 className="text-white font-bold text-base leading-tight mb-1">
-                  {b.title}
-                </h3>
-                <p className="text-white/40 text-xs mb-4">
-                  📍 {b.start}
-                </p>
+                  {/* Title */}
+                  <h3 className="text-white font-bold text-base leading-tight mb-1">{b.title}</h3>
+                  <p className="text-white/40 text-xs mb-4">📍 {b.start}</p>
 
-                {/* Date */}
-                <div className="mb-4">
-                  <span className="text-white/50 text-xs">
-                    📅 {b.date
-                      ? new Date(b.date).toLocaleDateString('el-GR', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })
-                      : '—'}
-                  </span>
-                </div>
-
-                {/* Stats */}
-                <div className="flex items-center gap-4 mb-4">
-                  {b.ascent > 0 && (
-                    <span className="text-white/40 text-xs">
-                      ⛰️ {b.ascent.toLocaleString()}m+
+                  {/* Date */}
+                  <div className="mb-4">
+                    <span className="text-white/50 text-xs">
+                      📅 {b.date
+                        ? new Date(b.date).toLocaleDateString('el-GR', {
+                            day: 'numeric', month: 'long', year: 'numeric',
+                          })
+                        : '—'}
                     </span>
-                  )}
-                  {b.certification && (
-                    <span className="text-white/40 text-xs">{b.certification}</span>
-                  )}
-                  {b.type && (
-                    <span className="text-white/40 text-xs">{b.type}</span>
-                  )}
-                </div>
+                  </div>
 
-                {/* Bottom */}
-                <div className="flex items-center justify-between">
-                  <span
-                    className="text-xs font-bold px-3 py-1 rounded-full"
-                    style={{
-                      backgroundColor: b.difficultyColor + '20',
-                      color: b.difficultyColor,
-                      border: `1px solid ${b.difficultyColor}40`,
-                    }}
-                  >
-                    {b.difficultyLabel}
-                  </span>
-                  {b.gpxUrl && (
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.open(b.gpxUrl, '_blank');
+                  {/* Stats */}
+                  <div className="flex items-center gap-4 mb-4">
+                    {b.ascent > 0 && (
+                      <span className="text-white/40 text-xs">⛰️ {b.ascent.toLocaleString()}m+</span>
+                    )}
+                    {b.certification && (
+                      <span className="text-white/40 text-xs">{b.certification}</span>
+                    )}
+                    {b.type && (
+                      <span className="text-white/40 text-xs">{b.type}</span>
+                    )}
+                  </div>
+
+                  {/* Bottom */}
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="text-xs font-bold px-3 py-1 rounded-full"
+                      style={{
+                        backgroundColor: b.difficultyColor + '20',
+                        color: b.difficultyColor,
+                        border: `1px solid ${b.difficultyColor}40`,
                       }}
-                      className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
                     >
-                      GPX →
-                    </button>
-                  )}
-                </div>
-              </a>
-            ))}
+                      {b.difficultyLabel}
+                    </span>
+                    {b.gpxUrl && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          window.open(b.gpxUrl, '_blank');
+                        }}
+                        className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
+                      >
+                        GPX →
+                      </button>
+                    )}
+                  </div>
+                </a>
+              );
+            })}
           </div>
         )}
 
         {/* Count */}
         {!loading && (
-          <p className="text-white/30 text-xs text-center mt-8">
-            {filtered.length} brevets
-          </p>
+          <p className="text-white/30 text-xs text-center mt-8">{filtered.length} brevets</p>
         )}
       </div>
     </div>
