@@ -19,7 +19,7 @@ interface Brevet {
   organizer: string;
   organizerId: string;
   organizerLogo: string;
-  coOrganizerId: string;       // ← NEW
+  coOrganizerId: string;
   start: string;
   ascent: number;
   certification: string;
@@ -36,12 +36,12 @@ interface OrganizerOption {
 }
 
 function getDifficultyLabel(bdi: number): { label: string; color: string } {
-  if (bdi < 4)  return { label: 'ΕΥΚΟΛΟ',        color: '#2E7D32' };
-  if (bdi < 7)  return { label: 'ΜΕΤΡΙΟ',         color: '#F9A825' };
-  if (bdi < 10) return { label: 'ΔΥΣΚΟΛΟ',        color: '#E65100' };
-  if (bdi < 14) return { label: 'ΠΟΛΥ ΔΥΣΚΟΛΟ',  color: '#D32F2F' };
-  if (bdi < 19) return { label: 'ΑΚΡΑΙΟ',         color: '#6A1B9A' };
-  return         { label: 'ΘΡΥΛΙΚΟ',              color: '#1A1A1A' };
+  if (bdi < 4)  return { label: 'ΕΥΚΟΛΟ',       color: '#2E7D32' };
+  if (bdi < 7)  return { label: 'ΜΕΤΡΙΟ',        color: '#F9A825' };
+  if (bdi < 10) return { label: 'ΔΥΣΚΟΛΟ',       color: '#E65100' };
+  if (bdi < 14) return { label: 'ΠΟΛΥ ΔΥΣΚΟΛΟ', color: '#D32F2F' };
+  if (bdi < 19) return { label: 'ΑΚΡΑΙΟ',        color: '#6A1B9A' };
+  return         { label: 'ΘΡΥΛΙΚΟ',             color: '#1A1A1A' };
 }
 
 function computeBDI(wcs: number, km: number, ascent: number): number {
@@ -70,6 +70,7 @@ function deriveOrganizers(data: Brevet[]): OrganizerOption[] {
 }
 
 export default function BrevetsPage() {
+  // ── ALL STATE AT THE TOP ───────────────────────────
   const [brevets, setBrevets] = useState<Brevet[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<number | null>(null);
@@ -78,11 +79,29 @@ export default function BrevetsPage() {
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
   const [monthFilter, setMonthFilter] = useState<number | null>(null);
   const [organizerFilter, setOrganizerFilter] = useState<string | null>(() => {
-  if (typeof window === 'undefined') return null;
-  return new URLSearchParams(window.location.search).get('organizer');
-});
+    if (typeof window === 'undefined') return null;
+    return new URLSearchParams(window.location.search).get('organizer');
+  });
   const [organizers, setOrganizers] = useState<OrganizerOption[]>([]);
 
+  // ── ORGANIZER VIEW STATE ───────────────────────────
+  // isOrganizerView: true when landed from organizer dashboard
+  // myOrganizerClubId: stored so we can go back after "Δες όλα"
+  const [isOrganizerView, setIsOrganizerView] = useState(false);
+  const [myOrganizerClubId, setMyOrganizerClubId] = useState<string | null>(null);
+
+  // ── DETECT ORGANIZER VIEW ON MOUNT ────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const orgId = params.get('organizer');
+    if (orgId) {
+      setIsOrganizerView(true);
+      setMyOrganizerClubId(orgId);
+    }
+  }, []);
+
+  // ── FETCH BREVETS ──────────────────────────────────
   useEffect(() => {
     async function fetchAll() {
       try {
@@ -134,8 +153,8 @@ export default function BrevetsPage() {
             if (!isNaN(d2.getTime())) parsedDate = d2.toISOString();
           } catch { parsedDate = ''; }
 
-          const orgId      = info.organizerId?.toString()   ?? '';
-          const coOrgId    = info.coOrganizerId?.toString() ?? '';  // ← NEW
+          const orgId   = info.organizerId?.toString()   ?? '';
+          const coOrgId = info.coOrganizerId?.toString() ?? '';
 
           data.push({
             id:              doc.id,
@@ -145,7 +164,7 @@ export default function BrevetsPage() {
             organizer:       cachedClubs[orgId] ?? '',
             organizerId:     orgId,
             organizerLogo:   cachedLogos[orgId] ?? '/logos/000000.png',
-            coOrganizerId:   coOrgId,                               // ← NEW
+            coOrganizerId:   coOrgId,
             start:           route.start?.toString() ?? '',
             ascent,
             certification:   info.certification?.toString() ?? '',
@@ -177,14 +196,7 @@ export default function BrevetsPage() {
     fetchAll();
   }, []);
 
-useEffect(() => {
-  if (typeof window === 'undefined') return;
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('organizer')) {
-    setIsOrganizerView(true);
-  }
-}, []);
-
+  // ── FILTER LOGIC ───────────────────────────────────
   const filtered = brevets.filter((b) => {
     const matchDist      = filter === null || b.distance === filter;
     const matchYear      = yearFilter === null ||
@@ -199,12 +211,10 @@ useEffect(() => {
       b.title.toLowerCase().includes(search.toLowerCase()) ||
       b.start.toLowerCase().includes(search.toLowerCase()) ||
       b.organizer.toLowerCase().includes(search.toLowerCase());
-    return matchDist && matchYear && matchMonth && matchDiff && matchOrganizer && matchSearch;
+    return matchDist && matchYear && matchMonth && matchDiff &&
+      matchOrganizer && matchSearch;
   });
 
-const [isOrganizerView, setIsOrganizerView] = useState(false);
-
-  // ── Helper: does this brevet have a co-organizer? ──────────────────
   const hasCoOrg = (b: Brevet) =>
     b.coOrganizerId && b.coOrganizerId !== '' && b.coOrganizerId !== '0';
 
@@ -214,8 +224,12 @@ const [isOrganizerView, setIsOrganizerView] = useState(false);
 
         {/* ── HEADER ─────────────────────────────────── */}
         <div className="mb-10">
-          <h1 className="text-3xl font-bold text-white mb-2">📅 Ημερολόγιο Brevet</h1>
-          <p className="text-white/50">Όλα τα προγραμματισμένα brevets της σεζόν</p>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            📅 Ημερολόγιο Brevet
+          </h1>
+          <p className="text-white/50">
+            Όλα τα προγραμματισμένα brevets της σεζόν
+          </p>
         </div>
 
         {/* ── FILTERS ────────────────────────────────── */}
@@ -228,12 +242,15 @@ const [isOrganizerView, setIsOrganizerView] = useState(false);
               placeholder="Αναζήτηση brevet, πόλη, διοργανωτή..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 bg-white/5 border border-white/10 text-white placeholder-white/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
+              className="flex-1 bg-white/5 border border-white/10 text-white
+                placeholder-white/30 rounded-xl px-4 py-3 text-sm
+                focus:outline-none focus:border-cyan-500/50"
             />
             <select
               onChange={(e) => setYearFilter(parseInt(e.target.value) || null)}
               defaultValue="2026"
-              className="bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
+              className="bg-white/5 border border-white/10 text-white rounded-xl
+                px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
             >
               <option value="">Όλα τα χρόνια</option>
               <option value="2026">2026</option>
@@ -280,7 +297,11 @@ const [isOrganizerView, setIsOrganizerView] = useState(false);
                     ? 'border-transparent text-white'
                     : 'bg-white/5 text-white/60 hover:text-white border-white/10'
                 }`}
-                style={difficultyFilter === d.label ? { backgroundColor: d.color ?? '#06b6d4' } : {}}
+                style={
+                  difficultyFilter === d.label
+                    ? { backgroundColor: d.color ?? '#06b6d4' }
+                    : {}
+                }
               >
                 {d.display}
               </button>
@@ -313,75 +334,103 @@ const [isOrganizerView, setIsOrganizerView] = useState(false);
             ))}
           </div>
 
-          {/* Row 5 — Organizer */}
- {isOrganizerView ? (
-  // ── Organizer focused view banner ──────────
-  <div className="flex items-center justify-between
-    bg-purple-500/10 border border-purple-400/30
-    rounded-xl px-4 py-3">
-    <div className="flex items-center gap-2">
-      <span className="text-purple-300 text-sm">🏁</span>
-      <span className="text-purple-300 text-sm font-medium">
-        Εμφάνιση brevets του συλλόγου σου
-      </span>
-    </div>
-    <button
-      onClick={() => {
-        setIsOrganizerView(false);
-        setOrganizerFilter(null);
-        window.history.replaceState({}, '', '/brevets');
-      }}
-      className="text-xs text-purple-300 hover:text-white
-        border border-purple-400/30 hover:border-purple-400
-        px-3 py-1.5 rounded-lg transition-all"
-    >
-      Δες όλα →
-    </button>
-  </div>
-) : organizers.length > 1 ? (
-  // ── Normal organizer filter row ────────────
-  <div className="flex gap-2 flex-wrap items-center">
-    <span className="text-white/30 text-xs w-16">Διοργ.:</span>
-    <button
-      onClick={() => setOrganizerFilter(null)}
-      className={`px-3 py-2 rounded-full text-xs font-bold transition-colors border ${
-        organizerFilter === null
-          ? 'bg-cyan-500 text-black border-transparent'
-          : 'bg-white/5 text-white/60 hover:text-white border-white/10'
-      }`}
-    >
-      Όλοι
-    </button>
-    {organizers.map((org) => {
-      const isSelected = organizerFilter === org.id;
-      return (
-        <button
-          key={org.id}
-          onClick={() => setOrganizerFilter(isSelected ? null : org.id)}
-          title={org.name}
-          className={`flex items-center gap-2 pl-1 pr-3 py-1 rounded-full text-xs font-bold transition-all border ${
-            isSelected
-              ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400'
-              : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/30'
-          }`}
-        >
-          <img src={org.logo} alt={org.name}
-            className="w-6 h-6 rounded-full object-contain bg-white/10"
-            onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
-          />
-          <span className="max-w-[100px] truncate">{org.name}</span>
-        </button>
-      );
-    })}
-  </div>
-) : null}
+          {/* Row 5 — Organizer / Organizer view toggle */}
+          {isOrganizerView ? (
+            // ── ORGANIZER FOCUSED VIEW ─────────────────
+            <div className="flex items-center justify-between
+              bg-purple-500/10 border border-purple-400/30 rounded-xl px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="text-purple-300 text-sm">🏁</span>
+                <span className="text-purple-300 text-sm font-medium">
+                  Εμφάνιση brevets του συλλόγου σου
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setIsOrganizerView(false);
+                  setOrganizerFilter(null);
+                  window.history.replaceState({}, '', '/brevets');
+                }}
+                className="text-xs text-purple-300 hover:text-white
+                  border border-purple-400/30 hover:border-purple-400
+                  px-3 py-1.5 rounded-lg transition-all"
+              >
+                Δες όλα →
+              </button>
+            </div>
+          ) : organizers.length > 1 ? (
+            // ── NORMAL ORGANIZER FILTER ROW ────────────
+            <div className="flex gap-2 flex-wrap items-center">
+              <span className="text-white/30 text-xs w-16">Διοργ.:</span>
+
+              {/* ── "Τα δικά μου" button — only if came from dashboard ── */}
+              {myOrganizerClubId && (
+                <button
+                  onClick={() => {
+                    setOrganizerFilter(myOrganizerClubId);
+                    setIsOrganizerView(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-full
+                    text-xs font-bold border bg-purple-500/20
+                    border-purple-400/40 text-purple-300
+                    hover:bg-purple-500/30 transition-all"
+                >
+                  🏁 Τα δικά μου
+                </button>
+              )}
+
+              <button
+                onClick={() => setOrganizerFilter(null)}
+                className={`px-3 py-2 rounded-full text-xs font-bold
+                  transition-colors border ${
+                  organizerFilter === null
+                    ? 'bg-cyan-500 text-black border-transparent'
+                    : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                }`}
+              >
+                Όλοι
+              </button>
+
+              {organizers.map((org) => {
+                const isSelected = organizerFilter === org.id;
+                return (
+                  <button
+                    key={org.id}
+                    onClick={() =>
+                      setOrganizerFilter(isSelected ? null : org.id)
+                    }
+                    title={org.name}
+                    className={`flex items-center gap-2 pl-1 pr-3 py-1
+                      rounded-full text-xs font-bold transition-all border ${
+                      isSelected
+                        ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400'
+                        : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                    }`}
+                  >
+                    <img
+                      src={org.logo}
+                      alt={org.name}
+                      className="w-6 h-6 rounded-full object-contain bg-white/10"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          '/logos/000000.png';
+                      }}
+                    />
+                    <span className="max-w-[100px] truncate">{org.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
         </div>
 
         {/* ── CONTENT ────────────────────────────────── */}
         {loading ? (
           <div className="flex items-center justify-center py-24">
             <div className="text-center">
-              <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <div className="w-8 h-8 border-2 border-cyan-500
+                border-t-transparent rounded-full animate-spin mx-auto mb-4" />
               <p className="text-white/50 text-sm">Φόρτωση brevets...</p>
             </div>
           </div>
@@ -397,19 +446,23 @@ const [isOrganizerView, setIsOrganizerView] = useState(false);
                 <a
                   key={b.id}
                   href={`/brevets/${b.id}`}
-                  className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/30 transition-colors cursor-pointer block no-underline"
+                  className="bg-white/5 border border-white/10 rounded-2xl p-6
+                    hover:border-cyan-500/30 transition-colors cursor-pointer
+                    block no-underline"
                 >
-                  {/* ── Organizer row ───────────────────── */}
+                  {/* Organizer row */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       {isCoOrg ? (
-                        // Co-organized — show both.png logo
                         <>
                           <img
                             src="/logos/both.png"
                             alt="Συνδιοργάνωση"
                             className="w-10 h-10 object-contain rounded-full bg-white/5"
-                            onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src =
+                                '/logos/000000.png';
+                            }}
                           />
                           <div className="flex flex-col">
                             <span className="text-cyan-400 text-xs font-bold leading-tight">
@@ -421,13 +474,15 @@ const [isOrganizerView, setIsOrganizerView] = useState(false);
                           </div>
                         </>
                       ) : (
-                        // Single organizer
                         <>
                           <img
                             src={b.organizerLogo}
                             alt={b.organizer}
                             className="w-10 h-10 object-contain rounded-full"
-                            onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src =
+                                '/logos/000000.png';
+                            }}
                           />
                           <span className="text-white/60 text-xs font-medium">
                             {b.organizer}
@@ -435,21 +490,27 @@ const [isOrganizerView, setIsOrganizerView] = useState(false);
                         </>
                       )}
                     </div>
-                    <span className="bg-cyan-500/10 text-cyan-400 text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/20">
+                    <span className="bg-cyan-500/10 text-cyan-400 text-xs
+                      font-bold px-3 py-1 rounded-full border border-cyan-500/20">
                       {b.distance}km
                     </span>
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-white font-bold text-base leading-tight mb-1">{b.title}</h3>
+                  <h3 className="text-white font-bold text-base leading-tight mb-1">
+                    {b.title}
+                  </h3>
                   <p className="text-white/40 text-xs mb-4">📍 {b.start}</p>
 
                   {/* Date */}
                   <div className="mb-4">
                     <span className="text-white/50 text-xs">
-                      📅 {b.date
+                      📅{' '}
+                      {b.date
                         ? new Date(b.date).toLocaleDateString('el-GR', {
-                            day: 'numeric', month: 'long', year: 'numeric',
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
                           })
                         : '—'}
                     </span>
@@ -458,10 +519,14 @@ const [isOrganizerView, setIsOrganizerView] = useState(false);
                   {/* Stats */}
                   <div className="flex items-center gap-4 mb-4">
                     {b.ascent > 0 && (
-                      <span className="text-white/40 text-xs">⛰️ {b.ascent.toLocaleString()}m+</span>
+                      <span className="text-white/40 text-xs">
+                        ⛰️ {b.ascent.toLocaleString()}m+
+                      </span>
                     )}
                     {b.certification && (
-                      <span className="text-white/40 text-xs">{b.certification}</span>
+                      <span className="text-white/40 text-xs">
+                        {b.certification}
+                      </span>
                     )}
                     {b.type && (
                       <span className="text-white/40 text-xs">{b.type}</span>
@@ -487,7 +552,8 @@ const [isOrganizerView, setIsOrganizerView] = useState(false);
                           e.stopPropagation();
                           window.open(b.gpxUrl, '_blank');
                         }}
-                        className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
+                        className="text-cyan-400 text-xs hover:text-cyan-300
+                          transition-colors"
                       >
                         GPX →
                       </button>
@@ -501,8 +567,11 @@ const [isOrganizerView, setIsOrganizerView] = useState(false);
 
         {/* Count */}
         {!loading && (
-          <p className="text-white/30 text-xs text-center mt-8">{filtered.length} brevets</p>
+          <p className="text-white/30 text-xs text-center mt-8">
+            {filtered.length} brevets
+          </p>
         )}
+
       </div>
     </div>
   );
