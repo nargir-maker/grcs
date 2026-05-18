@@ -101,7 +101,7 @@ export default function OrganizerDashboard() {
             {/* Club logos */}
             <div className="flex gap-2">
               <img
-                src={`logos/${organizer.clubId}.png`}
+                src={`/logos/${organizer.clubId}.png`}
                 alt="logo"
                 className="h-64 w-64 object-contain"
               />
