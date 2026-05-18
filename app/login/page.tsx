@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
-
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/app/lib/AuthContext';
 
 // ── Types ────────────────────────────────────────────
 interface Club {
@@ -50,6 +51,17 @@ useEffect(() => {
     })
     .finally(() => setClubsLoading(false));
 }, [mode]);
+
+const { user, isOrganizer } = useAuth();
+const router = useRouter();
+
+useEffect(() => {
+  if (isOrganizer) {
+    router.replace('/organizer/dashboard');
+  } else if (user) {
+    router.replace('/');
+  }
+}, [user, isOrganizer, router]);
 
   // ── Cyclist login ─────────────────────────────────
   const handleGoogleLogin = async () => {
