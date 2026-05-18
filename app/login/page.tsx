@@ -132,12 +132,12 @@ useEffect(() => {
         <div className="text-center mb-8">
           <div className="flex justify-center gap-4 mb-4">
             <img
-              src="public/logos/65000.png"
+              src="/logos/65000.png"
               alt="ΛΕ.ΠΟ.Τ.Ε."
               className="h-48 w-48 object-contain drop-shadow-lg"
             />
             <img
-              src="public/logos/65999.png"
+              src="/logos/65999.png"
               alt="H.A.R."
               className="h-48 w-48 object-contain drop-shadow-lg"
             />
