@@ -177,6 +177,14 @@ export default function BrevetsPage() {
     fetchAll();
   }, []);
 
+useEffect(() => {
+  if (typeof window === 'undefined') return;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('organizer')) {
+    setIsOrganizerView(true);
+  }
+}, []);
+
   const filtered = brevets.filter((b) => {
     const matchDist      = filter === null || b.distance === filter;
     const matchYear      = yearFilter === null ||
@@ -193,6 +201,8 @@ export default function BrevetsPage() {
       b.organizer.toLowerCase().includes(search.toLowerCase());
     return matchDist && matchYear && matchMonth && matchDiff && matchOrganizer && matchSearch;
   });
+
+const [isOrganizerView, setIsOrganizerView] = useState(false);
 
   // ── Helper: does this brevet have a co-organizer? ──────────────────
   const hasCoOrg = (b: Brevet) =>
@@ -304,43 +314,67 @@ export default function BrevetsPage() {
           </div>
 
           {/* Row 5 — Organizer */}
-          {organizers.length > 1 && (
-            <div className="flex gap-2 flex-wrap items-center">
-              <span className="text-white/30 text-xs w-16">Διοργ.:</span>
-              <button
-                onClick={() => setOrganizerFilter(null)}
-                className={`px-3 py-2 rounded-full text-xs font-bold transition-colors border ${
-                  organizerFilter === null
-                    ? 'bg-cyan-500 text-black border-transparent'
-                    : 'bg-white/5 text-white/60 hover:text-white border-white/10'
-                }`}
-              >
-                Όλοι
-              </button>
-              {organizers.map((org) => {
-                const isSelected = organizerFilter === org.id;
-                return (
-                  <button
-                    key={org.id}
-                    onClick={() => setOrganizerFilter(isSelected ? null : org.id)}
-                    title={org.name}
-                    className={`flex items-center gap-2 pl-1 pr-3 py-1 rounded-full text-xs font-bold transition-all border ${
-                      isSelected
-                        ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400'
-                        : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/30'
-                    }`}
-                  >
-                    <img src={org.logo} alt={org.name}
-                      className="w-6 h-6 rounded-full object-contain bg-white/10"
-                      onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
-                    />
-                    <span className="max-w-[100px] truncate">{org.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
+ {isOrganizerView ? (
+  // ── Organizer focused view banner ──────────
+  <div className="flex items-center justify-between
+    bg-purple-500/10 border border-purple-400/30
+    rounded-xl px-4 py-3">
+    <div className="flex items-center gap-2">
+      <span className="text-purple-300 text-sm">🏁</span>
+      <span className="text-purple-300 text-sm font-medium">
+        Εμφάνιση brevets του συλλόγου σου
+      </span>
+    </div>
+    <button
+      onClick={() => {
+        setIsOrganizerView(false);
+        setOrganizerFilter(null);
+        window.history.replaceState({}, '', '/brevets');
+      }}
+      className="text-xs text-purple-300 hover:text-white
+        border border-purple-400/30 hover:border-purple-400
+        px-3 py-1.5 rounded-lg transition-all"
+    >
+      Δες όλα →
+    </button>
+  </div>
+) : organizers.length > 1 ? (
+  // ── Normal organizer filter row ────────────
+  <div className="flex gap-2 flex-wrap items-center">
+    <span className="text-white/30 text-xs w-16">Διοργ.:</span>
+    <button
+      onClick={() => setOrganizerFilter(null)}
+      className={`px-3 py-2 rounded-full text-xs font-bold transition-colors border ${
+        organizerFilter === null
+          ? 'bg-cyan-500 text-black border-transparent'
+          : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+      }`}
+    >
+      Όλοι
+    </button>
+    {organizers.map((org) => {
+      const isSelected = organizerFilter === org.id;
+      return (
+        <button
+          key={org.id}
+          onClick={() => setOrganizerFilter(isSelected ? null : org.id)}
+          title={org.name}
+          className={`flex items-center gap-2 pl-1 pr-3 py-1 rounded-full text-xs font-bold transition-all border ${
+            isSelected
+              ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400'
+              : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/30'
+          }`}
+        >
+          <img src={org.logo} alt={org.name}
+            className="w-6 h-6 rounded-full object-contain bg-white/10"
+            onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
+          />
+          <span className="max-w-[100px] truncate">{org.name}</span>
+        </button>
+      );
+    })}
+  </div>
+) : null}
         </div>
 
         {/* ── CONTENT ────────────────────────────────── */}
