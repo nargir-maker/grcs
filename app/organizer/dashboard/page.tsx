@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -35,15 +36,13 @@ export default function OrganizerDashboard() {
     }
   }, [isOrganizer, router]);
 
-  // Load brevets for this club — same pattern as brevets page
+  // Load brevets for this club
   useEffect(() => {
     if (!organizer?.clubId) return;
 
     const fetchBrevets = async () => {
       setLoading(true);
       try {
-        // Query all_brevets where organizerId matches — no year filter
-        // so organizer sees all their brevets across years
         const q = query(
           collection(db, 'all_brevets'),
           where('info.organizerId', '==', organizer.clubId),
@@ -58,7 +57,6 @@ export default function OrganizerDashboard() {
           const info  = d.info  || {};
           const route = d.route || {};
 
-          // Parse date — same logic as brevets page
           let parsedDate = '';
           try {
             const dateStr = info.date?.toString() ?? '';
@@ -75,32 +73,26 @@ export default function OrganizerDashboard() {
             else if (brevetDate.getTime() === today.getTime()) status = 'today';
           }
 
-          // Registrations count — from registrations subcollection
-          // Not loaded here to keep it fast — shown as 0 for now
-          const registrations = d.registrations?.length ?? 0;
-
           return {
-            id:             doc.id,
-            title:          info.title?.toString()        ?? doc.id,
-            distance:       parseInt(info.distance?.toString() ?? '0') || 0,
-            date:           parsedDate,
-            start:          route.start?.toString()       ?? '',
-            ascent:         parseInt(route.ascent?.toString()  ?? '0') || 0,
-            type:           info.type?.toString()         ?? 'BRM',
-            certification:  info.certification?.toString() ?? '',
-            registrations,
+            id:            doc.id,
+            title:         info.title?.toString()         ?? doc.id,
+            distance:      parseInt(info.distance?.toString() ?? '0') || 0,
+            date:          parsedDate,
+            start:         route.start?.toString()        ?? '',
+            ascent:        parseInt(route.ascent?.toString()  ?? '0') || 0,
+            type:          info.type?.toString()          ?? 'BRM',
+            certification: info.certification?.toString() ?? '',
+            registrations: d.registrations?.length        ?? 0,
             status,
           };
         });
 
-        // Sort: upcoming first (asc), past after (desc)
         data.sort((a, b) => {
           if (a.status !== 'past' && b.status === 'past') return -1;
           if (a.status === 'past' && b.status !== 'past') return 1;
           if (!a.date) return 1;
           if (!b.date) return -1;
           const diff = new Date(a.date).getTime() - new Date(b.date).getTime();
-          // Upcoming: ascending, Past: descending
           return a.status === 'past' ? -diff : diff;
         });
 
@@ -179,10 +171,10 @@ export default function OrganizerDashboard() {
         {/* ── STATS ROW ────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           {[
-            { label: 'Σύνολο Brevets',  value: brevets.length,          emoji: '📋' },
-            { label: 'Επερχόμενα',      value: upcomingBrevets.length,  emoji: '📅' },
-            { label: 'Εγγραφές',        value: totalReg,                emoji: '👥' },
-            { label: 'Περασμένα',       value: pastBrevets.length,      emoji: '✅' },
+            { label: 'Σύνολο Brevets', value: brevets.length,         emoji: '📋' },
+            { label: 'Επερχόμενα',     value: upcomingBrevets.length, emoji: '📅' },
+            { label: 'Εγγραφές',       value: totalReg,               emoji: '👥' },
+            { label: 'Περασμένα',      value: pastBrevets.length,     emoji: '✅' },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -222,7 +214,8 @@ export default function OrganizerDashboard() {
           ) : (
             <div className="flex flex-col gap-3">
               {upcomingBrevets.map((b) => (
-                <BrevetCard key={b.id} brevet={b} />
+                // ── ?from=organizer tells the detail page we came from dashboard
+                <BrevetCard key={b.id} brevet={b} clubId={organizer.clubId} />
               ))}
             </div>
           )}
@@ -237,7 +230,7 @@ export default function OrganizerDashboard() {
             </h2>
             <div className="flex flex-col gap-3">
               {pastBrevets.slice(0, 5).map((b) => (
-                <BrevetCard key={b.id} brevet={b} past />
+                <BrevetCard key={b.id} brevet={b} clubId={organizer.clubId} past />
               ))}
               {pastBrevets.length > 5 && (
                 <p className="text-slate-500 text-xs text-center pt-1">
@@ -281,7 +274,15 @@ export default function OrganizerDashboard() {
 
 // ── Sub-components ─────────────────────────────────────
 
-function BrevetCard({ brevet, past = false }: { brevet: Brevet; past?: boolean }) {
+function BrevetCard({
+  brevet,
+  clubId,
+  past = false,
+}: {
+  brevet: Brevet;
+  clubId: string;
+  past?: boolean;
+}) {
   const dateLabel = brevet.date
     ? new Date(brevet.date).toLocaleDateString('el-GR', {
         day: '2-digit', month: 'long', year: 'numeric',
@@ -300,9 +301,13 @@ function BrevetCard({ brevet, past = false }: { brevet: Brevet; past?: boolean }
     brevet.status === 'upcoming' ? 'Επερχόμενο' :
                                    'Ολοκληρώθηκε';
 
+  // ── Key change: pass from=organizer AND clubId so detail
+  //    page knows where to send the back button
+  const href = `/brevets/${brevet.id}?from=organizer&clubId=${clubId}`;
+
   return (
     <a
-      href={`/brevets/${brevet.id}`}
+      href={href}
       className={`flex items-center gap-4 p-4 rounded-xl border transition-all no-underline
         ${past
           ? 'bg-white/3 border-white/8 opacity-70'
@@ -343,7 +348,7 @@ function BrevetCard({ brevet, past = false }: { brevet: Brevet; past?: boolean }
         </div>
       </div>
 
-      {/* Right side */}
+      {/* Right */}
       <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
         <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusColor}`}>
           {statusLabel}
