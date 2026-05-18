@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 
-// Lazy import ElevationChart inside the modal (avoids circular dep issues)
 const ElevationChart = dynamic(() => import('./ElevationChart'), { ssr: false });
 
 interface BrevetMapProps {
@@ -11,10 +10,9 @@ interface BrevetMapProps {
   startCoords?: string;
   finishCoords?: string;
   controls?: { km: number; name: string; lat: number; lng: number }[];
-  scrubberKm?: number | null; // from parent — drives the moving dot
+  scrubberKm?: number | null;
 }
 
-// ── Coord store — parsed once, reused by both inline and fullscreen ────────
 interface ParsedCoord {
   lat: number;
   lng: number;
@@ -29,7 +27,6 @@ function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): num
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// Interpolate lat/lng from parsed coords at a given km position
 function interpolateLatLng(coords: ParsedCoord[], km: number): [number, number] | null {
   if (coords.length === 0) return null;
   if (km <= coords[0].distKm) return [coords[0].lat, coords[0].lng];
@@ -37,7 +34,6 @@ function interpolateLatLng(coords: ParsedCoord[], km: number): [number, number] 
     const last = coords[coords.length-1];
     return [last.lat, last.lng];
   }
-  // Binary search for surrounding segment
   let lo = 0, hi = coords.length - 1;
   while (lo < hi - 1) {
     const mid = Math.floor((lo + hi) / 2);
@@ -48,6 +44,63 @@ function interpolateLatLng(coords: ParsedCoord[], km: number): [number, number] 
   if (segLen === 0) return [a.lat, a.lng];
   const t = (km - a.distKm) / segLen;
   return [a.lat + t * (b.lat - a.lat), a.lng + t * (b.lng - a.lng)];
+}
+
+// ── Load leaflet-polylinedecorator script once ─────────────────────────────
+// The plugin attaches itself to the global L object, so it must be loaded
+// AFTER Leaflet is already on the page.
+let decoratorScriptPromise: Promise<void> | null = null;
+
+function loadPolylineDecorator(): Promise<void> {
+  if (decoratorScriptPromise) return decoratorScriptPromise;
+  decoratorScriptPromise = new Promise((resolve, reject) => {
+    // Already loaded?
+    if ((window as any).L?.Symbol?.arrowHead) {
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src =
+      'https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.6.0/leaflet.polylineDecorator.min.js';
+    script.onload = () => resolve();
+    script.onerror = () => {
+      decoratorScriptPromise = null; // allow retry
+      reject(new Error('Failed to load leaflet-polylinedecorator'));
+    };
+    document.head.appendChild(script);
+  });
+  return decoratorScriptPromise;
+}
+
+// ── Add directional arrows to a polyline ──────────────────────────────────
+// Called after the polyline is drawn and the decorator script is loaded.
+// Arrows repeat every 8% of the route, offset 5% from the start.
+// Prominent arrowheads: pixelSize 14, weight 3, filled orange.
+async function addDirectionArrows(L: any, map: any, polyline: any): Promise<void> {
+  try {
+    await loadPolylineDecorator();
+    (L as any).polylineDecorator(polyline, {
+      patterns: [
+        {
+          offset: '5%',
+          repeat: '8%',
+          symbol: (L as any).Symbol.arrowHead({
+            pixelSize: 14,
+            polygon: true,          // filled arrowhead
+            pathOptions: {
+              color: '#ff3d02',
+              fillColor: '#ff3d02',
+              fillOpacity: 1,
+              weight: 2,
+              opacity: 1,
+            },
+          }),
+        },
+      ],
+    }).addTo(map);
+  } catch (e) {
+    console.warn('Direction arrows unavailable:', e);
+  }
 }
 
 // ── Shared Leaflet initializer ─────────────────────────────────────────────
@@ -113,11 +166,23 @@ async function initLeafletMap(
       }
     });
 
-    if (coords.length === 0) { map.setView([38.0, 23.7], 7); }
-    else {
-      const polyline = L.polyline(coords, { color: '#ff3d02', weight: 3, opacity: 0.9 }).addTo(map);
+    if (coords.length === 0) {
+      map.setView([38.0, 23.7], 7);
+    } else {
+      const polyline = L.polyline(coords, {
+        color: '#ff3d02',
+        weight: 3,
+        opacity: 0.9,
+      }).addTo(map);
+
       map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
 
+      // ── DIRECTION ARROWS ─────────────────────────────────────────────────
+      // Fire-and-forget — arrows appear after script loads (~100ms)
+      // Does not block map rendering
+      addDirectionArrows(L, map, polyline);
+
+      // START marker
       L.marker(coords[0], {
         icon: L.divIcon({
           html: `<div style="background:#22c55e;color:white;font-size:11px;font-weight:bold;padding:3px 7px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);">🟢 START</div>`,
@@ -125,6 +190,7 @@ async function initLeafletMap(
         }),
       }).addTo(map).bindPopup('Αφετηρία');
 
+      // FINISH marker
       L.marker(coords[coords.length-1], {
         icon: L.divIcon({
           html: `<div style="background:#f59e0b;color:white;font-size:11px;font-weight:bold;padding:3px 7px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);">🏁 FINISH</div>`,
@@ -132,6 +198,7 @@ async function initLeafletMap(
         }),
       }).addTo(map).bindPopup('Τερματισμός');
 
+      // CP markers
       controls.forEach((cp, i) => {
         if (!cp.lat || !cp.lng) return;
         L.marker([cp.lat, cp.lng], {
@@ -142,7 +209,6 @@ async function initLeafletMap(
         }).addTo(map).bindPopup(`CP${i+1}: ${cp.name}`);
       });
 
-      // Notify parent of parsed coords for interpolation
       onCoordsReady?.(parsedCoords);
     }
   } catch (e) {
@@ -190,7 +256,6 @@ function FullscreenMap({
     };
   }, [gpxUrl]);
 
-  // Move dot on modal map when modal scrubber changes
   useEffect(() => {
     const marker = modalDotMarkerRef.current;
     if (!marker) return;
@@ -218,7 +283,6 @@ function FullscreenMap({
         className="relative w-[96vw] h-[90vh] rounded-2xl overflow-hidden border border-white/10 shadow-2xl flex flex-col bg-[#0A1628]"
         onClick={e => e.stopPropagation()}
       >
-        {/* Close button */}
         <button onClick={onClose} title="Κλείσιμο (Esc)"
           className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm"
           style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}>
@@ -230,13 +294,8 @@ function FullscreenMap({
           Κλείσιμο
         </button>
 
-        {/* Map — takes ~55% of height */}
         <div ref={modalMapRef} style={{ width: '100%', flex: '0 0 55%' }} />
-
-        {/* Divider */}
         <div className="border-t border-white/10" />
-
-        {/* Elevation chart — takes remaining ~45% */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2" style={{ background: '#0A1628' }}>
           <ElevationChart
             gpxUrl={gpxUrl}
@@ -244,8 +303,8 @@ function FullscreenMap({
             storedAscent={storedAscent}
             scrubberKm={modalScrubberKm}
             onScrub={setModalScrubberKm}
-            defaultZoomed={true}  // ← ADD
-            zoomedPxPerKm={10}  // ← ADD
+            defaultZoomed={true}
+            zoomedPxPerKm={10}
           />
         </div>
       </div>
@@ -266,7 +325,6 @@ export default function BrevetMap({
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(f => !f), []);
 
-  // Initialize inline map once
   useEffect(() => {
     if (!mapRef.current || initializedRef.current) return;
     initializedRef.current = true;
@@ -287,7 +345,6 @@ export default function BrevetMap({
     };
   }, [gpxUrl]);
 
-  // Move dot on inline map when scrubberKm changes
   useEffect(() => {
     const marker = dotMarkerRef.current;
     if (!marker) return;
@@ -307,7 +364,6 @@ export default function BrevetMap({
       <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 
-      {/* Fullscreen modal */}
       {isFullscreen && (
         <FullscreenMap
           gpxUrl={gpxUrl}
@@ -316,7 +372,6 @@ export default function BrevetMap({
         />
       )}
 
-      {/* Inline map — stays put, hidden when fullscreen open */}
       <div className="relative" style={{ visibility: isFullscreen ? 'hidden' : 'visible' }}>
         <div ref={mapRef} style={{ height: '400px', width: '100%' }}
           className="rounded-xl overflow-hidden border border-white/10" />
