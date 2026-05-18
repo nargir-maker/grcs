@@ -30,7 +30,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (mode !== 'organizer') return;
     setClubsLoading(true);
-    getDocs(collection(db, 'CLUBS'))
+    getDocs(collection(db, 'clubs'))
       .then((snap) => {
         const data: Club[] = snap.docs.map((doc) => ({
           id: doc.id,
