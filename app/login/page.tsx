@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from './lib/firebase';
-import Image from 'next/image';
+import { db } from '@/app/lib/firebase';
+
 
 // ── Types ────────────────────────────────────────────
 interface Club {
