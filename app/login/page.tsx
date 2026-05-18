@@ -27,23 +27,29 @@ export default function LoginPage() {
   const [clubsLoading, setClubsLoading] = useState(false);
 
   // Load clubs from Firestore when organizer mode selected
-  useEffect(() => {
-    if (mode !== 'organizer') return;
-    setClubsLoading(true);
-    getDocs(collection(db, 'clubs'))
-      .then((snap) => {
-        const data: Club[] = snap.docs.map((doc) => ({
-          id: doc.id,
-          shortNameGr: doc.data().CLUB_NAME_SHORT_GR ?? '',
-          shortNameEn: doc.data().ACP_CLUB_NAME_EN ?? '',
-          fullNameGr: doc.data().CLUB_NAME_FULL_GR ?? '',
-        }));
-        setClubs(data);
-        if (data.length > 0) setSelectedClubId(data[0].id);
-      })
-      .catch(() => setError('Αδυναμία φόρτωσης συλλόγων.'))
-      .finally(() => setClubsLoading(false));
-  }, [mode]);
+useEffect(() => {
+  if (mode !== 'organizer') return;
+  setClubsLoading(true);
+  console.log('fetching clubs...');
+  getDocs(collection(db, 'clubs'))
+    .then((snap) => {
+      console.log('snap size:', snap.size);
+      console.log('docs:', snap.docs.map(d => d.id));
+      const data: Club[] = snap.docs.map((doc) => ({
+        id: doc.id,
+        shortNameGr: doc.data().CLUB_NAME_SHORT_GR ?? '',
+        shortNameEn: doc.data().ACP_CLUB_NAME_EN ?? '',
+        fullNameGr: doc.data().CLUB_NAME_FULL_GR ?? '',
+      }));
+      setClubs(data);
+      if (data.length > 0) setSelectedClubId(data[0].id);
+    })
+    .catch((err) => {
+      console.error('clubs fetch error:', err);
+      setError('Αδυναμία φόρτωσης συλλόγων.');
+    })
+    .finally(() => setClubsLoading(false));
+}, [mode]);
 
   // ── Cyclist login ─────────────────────────────────
   const handleGoogleLogin = async () => {
