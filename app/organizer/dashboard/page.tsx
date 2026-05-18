@@ -3,22 +3,19 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/AuthContext';
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  orderBy,
-} from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 // ── Types ─────────────────────────────────────────────
 interface Brevet {
   id: string;
-  name: string;
+  title: string;
   distance: number;
-  date: string;          // ISO string
-  location: string;
+  date: string;
+  start: string;
+  ascent: number;
+  type: string;
+  certification: string;
   registrations: number;
   status: 'upcoming' | 'past' | 'today';
 }
@@ -38,41 +35,73 @@ export default function OrganizerDashboard() {
     }
   }, [isOrganizer, router]);
 
-  // Load brevets for this club
+  // Load brevets for this club — same pattern as brevets page
   useEffect(() => {
     if (!organizer?.clubId) return;
 
     const fetchBrevets = async () => {
       setLoading(true);
       try {
+        // Query all_brevets where organizerId matches — no year filter
+        // so organizer sees all their brevets across years
         const q = query(
           collection(db, 'all_brevets'),
           where('info.organizerId', '==', organizer.clubId),
-          orderBy('info.date', 'desc'),
         );
+
         const snap = await getDocs(q);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         const data: Brevet[] = snap.docs.map((doc) => {
           const d = doc.data();
-          const dateStr: string = d.info?.date ?? '';
-          const brevetDate = new Date(dateStr);
-          brevetDate.setHours(0, 0, 0, 0);
+          const info  = d.info  || {};
+          const route = d.route || {};
+
+          // Parse date — same logic as brevets page
+          let parsedDate = '';
+          try {
+            const dateStr = info.date?.toString() ?? '';
+            const d2 = new Date(dateStr.split('+')[0]);
+            if (!isNaN(d2.getTime())) parsedDate = d2.toISOString();
+          } catch { parsedDate = ''; }
+
+          const brevetDate = parsedDate ? new Date(parsedDate) : null;
+          if (brevetDate) brevetDate.setHours(0, 0, 0, 0);
 
           let status: Brevet['status'] = 'upcoming';
-          if (brevetDate < today) status = 'past';
-          else if (brevetDate.getTime() === today.getTime()) status = 'today';
+          if (brevetDate) {
+            if (brevetDate < today) status = 'past';
+            else if (brevetDate.getTime() === today.getTime()) status = 'today';
+          }
+
+          // Registrations count — from registrations subcollection
+          // Not loaded here to keep it fast — shown as 0 for now
+          const registrations = d.registrations?.length ?? 0;
 
           return {
-            id: doc.id,
-            name: d.info?.name ?? 'Χωρίς όνομα',
-            distance: d.info?.distance ?? 0,
-            date: dateStr,
-            location: d.info?.location ?? '',
-            registrations: d.registrations?.length ?? 0,
+            id:             doc.id,
+            title:          info.title?.toString()        ?? doc.id,
+            distance:       parseInt(info.distance?.toString() ?? '0') || 0,
+            date:           parsedDate,
+            start:          route.start?.toString()       ?? '',
+            ascent:         parseInt(route.ascent?.toString()  ?? '0') || 0,
+            type:           info.type?.toString()         ?? 'BRM',
+            certification:  info.certification?.toString() ?? '',
+            registrations,
             status,
           };
+        });
+
+        // Sort: upcoming first (asc), past after (desc)
+        data.sort((a, b) => {
+          if (a.status !== 'past' && b.status === 'past') return -1;
+          if (a.status === 'past' && b.status !== 'past') return 1;
+          if (!a.date) return 1;
+          if (!b.date) return -1;
+          const diff = new Date(a.date).getTime() - new Date(b.date).getTime();
+          // Upcoming: ascending, Past: descending
+          return a.status === 'past' ? -diff : diff;
         });
 
         setBrevets(data);
@@ -89,7 +118,8 @@ export default function OrganizerDashboard() {
   if (!isOrganizer || !organizer) return null;
 
   const upcomingBrevets = brevets.filter((b) => b.status !== 'past');
-  const pastBrevets = brevets.filter((b) => b.status === 'past');
+  const pastBrevets     = brevets.filter((b) => b.status === 'past');
+  const totalReg        = brevets.reduce((s, b) => s + b.registrations, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -98,14 +128,14 @@ export default function OrganizerDashboard() {
       <header className="border-b border-white/10 bg-black/20 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Club logos */}
-            <div className="flex gap-2">
-              <img
-                src={`/logos/${organizer.clubId}.png`}
-                alt="logo"
-                className="h-64 w-64 object-contain"
-              />
-            </div>
+            <img
+              src={`/logos/${organizer.clubId}.png`}
+              alt={organizer.clubNameGr}
+              className="h-16 w-16 object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/logos/000000.png';
+              }}
+            />
             <div>
               <div className="text-white font-bold text-sm leading-tight">
                 {organizer.clubNameGr}
@@ -117,8 +147,9 @@ export default function OrganizerDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-xs text-purple-300 bg-purple-500/20
-              border border-purple-400/30 px-2.5 py-1 rounded-full font-semibold">
+            <span className="hidden sm:block text-xs text-purple-300
+              bg-purple-500/20 border border-purple-400/30 px-2.5 py-1
+              rounded-full font-semibold">
               🏁 Διοργανωτής
             </span>
             <button
@@ -148,10 +179,10 @@ export default function OrganizerDashboard() {
         {/* ── STATS ROW ────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           {[
-            { label: 'Σύνολο Brevets', value: brevets.length, emoji: '📋' },
-            { label: 'Επερχόμενα', value: upcomingBrevets.length, emoji: '📅' },
-            { label: 'Εγγραφές', value: brevets.reduce((s, b) => s + b.registrations, 0), emoji: '👥' },
-            { label: 'Περασμένα', value: pastBrevets.length, emoji: '✅' },
+            { label: 'Σύνολο Brevets',  value: brevets.length,          emoji: '📋' },
+            { label: 'Επερχόμενα',      value: upcomingBrevets.length,  emoji: '📅' },
+            { label: 'Εγγραφές',        value: totalReg,                emoji: '👥' },
+            { label: 'Περασμένα',       value: pastBrevets.length,      emoji: '✅' },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -175,7 +206,6 @@ export default function OrganizerDashboard() {
             <h2 className="text-white font-semibold text-lg flex items-center gap-2">
               <span>📅</span> Επερχόμενα Brevets
             </h2>
-            {/* Placeholder — add brevet button coming soon */}
             <button
               disabled
               className="text-xs bg-purple-600/30 border border-purple-400/30
@@ -188,10 +218,7 @@ export default function OrganizerDashboard() {
           {loading ? (
             <BrevetSkeleton />
           ) : upcomingBrevets.length === 0 ? (
-            <EmptyState
-              emoji="📭"
-              message="Δεν υπάρχουν επερχόμενα brevets"
-            />
+            <EmptyState emoji="📭" message="Δεν υπάρχουν επερχόμενα brevets" />
           ) : (
             <div className="flex flex-col gap-3">
               {upcomingBrevets.map((b) => (
@@ -203,7 +230,7 @@ export default function OrganizerDashboard() {
 
         {/* ── PAST BREVETS ─────────────────────────── */}
         {!loading && pastBrevets.length > 0 && (
-          <section>
+          <section className="mb-8">
             <h2 className="text-slate-400 font-semibold text-base
               flex items-center gap-2 mb-4">
               <span>✅</span> Παρελθόν
@@ -222,17 +249,17 @@ export default function OrganizerDashboard() {
         )}
 
         {/* ── PLACEHOLDER SECTIONS ─────────────────── */}
-        <div className="grid sm:grid-cols-2 gap-4 mt-10">
+        <div className="grid sm:grid-cols-2 gap-4 mt-4">
           {[
-            { emoji: '📊', title: 'Αναλυτικά Αποτελέσματα', soon: true },
-            { emoji: '📧', title: 'Αποστολή Brevet Cards', soon: true },
-            { emoji: '👥', title: 'Διαχείριση Εγγραφών', soon: true },
-            { emoji: '⚙️', title: 'Ρυθμίσεις Συλλόγου', soon: true },
+            { emoji: '📊', title: 'Αναλυτικά Αποτελέσματα' },
+            { emoji: '📧', title: 'Αποστολή Brevet Cards' },
+            { emoji: '👥', title: 'Διαχείριση Εγγραφών' },
+            { emoji: '⚙️', title: 'Ρυθμίσεις Συλλόγου' },
           ].map((item) => (
             <div
               key={item.title}
               className="bg-white/3 border border-white/8 rounded-xl p-5
-                flex items-center gap-4 opacity-50"
+                flex items-center gap-4 opacity-40"
             >
               <span className="text-2xl">{item.emoji}</span>
               <div>
@@ -255,11 +282,11 @@ export default function OrganizerDashboard() {
 // ── Sub-components ─────────────────────────────────────
 
 function BrevetCard({ brevet, past = false }: { brevet: Brevet; past?: boolean }) {
-  const dateLabel = new Date(brevet.date).toLocaleDateString('el-GR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  });
+  const dateLabel = brevet.date
+    ? new Date(brevet.date).toLocaleDateString('el-GR', {
+        day: '2-digit', month: 'long', year: 'numeric',
+      })
+    : '—';
 
   const statusColor =
     brevet.status === 'today'
@@ -269,18 +296,17 @@ function BrevetCard({ brevet, past = false }: { brevet: Brevet; past?: boolean }
       : 'bg-slate-500/20 border-slate-400/30 text-slate-400';
 
   const statusLabel =
-    brevet.status === 'today'
-      ? 'Σήμερα'
-      : brevet.status === 'upcoming'
-      ? 'Επερχόμενο'
-      : 'Ολοκληρώθηκε';
+    brevet.status === 'today'    ? 'Σήμερα' :
+    brevet.status === 'upcoming' ? 'Επερχόμενο' :
+                                   'Ολοκληρώθηκε';
 
   return (
-    <div
-      className={`flex items-center gap-4 p-4 rounded-xl border transition-all
+    <a
+      href={`/brevets/${brevet.id}`}
+      className={`flex items-center gap-4 p-4 rounded-xl border transition-all no-underline
         ${past
           ? 'bg-white/3 border-white/8 opacity-70'
-          : 'bg-white/7 border-white/15 hover:bg-white/10 cursor-pointer'
+          : 'bg-white/7 border-white/15 hover:bg-white/10 hover:border-white/25'
         }`}
     >
       {/* Distance badge */}
@@ -295,16 +321,25 @@ function BrevetCard({ brevet, past = false }: { brevet: Brevet; past?: boolean }
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="text-white font-semibold text-sm truncate">
-          {brevet.name}
+          {brevet.title}
         </div>
-        <div className="text-slate-400 text-xs mt-0.5 flex items-center gap-2">
+        <div className="text-slate-400 text-xs mt-0.5 flex items-center gap-2 flex-wrap">
           <span>📅 {dateLabel}</span>
-          {brevet.location && (
+          {brevet.start && (
             <>
               <span className="text-slate-600">·</span>
-              <span>📍 {brevet.location}</span>
+              <span>📍 {brevet.start}</span>
             </>
           )}
+          {brevet.ascent > 0 && (
+            <>
+              <span className="text-slate-600">·</span>
+              <span>⛰️ {brevet.ascent.toLocaleString()}m</span>
+            </>
+          )}
+        </div>
+        <div className="text-slate-500 text-xs mt-0.5">
+          {brevet.certification} {brevet.type}
         </div>
       </div>
 
@@ -313,11 +348,13 @@ function BrevetCard({ brevet, past = false }: { brevet: Brevet; past?: boolean }
         <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusColor}`}>
           {statusLabel}
         </span>
-        <span className="text-slate-400 text-xs">
-          👥 {brevet.registrations} εγγραφές
-        </span>
+        {brevet.registrations > 0 && (
+          <span className="text-slate-400 text-xs">
+            👥 {brevet.registrations}
+          </span>
+        )}
       </div>
-    </div>
+    </a>
   );
 }
 
