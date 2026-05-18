@@ -116,6 +116,32 @@ function getCloseTime(cpKm: number, startDate: Date): string {
   return closeTime.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function BackButton() {
+  const [href, setHref] = useState('/brevets');
+  const [label, setLabel] = useState('← Πίσω στα Brevets');
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const from   = searchParams.get('from');
+    const clubId = searchParams.get('clubId');
+
+    if (from === 'organizer' && clubId) {
+      setHref(`/brevets?organizer=${clubId}`);
+      setLabel('← Πίσω στα Brevets μου');
+    }
+  }, []);
+
+  return (
+    <a
+      href={href}
+      className="inline-flex items-center gap-2 text-white/40 hover:text-white
+        text-sm mb-8 transition-colors"
+    >
+      {label}
+    </a>
+  );
+}
+
 export default function BrevetDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -270,11 +296,9 @@ export default function BrevetDetailPage() {
       <div className="max-w-3xl mx-auto">
 
         {/* ── BACK ───────────────────────────────────── */}
-        <a href="/brevets"
-          className="inline-flex items-center gap-2 text-white/40 hover:text-white text-sm mb-8 transition-colors">
-          ← Πίσω στα Brevets
-        </a>
-
+        
+          <BackButton />
+       
         {/* ── FLOATING LOGO + HERO ───────────────────── */}
         <div className="relative mb-8">
           <div className="h-72 rounded-2xl overflow-hidden border border-white/10 bg-white/5">

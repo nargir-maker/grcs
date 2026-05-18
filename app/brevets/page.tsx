@@ -77,7 +77,10 @@ export default function BrevetsPage() {
   const [yearFilter, setYearFilter] = useState<number | null>(2026);
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
   const [monthFilter, setMonthFilter] = useState<number | null>(null);
-  const [organizerFilter, setOrganizerFilter] = useState<string | null>(null);
+  const [organizerFilter, setOrganizerFilter] = useState<string | null>(() => {
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get('organizer');
+});
   const [organizers, setOrganizers] = useState<OrganizerOption[]>([]);
 
   useEffect(() => {

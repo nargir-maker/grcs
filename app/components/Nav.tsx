@@ -50,8 +50,9 @@ export default function Nav() {
             >
               Dashboard
             </Link>
+            {/* ── Points to dashboard — same page, no 404 ── */}
             <Link
-              href="/organizer/brevets"
+              href="/organizer/dashboard"
               className="text-white/60 hover:text-white text-sm transition-colors"
             >
               Τα Brevets μου
@@ -76,11 +77,13 @@ export default function Nav() {
           >
             {menuOpen ? (
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12" />
               </svg>
             ) : (
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             )}
           </button>
@@ -106,7 +109,7 @@ export default function Nav() {
               Dashboard
             </Link>
             <Link
-              href="/organizer/brevets"
+              href="/organizer/dashboard"
               className="text-white/60 hover:text-white text-sm transition-colors"
               onClick={() => setMenuOpen(false)}
             >
@@ -124,7 +127,7 @@ export default function Nav() {
     );
   }
 
-  // ── CYCLIST / GUEST NAV (unchanged logic) ─────────
+  // ── CYCLIST / GUEST NAV ───────────────────────────
   return (
     <nav className="border-b border-white/10 px-6 py-4 bg-[#0A1628] sticky top-0 z-50">
       <div className="max-w-5xl mx-auto flex items-center justify-between">
@@ -140,16 +143,20 @@ export default function Nav() {
 
         {/* Desktop menu */}
         <div className="hidden sm:flex items-center gap-8">
-          <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors">
+          <Link href="/brevets"
+            className="text-white/60 hover:text-white text-sm transition-colors">
             Brevets
           </Link>
-          <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors">
+          <Link href="/results"
+            className="text-white/60 hover:text-white text-sm transition-colors">
             Αποτελέσματα
           </Link>
-          <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors">
+          <Link href="/members"
+            className="text-white/60 hover:text-white text-sm transition-colors">
             Αναβάτες
           </Link>
-          <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
+          <Link href="/about"
+            className="text-white/60 hover:text-white text-sm transition-colors">
             Σχετικά
           </Link>
         </div>
@@ -204,11 +211,13 @@ export default function Nav() {
         >
           {menuOpen ? (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           )}
         </button>
@@ -217,19 +226,23 @@ export default function Nav() {
       {/* Mobile cyclist menu */}
       {menuOpen && (
         <div className="sm:hidden mt-4 pb-4 border-t border-white/10 pt-4 flex flex-col gap-4">
-          <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors"
+          <Link href="/brevets"
+            className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>
             Brevets
           </Link>
-          <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors"
+          <Link href="/results"
+            className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>
             Αποτελέσματα
           </Link>
-          <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors"
+          <Link href="/members"
+            className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>
             Αναβάτες
           </Link>
-          <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors"
+          <Link href="/about"
+            className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>
             Σχετικά
           </Link>
