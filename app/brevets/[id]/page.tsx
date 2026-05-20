@@ -7,7 +7,7 @@ import { doc, getDoc, getDocFromCache } from 'firebase/firestore';
 import dynamic from 'next/dynamic';
 import { useSession, signIn } from 'next-auth/react';
 import RegistrationForm from '@/app/components/RegistrationForm';
-import WeatherStrip from '@/app/components/WeatherStrip';
+import WeatherStrip from '../../components/WeatherStrip';
 
 const ElevationChart = dynamic(() => import('../../components/ElevationChart'), {
   ssr: false,
