@@ -175,15 +175,7 @@ function DaylightSection({ startCoords, startDate, distanceKm }: {
     darkMinutes += (darkEnd.getTime() - startDate.getTime()) / 60000;
   }
 
-{/* ── WEATHER STRIP ── */}
-{startDate && brevet.gpxUrl && (
-  <WeatherStrip
-    gpxUrl={brevet.gpxUrl}
-    startDate={startDate}
-    distanceKm={brevet.distance}
-    controls={brevet.controls}
-  />
-)}
+
 
   // Daylight duration
   const daylightMin = Math.round((sunset.getTime() - sunrise.getTime()) / 60000);
@@ -393,6 +385,7 @@ function DaylightSection({ startCoords, startDate, distanceKm }: {
     </div>
   );
 }
+
 
 // ── BackButton ─────────────────────────────────────────────────────────────────
 function BackButton() {
@@ -636,6 +629,15 @@ export default function BrevetDetailPage() {
           />
         )}
 
+{/* ── WEATHER STRIP ── */}
+{startDate && brevet.gpxUrl && (
+  <WeatherStrip
+    gpxUrl={brevet.gpxUrl}
+    startDate={startDate}
+    distanceKm={brevet.distance}
+    controls={brevet.controls}
+  />
+)}
         {/* ── CONTROL POINTS ── */}
         {brevet.controls.length > 0 && (
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
