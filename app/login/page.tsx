@@ -36,13 +36,16 @@ useEffect(() => {
     .then((snap) => {
       console.log('snap size:', snap.size);
       console.log('docs:', snap.docs.map(d => d.id));
-      const data: Club[] = snap.docs.map((doc) => ({
-        id: doc.id,
-        shortNameGr: doc.data().CLUB_NAME_SHORT_GR ?? '',
-        shortNameEn: doc.data().ACP_CLUB_NAME_EN ?? '',
-        fullNameGr: doc.data().CLUB_NAME_FULL_GR ?? '',
-      }));
-      setClubs(data);
+const data: Club[] = snap.docs
+  .filter((doc) => (doc.data().last_brevet_year ?? 0) >= 2024)
+  .map((doc) => ({
+    id: doc.id,
+    shortNameGr: doc.data().CLUB_NAME_SHORT_GR ?? '',
+    shortNameEn: doc.data().ACP_CLUB_NAME_EN ?? '',
+    fullNameGr: doc.data().CLUB_NAME_FULL_GR ?? '',
+  }));
+setClubs(data);
+if (data.length > 0) setSelectedClubId(data[0].id);
       if (data.length > 0) setSelectedClubId(data[0].id);
     })
     .catch((err) => {
