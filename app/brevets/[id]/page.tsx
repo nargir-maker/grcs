@@ -55,6 +55,7 @@ function getDifficultyInfo(bdi: number) {
   if (bdi < 19) return { label: 'ΑΚΡΑΙΟ',        color: '#6A1B9A', emoji: '💀' };
   return         { label: 'ΘΡΥΛΙΚΟ',             color: '#1A1A1A', emoji: '☠️' };
 }
+
 function computeBDI(wcs: number, km: number, ascent: number) {
   if (km <= 0) return 0;
   if (wcs > 0) return Math.log(km / 100 + 1) * 2.2 + wcs / 1403;
