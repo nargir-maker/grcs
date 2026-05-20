@@ -1,7 +1,7 @@
 'use client';
 
 // components/WeatherStrip.tsx
-//
+// Version 2.0 
 // Fetches weather at ~8 evenly spaced route points + all CPs along the GPX.
 // Uses Open-Meteo API — free, no API key needed.
 //
