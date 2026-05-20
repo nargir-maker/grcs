@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import { useSession, signIn } from 'next-auth/react';
 import RegistrationForm from '@/app/components/RegistrationForm';
 
+
 const WeatherStrip = dynamic(() => import('../../components/WeatherStrip'), {
   ssr: false,
   loading: () => (
