@@ -7,7 +7,18 @@ import { doc, getDoc, getDocFromCache } from 'firebase/firestore';
 import dynamic from 'next/dynamic';
 import { useSession, signIn } from 'next-auth/react';
 import RegistrationForm from '@/app/components/RegistrationForm';
-import WeatherStrip from '../../components/WeatherStrip';
+
+const WeatherStrip = dynamic(() => import('../../components/WeatherStrip'), {
+  ssr: false,
+  loading: () => (
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+      <div className="flex items-center gap-3 text-white/40 text-sm">
+        <div className="w-4 h-4 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+        Φόρτωση καιρού...
+      </div>
+    </div>
+  ),
+});
 
 const ElevationChart = dynamic(() => import('../../components/ElevationChart'), {
   ssr: false,
