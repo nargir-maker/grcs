@@ -7,6 +7,7 @@ import { doc, getDoc, getDocFromCache } from 'firebase/firestore';
 import dynamic from 'next/dynamic';
 import { useSession, signIn } from 'next-auth/react';
 import RegistrationForm from '@/app/components/RegistrationForm';
+import WeatherStrip from '@/app/components/WeatherStrip';
 
 const ElevationChart = dynamic(() => import('../../components/ElevationChart'), {
   ssr: false,
@@ -173,6 +174,16 @@ function DaylightSection({ startCoords, startDate, distanceKm }: {
     const darkEnd = lightsOff < brevetEnd ? lightsOff : brevetEnd;
     darkMinutes += (darkEnd.getTime() - startDate.getTime()) / 60000;
   }
+
+{/* ── WEATHER STRIP ── */}
+{startDate && brevet.gpxUrl && (
+  <WeatherStrip
+    gpxUrl={brevet.gpxUrl}
+    startDate={startDate}
+    distanceKm={brevet.distance}
+    controls={brevet.controls}
+  />
+)}
 
   // Daylight duration
   const daylightMin = Math.round((sunset.getTime() - sunrise.getTime()) / 60000);
