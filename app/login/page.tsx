@@ -191,7 +191,26 @@ useEffect(() => {
 
         {/* Logo + Title */}
         <div className="text-center mb-8">
-flex logo-scroll gap-6 w-max
+<div className="w-full overflow-hidden mb-4">
+  <style>{scrollStyle}</style>
+  <div className="flex logo-scroll gap-6 w-max">
+    {[...allClubs, ...allClubs].map((club, i) => (
+      <div key={i} className="flex-shrink-0 flex flex-col items-center gap-2">
+        <img
+          src={`/logos/${club.id}.png`}
+          alt={club.shortNameGr}
+          className="h-48 w-48 object-contain drop-shadow-lg"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+        <span className="text-white/50 text-xs text-center max-w-[120px] truncate">
+          {club.shortNameGr}
+        </span>
+      </div>
+    ))}
+  </div>
+</div>
           <LogoScroller clubs={allClubs} />
           <h1 className="text-2xl font-bold text-white tracking-wide">
             GRC Platform
