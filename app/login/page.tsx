@@ -7,6 +7,19 @@ import { db } from '@/app/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/AuthContext';
 
+// Add this style tag for the scroll animation
+const scrollStyle = `
+  @keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .logo-scroll {
+    animation: scroll 30s linear infinite;
+  }
+  .logo-scroll:hover {
+    animation-play-state: paused;
+  }
+`;
 // ── Types ────────────────────────────────────────────
 interface Club {
   id: string;
@@ -17,6 +30,35 @@ interface Club {
 
 type Mode = 'choose' | 'cyclist' | 'organizer';
 
+function LogoScroller({ clubs }: { clubs: Club[] }) {
+  if (clubs.length === 0) return null;
+  // Duplicate for seamless loop
+  const doubled = [...clubs, ...clubs];
+  return (
+    <div className="w-full overflow-hidden mt-4 mb-2">
+      <style>{scrollStyle}</style>
+      <div className="flex logo-scroll gap-4 w-max">
+        {doubled.map((club, i) => (
+          <div key={i} className="flex-shrink-0 flex flex-col items-center gap-1">
+            <img
+              src={`/logos/${club.id}.png`}
+              alt={club.shortNameGr}
+              className="w-10 h-10 object-contain rounded-full bg-white/5
+                border border-white/10 p-0.5"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+            <span className="text-white/30 text-[9px] text-center max-w-[48px] truncate">
+              {club.shortNameGr}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>('choose');
@@ -26,7 +68,23 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [clubsLoading, setClubsLoading] = useState(false);
+  const [allClubs, setAllClubs] = useState<Club[]>([]);
 
+  useEffect(() => {
+  getDocs(collection(db, 'clubs'))
+    .then((snap) => {
+      const data: Club[] = snap.docs
+        .filter((d) => (d.data().last_brevet_year ?? 0) >= 2024)
+        .map((doc) => ({
+          id: doc.id,
+          shortNameGr: doc.data().CLUB_NAME_SHORT_GR ?? '',
+          shortNameEn: doc.data().ACP_CLUB_NAME_EN ?? '',
+          fullNameGr: doc.data().CLUB_NAME_FULL_GR ?? '',
+        }));
+      setAllClubs(data);
+    })
+    .catch(() => {});
+}, []);
   // Load clubs from Firestore when organizer mode selected
 useEffect(() => {
   if (mode !== 'organizer') return;
@@ -145,6 +203,7 @@ useEffect(() => {
               className="h-48 w-48 object-contain drop-shadow-lg"
             />
           </div>
+          <LogoScroller clubs={allClubs} />
           <h1 className="text-2xl font-bold text-white tracking-wide">
             GRC Platform
           </h1>
