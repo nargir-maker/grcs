@@ -489,20 +489,20 @@ export default function BrevetsPage() {
                           <img
                             src="/logos/both.png"
                             alt="Συνδιοργάνωση"
-                            className="w-8 h-8 object-contain rounded-full bg-white/10 backdrop-blur-sm"
+                            className="w-24 h-24 object-contain rounded-full bg-white/10 backdrop-blur-sm"
                             onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                           />
-                          <span className="text-cyan-400 text-xs font-bold">Συνδιοργάνωση</span>
+                          <span className="text-cyan-600 text-xs font-bold">Συνδιοργάνωση</span>
                         </>
                       ) : (
                         <>
                           <img
                             src={b.organizerLogo}
                             alt={b.organizer}
-                            className="w-16 h-16 object-contain rounded-full bg-white/10 backdrop-blur-sm"
+                            className="w-24 h-24 object-contain rounded-full bg-white/10 backdrop-blur-sm"
                             onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                           />
-                          <span className="text-white/90 text-xs font-medium">{b.organizer}</span>
+                          <span className="text-white/110 text-xs font-medium">{b.organizer}</span>
                         </>
                       )}
                     </div>
