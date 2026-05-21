@@ -438,10 +438,10 @@ export default function BrevetsPage() {
                 <a
                   key={b.id}
                   href={`/brevets/${b.id}`}
-                  className="relative rounded-2xl overflow-hidden border border-white/10
-                    hover:border-cyan-500/40 transition-all cursor-pointer block
+                  className="relative rounded-2xl overflow-hidden border-2 border-white/20
+                    hover:border-cyan-500/60 transition-all cursor-pointer block
                     no-underline min-h-[280px] flex flex-col justify-end
-                    hover:shadow-lg hover:shadow-cyan-500/10"
+                    hover:shadow-lg hover:shadow-cyan-500/60"
                   style={hasImage ? {
                     backgroundImage: `url(${b.imageUrl})`,
                     backgroundSize: 'cover',
