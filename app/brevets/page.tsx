@@ -25,6 +25,7 @@ interface Brevet {
   certification: string;
   type: string;
   gpxUrl: string;
+  imageUrl: string;          // ← photo for card background
   difficultyLabel: string;
   difficultyColor: string;
 }
@@ -85,8 +86,6 @@ export default function BrevetsPage() {
   const [organizers, setOrganizers] = useState<OrganizerOption[]>([]);
 
   // ── ORGANIZER VIEW STATE ───────────────────────────
-  // isOrganizerView: true when landed from organizer dashboard
-  // myOrganizerClubId: stored so we can go back after "Δες όλα"
   const [isOrganizerView, setIsOrganizerView] = useState(false);
   const [myOrganizerClubId, setMyOrganizerClubId] = useState<string | null>(null);
 
@@ -139,6 +138,7 @@ export default function BrevetsPage() {
           const d = doc.data();
           const info  = d.info  || {};
           const route = d.route || {};
+          const extra = d.extra || {};   // ← fetch extra for imageUrl
 
           const km     = parseInt(info.distance?.toString()  ?? '0') || 0;
           const ascent = parseInt(route.ascent?.toString()   ?? '0') || 0;
@@ -170,6 +170,7 @@ export default function BrevetsPage() {
             certification:   info.certification?.toString() ?? '',
             type:            info.type?.toString() ?? 'BRM',
             gpxUrl:          route.gpxUrl?.toString() ?? '',
+            imageUrl:        extra.imageUrl?.toString() ?? '',   // ← photo
             difficultyLabel: label,
             difficultyColor: color,
           });
@@ -336,7 +337,6 @@ export default function BrevetsPage() {
 
           {/* Row 5 — Organizer / Organizer view toggle */}
           {isOrganizerView ? (
-            // ── ORGANIZER FOCUSED VIEW ─────────────────
             <div className="flex items-center justify-between
               bg-purple-500/10 border border-purple-400/30 rounded-xl px-4 py-3">
               <div className="flex items-center gap-2">
@@ -359,11 +359,8 @@ export default function BrevetsPage() {
               </button>
             </div>
           ) : organizers.length > 1 ? (
-            // ── NORMAL ORGANIZER FILTER ROW ────────────
             <div className="flex gap-2 flex-wrap items-center">
               <span className="text-white/30 text-xs w-16">Διοργ.:</span>
-
-              {/* ── "Τα δικά μου" button — only if came from dashboard ── */}
               {myOrganizerClubId && (
                 <button
                   onClick={() => {
@@ -378,7 +375,6 @@ export default function BrevetsPage() {
                   🏁 Τα δικά μου
                 </button>
               )}
-
               <button
                 onClick={() => setOrganizerFilter(null)}
                 className={`px-3 py-2 rounded-full text-xs font-bold
@@ -390,15 +386,12 @@ export default function BrevetsPage() {
               >
                 Όλοι
               </button>
-
               {organizers.map((org) => {
                 const isSelected = organizerFilter === org.id;
                 return (
                   <button
                     key={org.id}
-                    onClick={() =>
-                      setOrganizerFilter(isSelected ? null : org.id)
-                    }
+                    onClick={() => setOrganizerFilter(isSelected ? null : org.id)}
                     title={org.name}
                     className={`flex items-center gap-2 pl-1 pr-3 py-1
                       rounded-full text-xs font-bold transition-all border ${
@@ -408,13 +401,9 @@ export default function BrevetsPage() {
                     }`}
                   >
                     <img
-                      src={org.logo}
-                      alt={org.name}
+                      src={org.logo} alt={org.name}
                       className="w-6 h-6 rounded-full object-contain bg-white/10"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          '/logos/000000.png';
-                      }}
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                     />
                     <span className="max-w-[100px] truncate">{org.name}</span>
                   </button>
@@ -442,124 +431,127 @@ export default function BrevetsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filtered.map((b) => {
               const isCoOrg = hasCoOrg(b);
+              const hasImage = b.imageUrl && b.imageUrl.length > 0;
+
+              // ── put here <a ────────────────────────────────────────────────
               return (
                 <a
                   key={b.id}
                   href={`/brevets/${b.id}`}
-                  className="bg-white/5 border border-white/10 rounded-2xl p-6
-                    hover:border-cyan-500/30 transition-colors cursor-pointer
-                    block no-underline"
+                  className="relative rounded-2xl overflow-hidden border border-white/10
+                    hover:border-cyan-500/40 transition-all cursor-pointer block
+                    no-underline min-h-[280px] flex flex-col justify-end
+                    hover:shadow-lg hover:shadow-cyan-500/10"
+                  style={hasImage ? {
+                    backgroundImage: `url(${b.imageUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  } : {
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                  }}
                 >
-                  {/* Organizer row */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
+                  {/* ── Dark gradient overlay — always present ── */}
+                  <div className={`absolute inset-0 ${
+                    hasImage
+                      ? 'bg-gradient-to-t from-[#0A1628] via-[#0A1628]/85 to-[#0A1628]/30'
+                      : 'bg-transparent'
+                  }`} />
+
+                  {/* ── Distance badge — top right ── */}
+                  <div className="absolute top-4 right-4 z-10">
+                    <span className="bg-cyan-500/20 backdrop-blur-sm text-cyan-400
+                      text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/40">
+                      {b.distance}km
+                    </span>
+                  </div>
+
+                  {/* ── Difficulty badge — top left ── */}
+                  <div className="absolute top-4 left-4 z-10">
+                    <span
+                      className="text-xs font-bold px-3 py-1 rounded-full backdrop-blur-sm"
+                      style={{
+                        backgroundColor: b.difficultyColor + '30',
+                        color: b.difficultyColor,
+                        border: `1px solid ${b.difficultyColor}60`,
+                      }}
+                    >
+                      {b.difficultyLabel}
+                    </span>
+                  </div>
+
+                  {/* ── Card content — layered on top of gradient ── */}
+                  <div className="relative z-10 p-6">
+
+                    {/* Organizer row */}
+                    <div className="flex items-center gap-2 mb-3">
                       {isCoOrg ? (
                         <>
                           <img
                             src="/logos/both.png"
                             alt="Συνδιοργάνωση"
-                            className="w-10 h-10 object-contain rounded-full bg-white/5"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src =
-                                '/logos/000000.png';
-                            }}
+                            className="w-8 h-8 object-contain rounded-full bg-white/10 backdrop-blur-sm"
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                           />
-                          <div className="flex flex-col">
-                            <span className="text-cyan-400 text-xs font-bold leading-tight">
-                              Συνδιοργάνωση
-                            </span>
-                            <span className="text-white/40 text-xs leading-tight">
-                              {b.organizer}
-                            </span>
-                          </div>
+                          <span className="text-cyan-400 text-xs font-bold">Συνδιοργάνωση</span>
                         </>
                       ) : (
                         <>
                           <img
                             src={b.organizerLogo}
                             alt={b.organizer}
-                            className="w-10 h-10 object-contain rounded-full"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src =
-                                '/logos/000000.png';
-                            }}
+                            className="w-8 h-8 object-contain rounded-full bg-white/10 backdrop-blur-sm"
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                           />
-                          <span className="text-white/60 text-xs font-medium">
-                            {b.organizer}
-                          </span>
+                          <span className="text-white/60 text-xs font-medium">{b.organizer}</span>
                         </>
                       )}
                     </div>
-                    <span className="bg-cyan-500/10 text-cyan-400 text-xs
-                      font-bold px-3 py-1 rounded-full border border-cyan-500/20">
-                      {b.distance}km
-                    </span>
-                  </div>
 
-                  {/* Title */}
-                  <h3 className="text-white font-bold text-base leading-tight mb-1">
-                    {b.title}
-                  </h3>
-                  <p className="text-white/40 text-xs mb-4">📍 {b.start}</p>
+                    {/* Title */}
+                    <h3 className="text-white font-bold text-base leading-tight mb-1 drop-shadow-md">
+                      {b.title}
+                    </h3>
 
-                  {/* Date */}
-                  <div className="mb-4">
-                    <span className="text-white/50 text-xs">
-                      📅{' '}
-                      {b.date
-                        ? new Date(b.date).toLocaleDateString('el-GR', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
-                          })
-                        : '—'}
-                    </span>
-                  </div>
+                    {/* Location */}
+                    <p className="text-white/50 text-xs mb-3">📍 {b.start}</p>
 
-                  {/* Stats */}
-                  <div className="flex items-center gap-4 mb-4">
-                    {b.ascent > 0 && (
-                      <span className="text-white/40 text-xs">
-                        ⛰️ {b.ascent.toLocaleString()}m+
+                    {/* Date + stats row */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-white/50 text-xs">
+                        📅{' '}
+                        {b.date
+                          ? new Date(b.date).toLocaleDateString('el-GR', {
+                              day: 'numeric', month: 'long', year: 'numeric',
+                            })
+                          : '—'}
                       </span>
-                    )}
-                    {b.certification && (
-                      <span className="text-white/40 text-xs">
-                        {b.certification}
-                      </span>
-                    )}
-                    {b.type && (
-                      <span className="text-white/40 text-xs">{b.type}</span>
-                    )}
-                  </div>
+                      <div className="flex items-center gap-3">
+                        {b.ascent > 0 && (
+                          <span className="text-white/40 text-xs">⛰️ {b.ascent.toLocaleString()}m+</span>
+                        )}
+                        {b.certification && (
+                          <span className="text-white/40 text-xs">{b.certification}</span>
+                        )}
+                        {b.gpxUrl && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              window.open(b.gpxUrl, '_blank');
+                            }}
+                            className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
+                          >
+                            GPX →
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
-                  {/* Bottom */}
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="text-xs font-bold px-3 py-1 rounded-full"
-                      style={{
-                        backgroundColor: b.difficultyColor + '20',
-                        color: b.difficultyColor,
-                        border: `1px solid ${b.difficultyColor}40`,
-                      }}
-                    >
-                      {b.difficultyLabel}
-                    </span>
-                    {b.gpxUrl && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          window.open(b.gpxUrl, '_blank');
-                        }}
-                        className="text-cyan-400 text-xs hover:text-cyan-300
-                          transition-colors"
-                      >
-                        GPX →
-                      </button>
-                    )}
                   </div>
+                  {/* ── end of card content ── */}
+
                 </a>
+                // ── end <a ─────────────────────────────────────────────────
               );
             })}
           </div>
