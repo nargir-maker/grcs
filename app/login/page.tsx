@@ -191,18 +191,7 @@ useEffect(() => {
 
         {/* Logo + Title */}
         <div className="text-center mb-8">
-          <div className="flex justify-center gap-4 mb-4">
-            <img
-              src="/logos/650000.png"
-              alt="ΛΕ.ΠΟ.Τ.Ε."
-              className="h-48 w-48 object-contain drop-shadow-lg"
-            />
-            <img
-              src="/logos/659999.png"
-              alt="H.A.R."
-              className="h-48 w-48 object-contain drop-shadow-lg"
-            />
-          </div>
+flex logo-scroll gap-6 w-max
           <LogoScroller clubs={allClubs} />
           <h1 className="text-2xl font-bold text-white tracking-wide">
             GRC Platform
