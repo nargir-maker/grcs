@@ -9,7 +9,7 @@ import { useSession, signIn } from 'next-auth/react';
 import RegistrationForm from '@/app/components/RegistrationForm';
 
 
-const WeatherStrip = dynamic(() => import('@/app/components/Weatherstrip'), {
+const WeatherStrip = dynamic(() => import('../../components/WeatherStrip'), {
   ssr: false,
   loading: () => (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
@@ -20,6 +20,7 @@ const WeatherStrip = dynamic(() => import('@/app/components/Weatherstrip'), {
     </div>
   ),
 });
+// weather strip component
 
 const ElevationChart = dynamic(() => import('../../components/ElevationChart'), {
   ssr: false,
