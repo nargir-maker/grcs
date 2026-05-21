@@ -187,7 +187,7 @@ useEffect(() => {
         }}
       />
 
-      <div className="relative w-full max-w-md">
+      <div className="relative w-full max-w-lg rounded-3xl p-6 md:p-12 bg-gradient-to-t from-white/5 to-white/10 border border-white/20 shadow-2xl">
 
         {/* Logo + Title */}
         <div className="text-center mb-8">
