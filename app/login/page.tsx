@@ -7,7 +7,6 @@ import { db } from '@/app/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/AuthContext';
 
-// Add this style tag for the scroll animation
 const scrollStyle = `
   @keyframes scroll {
     0% { transform: translateX(0); }
@@ -20,7 +19,7 @@ const scrollStyle = `
     animation-play-state: paused;
   }
 `;
-// ── Types ────────────────────────────────────────────
+
 interface Club {
   id: string;
   shortNameGr: string;
@@ -30,36 +29,6 @@ interface Club {
 
 type Mode = 'choose' | 'cyclist' | 'organizer';
 
-function LogoScroller({ clubs }: { clubs: Club[] }) {
-  if (clubs.length === 0) return null;
-  // Duplicate for seamless loop
-  const doubled = [...clubs, ...clubs];
-  return (
-    <div className="w-full overflow-hidden mt-4 mb-2">
-      <style>{scrollStyle}</style>
-      <div className="flex logo-scroll gap-4 w-max">
-        {doubled.map((club, i) => (
-          <div key={i} className="flex-shrink-0 flex flex-col items-center gap-1">
-            <img
-              src={`/logos/${club.id}.png`}
-              alt={club.shortNameGr}
-              className="w-10 h-10 object-contain rounded-full bg-white/5
-                border border-white/10 p-0.5"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-            <span className="text-white/30 text-[9px] text-center max-w-[48px] truncate">
-              {club.shortNameGr}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Main Page ────────────────────────────────────────
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>('choose');
   const [clubs, setClubs] = useState<Club[]>([]);
@@ -70,90 +39,70 @@ export default function LoginPage() {
   const [clubsLoading, setClubsLoading] = useState(false);
   const [allClubs, setAllClubs] = useState<Club[]>([]);
 
+  // ── Fetch all clubs for logo scroller on mount ─────────────────────────
   useEffect(() => {
-  getDocs(collection(db, 'clubs'))
-    .then((snap) => {
-      const data: Club[] = snap.docs
-        .filter((d) => (d.data().last_brevet_year ?? 0) >= 2024)
-        .map((doc) => ({
-          id: doc.id,
-          shortNameGr: doc.data().CLUB_NAME_SHORT_GR ?? '',
-          shortNameEn: doc.data().ACP_CLUB_NAME_EN ?? '',
-          fullNameGr: doc.data().CLUB_NAME_FULL_GR ?? '',
-        }));
-      setAllClubs(data);
-    })
-    .catch(() => {});
-}, []);
-  // Load clubs from Firestore when organizer mode selected
-useEffect(() => {
-  if (mode !== 'organizer') return;
-  setClubsLoading(true);
-  console.log('fetching clubs...');
-  getDocs(collection(db, 'clubs'))
-    .then((snap) => {
-      console.log('snap size:', snap.size);
-      console.log('docs:', snap.docs.map(d => d.id));
-const data: Club[] = snap.docs
-  .filter((doc) => (doc.data().last_brevet_year ?? 0) >= 2024)
-  .map((doc) => ({
-    id: doc.id,
-    shortNameGr: doc.data().CLUB_NAME_SHORT_GR ?? '',
-    shortNameEn: doc.data().ACP_CLUB_NAME_EN ?? '',
-    fullNameGr: doc.data().CLUB_NAME_FULL_GR ?? '',
-  }));
-setClubs(data);
-if (data.length > 0) setSelectedClubId(data[0].id);
-      if (data.length > 0) setSelectedClubId(data[0].id);
-    })
-    .catch((err) => {
-      console.error('clubs fetch error:', err);
-      setError('Αδυναμία φόρτωσης συλλόγων.');
-    })
-    .finally(() => setClubsLoading(false));
-}, [mode]);
+    getDocs(collection(db, 'clubs'))
+      .then((snap) => {
+        const data: Club[] = snap.docs
+          .filter((d) => (d.data().last_brevet_year ?? 0) >= 2024)
+          .map((doc) => ({
+            id: doc.id,
+            shortNameGr: doc.data().CLUB_NAME_SHORT_GR ?? '',
+            shortNameEn: doc.data().ACP_CLUB_NAME_EN ?? '',
+            fullNameGr: doc.data().CLUB_NAME_FULL_GR ?? '',
+          }));
+        setAllClubs(data);
+      })
+      .catch(() => {});
+  }, []);
 
-const { user, isOrganizer } = useAuth();
-const router = useRouter();
+  // ── Load clubs when organizer mode selected ────────────────────────────
+  useEffect(() => {
+    if (mode !== 'organizer') return;
+    setClubsLoading(true);
+    getDocs(collection(db, 'clubs'))
+      .then((snap) => {
+        const data: Club[] = snap.docs
+          .filter((doc) => (doc.data().last_brevet_year ?? 0) >= 2024)
+          .map((doc) => ({
+            id: doc.id,
+            shortNameGr: doc.data().CLUB_NAME_SHORT_GR ?? '',
+            shortNameEn: doc.data().ACP_CLUB_NAME_EN ?? '',
+            fullNameGr: doc.data().CLUB_NAME_FULL_GR ?? '',
+          }));
+        setClubs(data);
+        if (data.length > 0) setSelectedClubId(data[0].id);
+      })
+      .catch((err) => {
+        console.error('clubs fetch error:', err);
+        setError('Αδυναμία φόρτωσης συλλόγων.');
+      })
+      .finally(() => setClubsLoading(false));
+  }, [mode]);
 
-useEffect(() => {
-  if (isOrganizer) {
-    router.replace('/organizer/dashboard');
-  } else if (user) {
-    router.replace('/');
-  }
-}, [user, isOrganizer, router]);
+  const { user, isOrganizer } = useAuth();
+  const router = useRouter();
 
-  // ── Cyclist login ─────────────────────────────────
+  useEffect(() => {
+    if (isOrganizer) {
+      router.replace('/organizer/dashboard');
+    } else if (user) {
+      router.replace('/');
+    }
+  }, [user, isOrganizer, router]);
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     await signIn('google', { callbackUrl: '/' });
   };
 
-  // ── Organizer login ───────────────────────────────
   const handleOrganizerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (!selectedClubId) {
-      setError('Επέλεξε σύλλογο.');
-      return;
-    }
-    if (!password.trim()) {
-      setError('Εισήγαγε κωδικό.');
-      return;
-    }
-
-    // Password for now = club doc ID
-    if (password.trim() !== selectedClubId) {
-      setError('Λάθος κωδικός. Δοκίμασε ξανά.');
-      return;
-    }
-
+    if (!selectedClubId) { setError('Επέλεξε σύλλογο.'); return; }
+    if (!password.trim()) { setError('Εισήγαγε κωδικό.'); return; }
+    if (password.trim() !== selectedClubId) { setError('Λάθος κωδικός. Δοκίμασε ξανά.'); return; }
     setLoading(true);
-
-    // Store organizer session in localStorage
-    // (will be read by AuthContext and middleware)
     const selectedClub = clubs.find((c) => c.id === selectedClubId)!;
     localStorage.setItem('organizer_session', JSON.stringify({
       role: 'organizer',
@@ -163,12 +112,9 @@ useEffect(() => {
       clubFullNameGr: selectedClub.fullNameGr,
       loginAt: new Date().toISOString(),
     }));
-
-    // Redirect to organizer dashboard
     window.location.href = '/organizer/dashboard';
   };
 
-  // ── Back handler ──────────────────────────────────
   const handleBack = () => {
     setMode('choose');
     setError('');
@@ -187,261 +133,206 @@ useEffect(() => {
         }}
       />
 
-      <div className="relative w-full max-w-md rounded-3xl p-6 md:p-12 bg-gradient-to-t from-white/5 to-white/10 border border-white/20 shadow-2xl">
+      <div className="relative w-full max-w-lg">
 
-        {/* Logo + Title */}
-        <div className="text-center mb-8">
-<div className="w-full overflow-hidden mb-4 mx-12 -ml-14">
-  <style>{scrollStyle}</style>
-  <div className="flex logo-scroll gap-6 w-max">
-    {[...allClubs, ...allClubs].map((club, i) => (
-      <div key={i} className="flex-shrink-0 flex flex-col items-center gap-2">
-        <img
-          src={`/logos/${club.id}.png`}
-          alt={club.shortNameGr}
-          className="h-48 w-48 object-contain drop-shadow-lg"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none';
-          }}
-        />
-        <span className="text-white/50 text-xs text-center max-w-[120px] truncate">
-          {club.shortNameGr}
-        </span>
-      </div>
-    ))}
-  </div>
-</div>
-          <LogoScroller clubs={allClubs} />
-          <h1 className="text-2xl font-bold text-white tracking-wide">
-            GRC Platform
-          </h1>
-          <p className="text-blue-300 text-sm mt-1">
-            Greek Randonneuring Community
-          </p>
-        </div>
+        {/* ── CARD — overflow-hidden so scroller is clipped to border ── */}
+        <div className="rounded-3xl border border-white/20 shadow-2xl overflow-hidden
+          bg-gradient-to-t from-white/5 to-white/10">
 
-        {/* Card */}
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl overflow-hidden">
-
-          {/* ── MODE: CHOOSE ─────────────────────────── */}
-          {mode === 'choose' && (
-            <div className="p-8">
-              <h2 className="text-white text-center text-lg font-semibold mb-2">
-                Καλωσόρισες
-              </h2>
-              <p className="text-blue-200 text-center text-sm mb-8">
-                Πώς θέλεις να συνδεθείς;
-              </p>
-
-              <div className="flex flex-col gap-4">
-                {/* Cyclist */}
-                <button
-                  onClick={() => setMode('cyclist')}
-                  className="group relative flex items-center gap-4 p-5 rounded-xl
-                    bg-blue-600/30 border border-blue-400/40 hover:bg-blue-600/50
-                    hover:border-blue-400/70 transition-all duration-200 text-left"
-                >
-                  <div className="text-3xl">🚴</div>
-                  <div>
-                    <div className="text-white font-semibold text-base">
-                      Είμαι Αναβάτης
-                    </div>
-                    <div className="text-blue-300 text-xs mt-0.5">
-                      Δες brevets, εγγράψου, παρακολούθησε ιστορικό
-                    </div>
-                  </div>
-                  <div className="ml-auto text-blue-300 group-hover:translate-x-1 transition-transform">
-                    →
-                  </div>
-                </button>
-
-                {/* Organizer */}
-                <button
-                  onClick={() => setMode('organizer')}
-                  className="group relative flex items-center gap-4 p-5 rounded-xl
-                    bg-purple-600/30 border border-purple-400/40 hover:bg-purple-600/50
-                    hover:border-purple-400/70 transition-all duration-200 text-left"
-                >
-                  <div className="text-3xl">🏁</div>
-                  <div>
-                    <div className="text-white font-semibold text-base">
-                      Είμαι Διοργανωτής
-                    </div>
-                    <div className="text-purple-300 text-xs mt-0.5">
-                      Διαχείριση brevets, εγγραφών, αποτελεσμάτων
-                    </div>
-                  </div>
-                  <div className="ml-auto text-purple-300 group-hover:translate-x-1 transition-transform">
-                    →
-                  </div>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── MODE: CYCLIST ────────────────────────── */}
-          {mode === 'cyclist' && (
-            <div className="p-8">
-              <button
-                onClick={handleBack}
-                className="flex items-center gap-1 text-blue-300 hover:text-white
-                  text-sm mb-6 transition-colors"
-              >
-                ← Πίσω
-              </button>
-
-              <div className="text-center mb-6">
-                <div className="text-4xl mb-3">🚴</div>
-                <h2 className="text-white font-semibold text-lg">
-                  Σύνδεση Αναβάτη
-                </h2>
-                <p className="text-blue-200 text-sm mt-1">
-                  Χρησιμοποίησε τον Google λογαριασμό σου
-                </p>
-              </div>
-
-              <button
-                onClick={handleGoogleLogin}
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-3 py-3.5 px-4
-                  bg-white hover:bg-gray-50 text-gray-800 font-semibold rounded-xl
-                  shadow-lg transition-all duration-200 disabled:opacity-60
-                  disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent
-                    rounded-full animate-spin" />
-                ) : (
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                )}
-                {loading ? 'Σύνδεση...' : 'Συνέχεια με Google'}
-              </button>
-            </div>
-          )}
-
-          {/* ── MODE: ORGANIZER ──────────────────────── */}
-          {mode === 'organizer' && (
-            <div className="p-8">
-              <button
-                onClick={handleBack}
-                className="flex items-center gap-1 text-purple-300 hover:text-white
-                  text-sm mb-6 transition-colors"
-              >
-                ← Πίσω
-              </button>
-
-              <div className="text-center mb-6">
-                <div className="text-4xl mb-3">🏁</div>
-                <h2 className="text-white font-semibold text-lg">
-                  Σύνδεση Διοργανωτή
-                </h2>
-                <p className="text-purple-200 text-sm mt-1">
-                  Επέλεξε σύλλογο και εισήγαγε κωδικό
-                </p>
-              </div>
-
-              <form onSubmit={handleOrganizerLogin} className="flex flex-col gap-4">
-
-                {/* Club dropdown */}
-                <div>
-                  <label className="text-purple-200 text-xs font-semibold
-                    uppercase tracking-wider mb-1.5 block">
-                    Σύλλογος
-                  </label>
-                  {clubsLoading ? (
-                    <div className="flex items-center gap-2 py-3 text-purple-300 text-sm">
-                      <div className="w-4 h-4 border-2 border-purple-400
-                        border-t-transparent rounded-full animate-spin" />
-                      Φόρτωση συλλόγων...
-                    </div>
-                  ) : (
-                    <select
-                      value={selectedClubId}
-                      onChange={(e) => {
-                        setSelectedClubId(e.target.value);
-                        setError('');
-                      }}
-                      className="w-full bg-white/10 border border-purple-400/40
-                        text-white rounded-xl px-4 py-3 text-sm
-                        focus:outline-none focus:border-purple-400
-                        focus:ring-1 focus:ring-purple-400/50
-                        [&>option]:bg-slate-800 [&>option]:text-white"
-                    >
-                      {clubs.map((club) => (
-                        <option key={club.id} value={club.id}>
-                          {club.shortNameGr}
-                          {club.shortNameEn ? ` · ${club.shortNameEn}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                {/* Password */}
-                <div>
-                  <label className="text-purple-200 text-xs font-semibold
-                    uppercase tracking-wider mb-1.5 block">
-                    Κωδικός
-                  </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      setError('');
+          {/* ── LOGO SCROLLER — edge to edge, no padding ── */}
+          <style>{scrollStyle}</style>
+          <div className="w-full overflow-hidden">
+            <div className="flex logo-scroll gap-6 w-max py-4 px-2">
+              {[...allClubs, ...allClubs].map((club, i) => (
+                <div key={i} className="flex-shrink-0 flex flex-col items-center gap-2">
+                  <img
+                    src={`/logos/${club.id}.png`}
+                    alt={club.shortNameGr}
+                    className="h-40 w-40 object-contain drop-shadow-lg"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
                     }}
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                    className="w-full bg-white/10 border border-purple-400/40
-                      text-white placeholder-purple-300/50 rounded-xl px-4 py-3
-                      text-sm focus:outline-none focus:border-purple-400
-                      focus:ring-1 focus:ring-purple-400/50"
                   />
+                  <span className="text-white/50 text-xs text-center max-w-[120px] truncate">
+                    {club.shortNameGr}
+                  </span>
                 </div>
+              ))}
+            </div>
+          </div>
 
-                {/* Error */}
-                {error && (
-                  <div className="flex items-center gap-2 text-red-300 text-sm
-                    bg-red-500/10 border border-red-400/30 rounded-lg px-3 py-2">
-                    <span>⚠️</span>
-                    <span>{error}</span>
-                  </div>
-                )}
+          {/* ── TITLE — padded ── */}
+          <div className="text-center px-6 pb-6">
+            <h1 className="text-2xl font-bold text-white tracking-wide">
+              GRC Platform
+            </h1>
+            <p className="text-blue-300 text-sm mt-1">
+              Greek Randonneuring Community
+            </p>
+          </div>
 
-                {/* Submit */}
+          {/* ── MODE CONTENT — padded inner card ── */}
+          <div className="bg-white/10 backdrop-blur-md border-t border-white/20">
+
+            {/* ── MODE: CHOOSE ── */}
+            {mode === 'choose' && (
+              <div className="p-8">
+                <h2 className="text-white text-center text-lg font-semibold mb-2">
+                  Καλωσόρισες
+                </h2>
+                <p className="text-blue-200 text-center text-sm mb-8">
+                  Πώς θέλεις να συνδεθείς;
+                </p>
+                <div className="flex flex-col gap-4">
+                  <button
+                    onClick={() => setMode('cyclist')}
+                    className="group relative flex items-center gap-4 p-5 rounded-xl
+                      bg-blue-600/30 border border-blue-400/40 hover:bg-blue-600/50
+                      hover:border-blue-400/70 transition-all duration-200 text-left"
+                  >
+                    <div className="text-3xl">🚴</div>
+                    <div>
+                      <div className="text-white font-semibold text-base">Είμαι Αναβάτης</div>
+                      <div className="text-blue-300 text-xs mt-0.5">Δες brevets, εγγράψου, παρακολούθησε ιστορικό</div>
+                    </div>
+                    <div className="ml-auto text-blue-300 group-hover:translate-x-1 transition-transform">→</div>
+                  </button>
+                  <button
+                    onClick={() => setMode('organizer')}
+                    className="group relative flex items-center gap-4 p-5 rounded-xl
+                      bg-purple-600/30 border border-purple-400/40 hover:bg-purple-600/50
+                      hover:border-purple-400/70 transition-all duration-200 text-left"
+                  >
+                    <div className="text-3xl">🏁</div>
+                    <div>
+                      <div className="text-white font-semibold text-base">Είμαι Διοργανωτής</div>
+                      <div className="text-purple-300 text-xs mt-0.5">Διαχείριση brevets, εγγραφών, αποτελεσμάτων</div>
+                    </div>
+                    <div className="ml-auto text-purple-300 group-hover:translate-x-1 transition-transform">→</div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── MODE: CYCLIST ── */}
+            {mode === 'cyclist' && (
+              <div className="p-8">
+                <button onClick={handleBack}
+                  className="flex items-center gap-1 text-blue-300 hover:text-white text-sm mb-6 transition-colors">
+                  ← Πίσω
+                </button>
+                <div className="text-center mb-6">
+                  <div className="text-4xl mb-3">🚴</div>
+                  <h2 className="text-white font-semibold text-lg">Σύνδεση Αναβάτη</h2>
+                  <p className="text-blue-200 text-sm mt-1">Χρησιμοποίησε τον Google λογαριασμό σου</p>
+                </div>
                 <button
-                  type="submit"
-                  disabled={loading || clubsLoading || !selectedClubId}
-                  className="w-full py-3.5 bg-purple-600 hover:bg-purple-500
-                    text-white font-semibold rounded-xl shadow-lg
-                    transition-all duration-200 disabled:opacity-50
-                    disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-3 py-3.5 px-4
+                    bg-white hover:bg-gray-50 text-gray-800 font-semibold rounded-xl
+                    shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/50
-                        border-t-white rounded-full animate-spin" />
-                      Σύνδεση...
-                    </>
+                    <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    'Είσοδος ως Διοργανωτής'
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
                   )}
+                  {loading ? 'Σύνδεση...' : 'Συνέχεια με Google'}
                 </button>
+              </div>
+            )}
 
-              </form>
+            {/* ── MODE: ORGANIZER ── */}
+            {mode === 'organizer' && (
+              <div className="p-8">
+                <button onClick={handleBack}
+                  className="flex items-center gap-1 text-purple-300 hover:text-white text-sm mb-6 transition-colors">
+                  ← Πίσω
+                </button>
+                <div className="text-center mb-6">
+                  <div className="text-4xl mb-3">🏁</div>
+                  <h2 className="text-white font-semibold text-lg">Σύνδεση Διοργανωτή</h2>
+                  <p className="text-purple-200 text-sm mt-1">Επέλεξε σύλλογο και εισήγαγε κωδικό</p>
+                </div>
+                <form onSubmit={handleOrganizerLogin} className="flex flex-col gap-4">
+                  <div>
+                    <label className="text-purple-200 text-xs font-semibold uppercase tracking-wider mb-1.5 block">
+                      Σύλλογος
+                    </label>
+                    {clubsLoading ? (
+                      <div className="flex items-center gap-2 py-3 text-purple-300 text-sm">
+                        <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                        Φόρτωση συλλόγων...
+                      </div>
+                    ) : (
+                      <select
+                        value={selectedClubId}
+                        onChange={(e) => { setSelectedClubId(e.target.value); setError(''); }}
+                        className="w-full bg-white/10 border border-purple-400/40
+                          text-white rounded-xl px-4 py-3 text-sm
+                          focus:outline-none focus:border-purple-400
+                          focus:ring-1 focus:ring-purple-400/50
+                          [&>option]:bg-slate-800 [&>option]:text-white"
+                      >
+                        {clubs.map((club) => (
+                          <option key={club.id} value={club.id}>
+                            {club.shortNameGr}{club.shortNameEn ? ` · ${club.shortNameEn}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-purple-200 text-xs font-semibold uppercase tracking-wider mb-1.5 block">
+                      Κωδικός
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      className="w-full bg-white/10 border border-purple-400/40
+                        text-white placeholder-purple-300/50 rounded-xl px-4 py-3
+                        text-sm focus:outline-none focus:border-purple-400
+                        focus:ring-1 focus:ring-purple-400/50"
+                    />
+                  </div>
+                  {error && (
+                    <div className="flex items-center gap-2 text-red-300 text-sm
+                      bg-red-500/10 border border-red-400/30 rounded-lg px-3 py-2">
+                      <span>⚠️</span><span>{error}</span>
+                    </div>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={loading || clubsLoading || !selectedClubId}
+                    className="w-full py-3.5 bg-purple-600 hover:bg-purple-500
+                      text-white font-semibold rounded-xl shadow-lg
+                      transition-all duration-200 disabled:opacity-50
+                      disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                        Σύνδεση...
+                      </>
+                    ) : 'Είσοδος ως Διοργανωτής'}
+                  </button>
+                </form>
+                <p className="text-purple-300/50 text-xs text-center mt-4">
+                  Προσωρινός κωδικός: ID συλλόγου
+                </p>
+              </div>
+            )}
 
-              {/* Temp note */}
-              <p className="text-purple-300/50 text-xs text-center mt-4">
-                Προσωρινός κωδικός: ID συλλόγου
-              </p>
-            </div>
-          )}
-
+          </div>
         </div>
 
         {/* Footer */}
