@@ -187,11 +187,11 @@ useEffect(() => {
         }}
       />
 
-      <div className="relative w-full max-w-lg rounded-3xl p-6 md:p-12 bg-gradient-to-t from-white/5 to-white/10 border border-white/20 shadow-2xl">
+      <div className="relative w-full max-w-md rounded-3xl p-6 md:p-12 bg-gradient-to-t from-white/5 to-white/10 border border-white/20 shadow-2xl">
 
         {/* Logo + Title */}
         <div className="text-center mb-8">
-<div className="w-full overflow-hidden mb-4">
+<div className="w-full overflow-hidden mb-4 mx-auto">
   <style>{scrollStyle}</style>
   <div className="flex logo-scroll gap-6 w-max">
     {[...allClubs, ...allClubs].map((club, i) => (
