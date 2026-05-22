@@ -100,7 +100,7 @@ export default function Home() {
             <p className="text-white/50 text-sm leading-relaxed">
               Όλα τα προγραμματισμένα brevets σε ένα μέρος. Εγγραφή με ένα κλικ.
             </p>
-            <div className="mt-4 text-cyan-400 text-xs font-bold tracking-wider">ΣΎΝΤΟΜΑ →</div>
+            <div className="mt-4 text-cyan-400 text-xs font-bold tracking-wider">Δες εδώ →</div>
           </a>
 
           <a href="/live" className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/40 transition-colors">
@@ -109,7 +109,7 @@ export default function Home() {
             <p className="text-white/50 text-sm leading-relaxed">
               Παρακολούθηση σε πραγματικό χρόνο. Για αναβάτες, διοργανωτές και θεατές.
             </p>
-            <div className="mt-4 text-cyan-400 text-xs font-bold tracking-wider">ΣΎΝΤΟΜΑ →</div>
+            <div className="mt-4 text-cyan-400 text-xs font-bold tracking-wider">Δες εδώ →</div>
           </a>
 
           <a href="/members" className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/40 transition-colors">
