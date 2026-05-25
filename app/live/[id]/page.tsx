@@ -10,7 +10,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db, rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
 
-const LiveMap = dynamic(() => import('@/app/components/LiveMap'), {
+const LiveMap = dynamic(() => import('../../components/LiveMap'), {
   ssr: false,
   loading: () => (
     <div className="h-96 bg-white/5 rounded-xl border border-white/10 flex items-center justify-center">
