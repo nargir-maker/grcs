@@ -147,6 +147,10 @@ export default function Nav() {
             className="text-white/60 hover:text-white text-sm transition-colors">
             Brevets
           </Link>
+          <Link href="/live"
+  className="text-white/60 hover:text-white text-sm transition-colors">
+  Live
+</Link>
           <Link href="/results"
             className="text-white/60 hover:text-white text-sm transition-colors">
             Αποτελέσματα
@@ -175,15 +179,16 @@ export default function Nav() {
                   className="w-8 h-8 rounded-full border border-white/20"
                 />
               )}
-              <span className="text-white/60 text-sm">
-                {user.name?.split(' ')[0]}
-              </span>
-              <button
-                onClick={logout}
-                className="text-white/40 hover:text-white text-sm transition-colors"
-              >
-                Έξοδος
-              </button>
+<Link href="/profile"
+  className="text-white/60 hover:text-white text-sm transition-colors">
+  👤 {user.name?.split(' ')[0]}
+</Link>
+<button
+  onClick={logout}
+  className="text-white/40 hover:text-white text-sm transition-colors"
+>
+  Έξοδος
+</button>
             </div>
           ) : (
             <>
