@@ -105,7 +105,7 @@ function ClubFilterBar({ member, active, onToggle }: {
 
   if (!hasLepote && !hasHar) return null;
 
-  function Logo({ club, id, label }: { club: 'ACP'|'HAR'; id: string; label: string }) {
+  function Logo({ club, id, label, logoFile }: { club: 'ACP'|'HAR'; id: string; label: string; logoFile: string }) {
     const isActive  = active === club;
     const isOther   = active !== 'ALL' && active !== club;
     const color     = club === 'ACP' ? '#1a3a7a' : '#4a148c';
@@ -133,7 +133,7 @@ function ClubFilterBar({ member, active, onToggle }: {
           background: isActive ? `${color}12` : 'transparent',
         }}>
           <img
-            src={`/logos/${id}.png`}
+            src={`/logos/${logoFile}.png`}
             alt={label}
             style={{
               width: 72, height: 72, objectFit: 'contain',
@@ -177,13 +177,13 @@ function ClubFilterBar({ member, active, onToggle }: {
     }}>
       {/* Club logos row */}
       <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', gap: 16 }}>
-        {hasLepote && <Logo club="ACP" id={member.lepoteId} label="ΛΕ.ΠΟ.Τ.Ε." />}
+        {hasLepote && <Logo club="ACP" id={member.lepoteId} label="ΛΕ.ΠΟ.Τ.Ε." logoFile="650000" />}
 
         {hasLepote && hasHar && (
           <div style={{ width: 1, height: 80, background: 'rgba(255,255,255,0.1)' }} />
         )}
 
-        {hasHar && <Logo club="HAR" id={member.harId} label="H.A.R." />}
+        {hasHar && <Logo club="HAR" id={member.harId} label="H.A.R." logoFile="659999" />}
       </div>
 
       {/* Filter status line */}
