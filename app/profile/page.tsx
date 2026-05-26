@@ -13,7 +13,7 @@ import { useSession, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
-import { YearCard } from '@/app/components/BrevetCards';
+import { YearCard, ClubsProvider } from '@/app/components/BrevetCards';
 import { auth } from '@/app/lib/firebase';
 
 
@@ -618,6 +618,7 @@ export default function ProfilePage() {
         </div>
 
         {/* ── HISTORY ── */}
+        <ClubsProvider>
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
           <h2 className="text-white font-bold text-lg mb-4">
             📜 Ιστορικό ({sortedYears.length} χρόνια)
@@ -634,6 +635,7 @@ export default function ProfilePage() {
             ))
           )}
         </div>
+        </ClubsProvider>
 
       </div>
     </div>
