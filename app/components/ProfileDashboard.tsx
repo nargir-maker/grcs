@@ -116,19 +116,19 @@ function ClubFilterBar({ member, active, onToggle }: {
         onClick={() => onToggle(club)}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
           opacity: isOther ? 0.22 : 1,
           transform: isActive ? 'scale(1.08)' : isOther ? 'scale(0.92)' : 'scale(1)',
           transition: 'all 0.22s ease',
-          padding: 8,
+          padding: 10,
         }}
       >
         {/* Logo with glow ring when active */}
         <div style={{
-          padding: 6,
+          padding: 8,
           borderRadius: '50%',
           border: isActive ? `2.5px solid ${color}` : '2.5px solid transparent',
-          boxShadow: isActive ? `0 0 18px ${glow}` : 'none',
+          boxShadow: isActive ? `0 0 22px ${glow}` : 'none',
           transition: 'all 0.22s ease',
           background: isActive ? `${color}12` : 'transparent',
         }}>
@@ -136,12 +136,11 @@ function ClubFilterBar({ member, active, onToggle }: {
             src={`/logos/${logoFile}.png`}
             alt={label}
             style={{
-              width: 72, height: 72, objectFit: 'contain',
+              width: 110, height: 110, objectFit: 'contain',
               filter: isOther ? 'grayscale(100%)' : 'none',
               transition: 'filter 0.22s',
             }}
             onError={ev => {
-              // fallback: show initials circle
               (ev.target as HTMLImageElement).style.display = 'none';
             }}
           />
@@ -149,19 +148,20 @@ function ClubFilterBar({ member, active, onToggle }: {
 
         {/* Label */}
         <div style={{
-          fontSize: 10, fontWeight: isActive ? 700 : 500,
-          color: isActive ? color : 'rgba(255,255,255,0.45)',
+          fontSize: 14, fontWeight: isActive ? 700 : 600,
+          color: isActive ? color : 'rgba(255,255,255,0.75)',
           transition: 'color 0.22s',
+          letterSpacing: 0.5,
         }}>{label}</div>
 
         {/* Member ID chip */}
         <div style={{
-          padding: '4px 10px',
+          padding: '5px 14px',
           borderRadius: 10,
-          border: `${isActive ? 1.5 : 1}px solid ${isActive ? color : 'rgba(255,255,255,0.15)'}`,
-          background: isActive ? `${color}18` : 'rgba(255,255,255,0.05)',
-          fontSize: 14, fontWeight: 700,
-          color: isActive ? color : 'rgba(255,255,255,0.5)',
+          border: `${isActive ? 2 : 1}px solid ${isActive ? color : 'rgba(255,255,255,0.25)'}`,
+          background: isActive ? `${color}18` : 'rgba(255,255,255,0.07)',
+          fontSize: 18, fontWeight: 700,
+          color: isActive ? color : 'rgba(255,255,255,0.7)',
           transition: 'all 0.22s',
           fontFamily: 'Courier New, monospace',
         }}>{id}</div>
@@ -173,34 +173,35 @@ function ClubFilterBar({ member, active, onToggle }: {
     <div style={{
       background: 'rgba(255,255,255,0.05)',
       border: '1px solid rgba(255,255,255,0.1)',
-      borderRadius: 16, padding: '16px 20px', marginBottom: 20,
+      borderRadius: 16, padding: '20px 20px 14px', marginBottom: 20,
     }}>
       {/* Club logos row */}
       <div style={{ display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', gap: 16 }}>
         {hasLepote && <Logo club="ACP" id={member.lepoteId} label="ΛΕ.ΠΟ.Τ.Ε." logoFile="650000" />}
 
         {hasLepote && hasHar && (
-          <div style={{ width: 1, height: 80, background: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ width: 1, height: 100, background: 'rgba(255,255,255,0.15)' }} />
         )}
 
         {hasHar && <Logo club="HAR" id={member.harId} label="H.A.R." logoFile="659999" />}
       </div>
 
       {/* Filter status line */}
-      <div style={{ textAlign: 'center', marginTop: 10, fontSize: 10 }}>
+      <div style={{ textAlign: 'center', marginTop: 12, fontSize: 13 }}>
         {active === 'ALL' ? (
-          <span style={{ color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
-            {(hasLepote || hasHar) ? '👆 πάτα λογότυπο για φίλτρο ανά σύλλογο' : ''}
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontStyle: 'italic', fontWeight: 500 }}>
+            {(hasLepote || hasHar) ? '👆 Πάτα λογότυπο για φίλτρο ανά σύλλογο' : ''}
           </span>
         ) : (
-          <span style={{ color: active === 'ACP' ? '#60a5fa' : '#a78bfa', fontWeight: 600 }}>
+          <span style={{ color: active === 'ACP' ? '#60a5fa' : '#a78bfa', fontWeight: 700, fontSize: 13 }}>
             ● Εμφάνιση: {active === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε. / ACP brevets μόνο' : 'H.A.R. brevets μόνο'}
             {' '}
             <button onClick={() => onToggle(active)}
               style={{
-                fontSize: 9, fontWeight: 700, cursor: 'pointer',
-                background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: 4, padding: '1px 6px', color: 'rgba(255,255,255,0.6)',
+                fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: 6, padding: '2px 10px', color: 'rgba(255,255,255,0.85)',
+                marginLeft: 6,
               }}>
               Όλα
             </button>
@@ -220,13 +221,13 @@ function StatCard({ emoji, value, label, unit, color }: {
   return (
     <div style={{
       background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-      borderRadius: 12, padding: '14px 10px', textAlign: 'center', flex: 1,
+      borderRadius: 12, padding: '16px 10px', textAlign: 'center', flex: 1,
     }}>
-      <div style={{ fontSize: 22, marginBottom: 4 }}>{emoji}</div>
-      <div style={{ fontWeight: 700, fontSize: 20, color }}>
-        {value} <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 400 }}>{unit}</span>
+      <div style={{ fontSize: 26, marginBottom: 6 }}>{emoji}</div>
+      <div style={{ fontWeight: 700, fontSize: 22, color }}>
+        {value} <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}>{unit}</span>
       </div>
-      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 4 }}>{label}</div>
+      <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, marginTop: 5, fontWeight: 500 }}>{label}</div>
     </div>
   );
 }
@@ -407,10 +408,10 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 16 }}>📈</span>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>Ενεργή Δραστηριότητα</span>
+          <span style={{ fontSize: 20 }}>📈</span>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>Ενεργή Δραστηριότητα</span>
         </div>
-        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>Brevets ανά έτος</span>
+        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>Brevets ανά έτος</span>
       </div>
 
       {/* Top stats row */}
@@ -424,8 +425,8 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
           { v: String(activeYrs),  l: 'Ενεργά έτη',              c: '#4CAF50' },
         ].map((s, i) => (
           <div key={i} style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: s.c }}>{s.v}</div>
-            <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>{s.l}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: s.c }}>{s.v}</div>
+            <div style={{ fontSize: 12, color: '#555', marginTop: 3 }}>{s.l}</div>
           </div>
         ))}
       </div>
@@ -439,7 +440,7 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
             <span style={{ fontSize: 16 }}>{bdiEmoji}</span>
-            <span style={{ fontSize: 10, fontWeight: 700, color: bdiColor }}>Δείκτης Δραστηριότητας</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: bdiColor }}>Δείκτης Δραστηριότητας</span>
           </div>
           <div style={{
             fontSize: 8, fontWeight: 700, color: bdiColor,
@@ -465,7 +466,7 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
             <span style={{ fontSize: 14 }}>📊</span>
-            <span style={{ fontSize: 10, fontWeight: 700, color: conColor }}>Δείκτης Σταθερότητας</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: conColor }}>Δείκτης Σταθερότητας</span>
           </div>
           <div style={{
             fontSize: 8, fontWeight: 700, color: conColor,
@@ -696,8 +697,8 @@ function HistoryAnalysis({ history }: { history: Record<string, YearData> }) {
       display: 'flex', alignItems: 'center', gap: 6,
       background: active ? `${color}22` : 'rgba(255,255,255,0.05)',
       border: `1px solid ${active ? color : 'rgba(255,255,255,0.15)'}`,
-      borderRadius: 20, padding: '5px 12px', cursor: 'pointer',
-      fontSize: 11, fontWeight: 600, color: active ? color : 'rgba(255,255,255,0.35)',
+      borderRadius: 20, padding: '6px 16px', cursor: 'pointer',
+      fontSize: 13, fontWeight: 600, color: active ? color : 'rgba(255,255,255,0.5)',
       transition: 'all 0.18s',
     }}>
       <div style={{ width: 10, height: 3, borderRadius: 2, background: active ? color : 'rgba(255,255,255,0.2)' }} />
@@ -711,9 +712,9 @@ function HistoryAnalysis({ history }: { history: Record<string, YearData> }) {
       borderRadius: 16, overflow: 'hidden', marginBottom: 24,
     }}>
       {/* Header */}
-      <div style={{ background: 'rgba(13,59,94,0.9)', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 16 }}>📊</span>
-        <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>Συνολική Ανάλυση Ιστορικού</span>
+      <div style={{ background: 'rgba(13,59,94,0.9)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 20 }}>📊</span>
+        <span style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>Συνολική Ανάλυση Ιστορικού</span>
       </div>
 
       {/* Toggle buttons */}
@@ -799,24 +800,6 @@ export function FilteredProfile({ member }: { member: MemberProfile }) {
         <StatCard emoji="🏆" value={String(sr)}                   label="Super Randonneur" unit="SR"  color="#f87171" />
       </div>
 
-      {/* Insurance — always from full member, not filtered */}
-      <div style={{
-        background: member.isInsured ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-        border: `1px solid ${member.isInsured ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
-        borderRadius: 12, padding: '10px 16px', marginBottom: 20,
-        display: 'flex', alignItems: 'center', gap: 10,
-      }}>
-        <span style={{ fontSize: 22 }}>{member.isInsured ? '🛡️' : '⚠️'}</span>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 13, color: member.isInsured ? '#4ade80' : '#f87171' }}>
-            {member.isInsured ? 'ΕΝΕΡΓΗ Ασφάλιση' : 'ΛΗΞΗ Ασφάλισης'}
-          </div>
-          {member.isInsured && member.insuranceValue && (
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{member.insuranceValue}</div>
-          )}
-        </div>
-      </div>
-
       {/* Επιτεύγματα — medal images, always from full member stats */}
       <Epiteugmata member={filteredMember} />
 
@@ -837,7 +820,7 @@ export function FilteredProfile({ member }: { member: MemberProfile }) {
         background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
         borderRadius: 16, padding: '20px', marginBottom: 20,
       }}>
-        <h2 style={{ color: '#fff', fontWeight: 700, fontSize: 17, marginBottom: 16, margin: '0 0 16px' }}>
+        <h2 style={{ color: '#fff', fontWeight: 700, fontSize: 20, margin: '0 0 16px' }}>
           📜 Ιστορικό ({sortedYears.length} χρόνια)
         </h2>
         <ClubsProvider>

@@ -133,17 +133,17 @@ function SectionCard({ title, icon, headerColor, children }: {
       {/* Header */}
       <div style={{
         background: headerColor,
-        padding: '12px 20px',
+        padding: '14px 20px',
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
+        gap: 12,
       }}>
-        <span style={{ fontSize: 18 }}>{icon}</span>
-        <span style={{ color: '#fff', fontWeight: 700, fontSize: 15, letterSpacing: 0.5 }}>
+        <span style={{ fontSize: 22 }}>{icon}</span>
+        <span style={{ color: '#fff', fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>
           {title}
         </span>
       </div>
-      <div style={{ padding: '16px 20px' }}>{children}</div>
+      <div style={{ padding: '18px 20px' }}>{children}</div>
     </div>
   );
 }
@@ -208,20 +208,20 @@ function MedalTile({ src, label, sublabel, dimmed = false }: {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      gap: 6, minWidth: 110, opacity: dimmed ? 0.3 : 1,
+      gap: 8, minWidth: 130, opacity: dimmed ? 0.3 : 1,
       filter: dimmed ? 'grayscale(100%)' : 'none',
       transition: 'opacity 0.2s',
     }}>
       <img
         src={src}
         alt={label}
-        style={{ height: 110, width: 110, objectFit: 'contain' }}
+        style={{ height: 130, width: 130, objectFit: 'contain' }}
         onError={ev => { (ev.target as HTMLImageElement).style.opacity = '0'; }}
       />
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>{label}</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{label}</div>
         {sublabel && (
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>{sublabel}</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{sublabel}</div>
         )}
       </div>
     </div>
@@ -237,7 +237,7 @@ function AwardTile({ src, label, current, target }: {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      gap: 6, minWidth: 110,
+      gap: 8, minWidth: 130,
       opacity: done ? 1 : 0.45,
       filter: done ? 'none' : 'grayscale(80%)',
     }}>
@@ -245,27 +245,26 @@ function AwardTile({ src, label, current, target }: {
         <img
           src={src}
           alt={label}
-          style={{ height: 110, width: 110, objectFit: 'contain' }}
+          style={{ height: 130, width: 130, objectFit: 'contain' }}
           onError={ev => { (ev.target as HTMLImageElement).style.opacity = '0'; }}
         />
         {done && (
           <div style={{
             position: 'absolute', top: -4, right: -4,
             background: '#22c55e', borderRadius: '50%',
-            width: 20, height: 20,
+            width: 22, height: 22,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, color: '#fff', fontWeight: 900,
+            fontSize: 12, color: '#fff', fontWeight: 900,
           }}>✓</div>
         )}
       </div>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>{label}</div>
-        <div style={{ fontSize: 10, color: done ? '#4ade80' : 'rgba(255,255,255,0.4)' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{label}</div>
+        <div style={{ fontSize: 12, color: done ? '#4ade80' : 'rgba(255,255,255,0.5)' }}>
           {done ? `${current}/${target} ✓` : `${current}/${target}`}
         </div>
-        {/* Progress bar */}
         <div style={{
-          marginTop: 4, height: 3, width: 80, background: 'rgba(255,255,255,0.1)',
+          marginTop: 5, height: 4, width: 90, background: 'rgba(255,255,255,0.1)',
           borderRadius: 2, overflow: 'hidden',
         }}>
           <div style={{
@@ -375,61 +374,61 @@ export function TaksidiXrono({ member }: { member: MemberProfile }) {
           return (
             <div key={key} style={{ display: 'flex', gap: 0 }}>
               {/* Left column: year + line */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 52, flexShrink: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 62, flexShrink: 0 }}>
                 <div style={{
                   background: `${color}22`,
                   border: `2px solid ${color}`,
-                  borderRadius: 6, padding: '3px 6px',
-                  fontSize: 11, fontWeight: 900, color,
+                  borderRadius: 6, padding: '4px 8px',
+                  fontSize: 14, fontWeight: 900, color,
                   whiteSpace: 'nowrap',
                 }}>
                   {year}
                 </div>
                 {!isLast && (
                   <div style={{
-                    flex: 1, width: 2, minHeight: 24,
+                    flex: 1, width: 2, minHeight: 28,
                     background: `linear-gradient(to bottom, ${color}88, transparent)`,
-                    margin: '2px 0',
+                    margin: '3px 0',
                   }} />
                 )}
               </div>
 
               {/* Dot */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 28, flexShrink: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 30, flexShrink: 0 }}>
                 <div style={{
-                  width: 12, height: 12, borderRadius: '50%',
+                  width: 14, height: 14, borderRadius: '50%',
                   background: color,
-                  boxShadow: `0 0 8px ${color}88`,
-                  marginTop: 6, flexShrink: 0,
+                  boxShadow: `0 0 10px ${color}88`,
+                  marginTop: 7, flexShrink: 0,
                 }} />
                 {!isLast && (
                   <div style={{
-                    flex: 1, width: 2, minHeight: 24,
+                    flex: 1, width: 2, minHeight: 28,
                     background: `linear-gradient(to bottom, ${color}44, transparent)`,
-                    margin: '2px 0',
+                    margin: '3px 0',
                   }} />
                 )}
               </div>
 
               {/* Content */}
-              <div style={{ flex: 1, paddingBottom: isLast ? 0 : 16, paddingLeft: 8, paddingTop: 2 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 14 }}>{emoji}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color }}>{label}</span>
+              <div style={{ flex: 1, paddingBottom: isLast ? 0 : 18, paddingLeft: 10, paddingTop: 2 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>{emoji}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color }}>{label}</span>
                 </div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2, lineHeight: 1.4 }}>
+                <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 3, lineHeight: 1.4 }}>
                   {event.n}
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
                   <span style={{
-                    fontSize: 10, fontWeight: 700, color,
+                    fontSize: 12, fontWeight: 700, color,
                     background: `${color}18`, border: `1px solid ${color}44`,
-                    padding: '1px 6px', borderRadius: 4,
+                    padding: '2px 8px', borderRadius: 4,
                   }}>
                     {event.d}km
                   </span>
                   {formatDate(event.dt) && (
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: 'Courier New' }}>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontFamily: 'Courier New' }}>
                       {formatDate(event.dt)}
                     </span>
                   )}
@@ -490,22 +489,22 @@ export function Epiteugmata({ member }: { member: MemberProfile }) {
         {visible.map((b, i) => (
           <div key={i} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',
-            gap: 8, minWidth: 110,
+            gap: 10, minWidth: 130,
           }}>
             <img
               src={b.src}
               alt={b.label}
-              style={{ height: 110, width: 110, objectFit: 'contain' }}
+              style={{ height: 130, width: 130, objectFit: 'contain' }}
               onError={ev => { (ev.target as HTMLImageElement).style.opacity = '0.15'; }}
             />
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.75)' }}>
                 {b.label}
               </div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: b.color, lineHeight: 1.1 }}>
+              <div style={{ fontSize: 28, fontWeight: 900, color: b.color, lineHeight: 1.1 }}>
                 {b.value}
                 {b.unit && (
-                  <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.4)', marginLeft: 2 }}>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.5)', marginLeft: 3 }}>
                     {b.unit}
                   </span>
                 )}
