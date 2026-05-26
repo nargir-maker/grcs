@@ -373,7 +373,7 @@ export default function ProfilePage() {
             Συνδέσου με Google για να δεις το προφίλ σου
           </p>
           <button
-            onClick={() => signIn('google')}
+            onClick={() => signIn('google', {}, { prompt: 'select_account' })}
             className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold
               px-6 py-3 rounded-full transition-colors"
           >

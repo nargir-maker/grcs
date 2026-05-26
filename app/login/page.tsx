@@ -93,7 +93,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    await signIn('google', { callbackUrl: '/' });
+    await signIn('google', { callbackUrl: '/' }, { prompt: 'select_account' });
   };
 
   const handleOrganizerLogin = async (e: React.FormEvent) => {
