@@ -15,6 +15,7 @@ import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } fro
 import { db } from '@/app/lib/firebase';
 import { YearCard, ClubsProvider } from '@/app/components/BrevetCards';
 import { auth } from '@/app/lib/firebase';
+import { OrosimaDiadomon, TaksidiXrono, Epiteugmata } from '@/app/components/ProfileSections';
 
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -569,53 +570,9 @@ export default function ProfilePage() {
         </div>
 
         {/* ── ACHIEVEMENTS ── */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
-          <h2 className="text-white font-bold text-lg mb-4">🎖️ Επιτεύγματα</h2>
-          <div className="flex flex-wrap gap-3">
-            {member.pbpCount > 0 && (
-              <div className="flex items-center gap-2 bg-blue-500/10
-                border border-blue-500/30 rounded-xl px-4 py-2">
-                <span className="text-xl">🗼</span>
-                <div>
-                  <div className="text-blue-400 font-bold text-sm">PBP</div>
-                  <div className="text-white/40 text-xs">{member.pbpCount}×</div>
-                </div>
-              </div>
-            )}
-            {member.lrmCount > 0 && (
-              <div className="flex items-center gap-2 bg-purple-500/10
-                border border-purple-500/30 rounded-xl px-4 py-2">
-                <span className="text-xl">🌍</span>
-                <div>
-                  <div className="text-purple-400 font-bold text-sm">LRM</div>
-                  <div className="text-white/40 text-xs">{member.lrmCount}×</div>
-                </div>
-              </div>
-            )}
-            {member.flcCount > 0 && (
-              <div className="flex items-center gap-2 bg-orange-500/10
-                border border-orange-500/30 rounded-xl px-4 py-2">
-                <span className="text-xl">⚡</span>
-                <div>
-                  <div className="text-orange-400 font-bold text-sm">Flèche</div>
-                  <div className="text-white/40 text-xs">{member.flcCount}×</div>
-                </div>
-              </div>
-            )}
-            {member.maxDist > 0 && (
-              <div className="flex items-center gap-2 bg-cyan-500/10
-                border border-cyan-500/30 rounded-xl px-4 py-2">
-                <span className="text-xl">📏</span>
-                <div>
-                  <div className="text-cyan-400 font-bold text-sm">
-                    Max {member.maxDist}km
-                  </div>
-                  <div className="text-white/40 text-xs">Μεγαλύτερη απόσταση</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+<Epiteugmata member={member} />
+<OrosimaDiadomon member={member} />
+<TaksidiXrono member={member} />
 
         {/* ── HISTORY ── */}
         <ClubsProvider>
