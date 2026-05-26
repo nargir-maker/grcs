@@ -366,14 +366,14 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
       }
 
-      // Year label — only every N years to avoid crowding
+      // Year label — larger and brighter
       const step = years.length > 20 ? 2 : 1;
       if (i % step === 0) {
         ctx.save();
-        ctx.translate(x, PAD_T + CHART_H + 8);
+        ctx.translate(x, PAD_T + CHART_H + 10);
         ctx.rotate(-0.5);
-        ctx.fillStyle = isLast ? '#FFDD00' : 'rgba(255,255,255,0.5)';
-        ctx.font = `${isLast ? 'bold ' : ''}10px sans-serif`;
+        ctx.fillStyle = isLast ? '#FFDD00' : 'rgba(255,255,255,0.85)';
+        ctx.font = `bold 12px sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillText(String(yr), 0, 0);
         ctx.restore();
@@ -432,64 +432,64 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
       </div>
 
       {/* BDI + Consistency cards */}
-      <div style={{ display: 'flex', gap: 10, padding: '10px 12px' }}>
+      <div style={{ display: 'flex', gap: 10, padding: '12px 12px' }}>
         {/* BDI */}
         <div style={{
-          flex: 1, border: `1px solid ${bdiColor}44`, borderRadius: 12,
-          padding: 12, background: `${bdiColor}12`,
+          flex: 1, border: `1px solid ${bdiColor}66`, borderRadius: 12,
+          padding: 14, background: `${bdiColor}18`,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span style={{ fontSize: 16 }}>{bdiEmoji}</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: bdiColor }}>Δείκτης Δραστηριότητας</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 20 }}>{bdiEmoji}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: bdiColor }}>Δείκτης Δραστηριότητας</span>
           </div>
           <div style={{
-            fontSize: 8, fontWeight: 700, color: bdiColor,
-            background: `${bdiColor}20`, border: `1px solid ${bdiColor}50`,
-            borderRadius: 4, padding: '1px 5px', display: 'inline-block', marginBottom: 4,
+            fontSize: 11, fontWeight: 700, color: bdiColor,
+            background: `${bdiColor}25`, border: `1px solid ${bdiColor}60`,
+            borderRadius: 5, padding: '2px 8px', display: 'inline-block', marginBottom: 6,
           }}>{bdiLabel}</div>
-          <div style={{ fontSize: 26, fontWeight: 900, color: bdiColor, lineHeight: 1 }}>
+          <div style={{ fontSize: 32, fontWeight: 900, color: bdiColor, lineHeight: 1 }}>
             {bdi.toFixed(1)}
           </div>
-          <div style={{ fontSize: 10, color: '#666', marginBottom: 6 }}>brevets / έτος</div>
-          <div style={{ height: 4, background: 'rgba(0,0,0,0.08)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{ width: `${Math.min(100, bdi/15*100)}%`, height: '100%', background: bdiColor, borderRadius: 2 }} />
+          <div style={{ fontSize: 12, color: '#444', marginBottom: 8, fontWeight: 500 }}>brevets / έτος</div>
+          <div style={{ height: 5, background: 'rgba(0,0,0,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{ width: `${Math.min(100, bdi/15*100)}%`, height: '100%', background: bdiColor, borderRadius: 3 }} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 8, color: '#aaa', marginTop: 3 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#555', marginTop: 5, fontWeight: 600 }}>
             <span>🌱 Χαλαρός</span><span>🔥 Κορυφαίος</span>
           </div>
         </div>
 
         {/* Consistency */}
         <div style={{
-          flex: 1, border: `1px solid ${conColor}44`, borderRadius: 12,
-          padding: 12, background: `${conColor}12`,
+          flex: 1, border: `1px solid ${conColor}66`, borderRadius: 12,
+          padding: 14, background: `${conColor}18`,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span style={{ fontSize: 14 }}>📊</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: conColor }}>Δείκτης Σταθερότητας</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 20 }}>📊</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: conColor }}>Δείκτης Σταθερότητας</span>
           </div>
           <div style={{
-            fontSize: 8, fontWeight: 700, color: conColor,
-            background: `${conColor}20`, border: `1px solid ${conColor}50`,
-            borderRadius: 4, padding: '1px 5px', display: 'inline-block', marginBottom: 4,
+            fontSize: 11, fontWeight: 700, color: conColor,
+            background: `${conColor}25`, border: `1px solid ${conColor}60`,
+            borderRadius: 5, padding: '2px 8px', display: 'inline-block', marginBottom: 6,
           }}>{conLabel}</div>
-          <div style={{ fontSize: 26, fontWeight: 900, color: conColor, lineHeight: 1 }}>
+          <div style={{ fontSize: 32, fontWeight: 900, color: conColor, lineHeight: 1 }}>
             {consistency.toFixed(0)}%
           </div>
-          <div style={{ fontSize: 10, color: '#666', marginBottom: 6 }}>
+          <div style={{ fontSize: 12, color: '#444', marginBottom: 8, fontWeight: 500 }}>
             {activeYrs} από {yearsInSport} έτη
           </div>
-          <div style={{ height: 4, background: 'rgba(0,0,0,0.08)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{ width: `${consistency}%`, height: '100%', background: conColor, borderRadius: 2 }} />
+          <div style={{ height: 5, background: 'rgba(0,0,0,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{ width: `${consistency}%`, height: '100%', background: conColor, borderRadius: 3 }} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 8, color: '#aaa', marginTop: 3 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#555', marginTop: 5, fontWeight: 600 }}>
             <span>Σποραδικός</span><span>Σταθερός</span>
           </div>
         </div>
       </div>
 
       {/* Chart label */}
-      <div style={{ padding: '0 40px 4px', fontSize: 11, fontWeight: 600, color: '#555' }}>
+      <div style={{ padding: '2px 40px 6px', fontSize: 13, fontWeight: 600, color: '#444' }}>
         Ιστορικό Δραστηριότητας · {firstYear} – {lastYear}
       </div>
 
@@ -565,18 +565,19 @@ function HistoryAnalysis({ history }: { history: Record<string, YearData> }) {
   const maxEl  = useMemo(() => Math.max(...data.map(d=>d.el),  1), [data]);
   const maxBrv = useMemo(() => Math.max(...data.map(d=>d.brv), 1), [data]);
 
-  const CHART_H  = 180;
-  const PAD_L    = 48;
-  const PAD_R    = 16;
+  const CHART_H  = 200;
+  const PAD_L    = 52;  // left: km axis
+  const PAD_R    = 52;  // right: elevation axis
   const PAD_T    = 16;
-  const PAD_B    = 44;
+  const PAD_B    = 50;  // more room for year labels
   const DOT_STEP = Math.max(44, Math.min(70, 900 / Math.max(data.length, 1)));
   const chartW   = PAD_L + PAD_R + data.length * DOT_STEP;
 
-  const xOf  = (i: number) => PAD_L + i * DOT_STEP + DOT_STEP / 2;
-  const yOfKm  = (v: number) => PAD_T + (1 - v/maxKm)  * CHART_H;
-  const yOfEl  = (v: number) => PAD_T + (1 - v/maxEl)  * CHART_H;
-  const yOfBrv = (v: number) => PAD_T + (1 - v/maxBrv) * CHART_H * 0.4; // bars fill bottom 40%
+  const xOf    = (i: number) => PAD_L + i * DOT_STEP + DOT_STEP / 2;
+  const yOfKm  = (v: number) => PAD_T + (1 - v / maxKm) * CHART_H;
+  const yOfEl  = (v: number) => PAD_T + (1 - v / maxEl) * CHART_H;
+  // Bars use full chart height with their own scale
+  const yOfBrv = (v: number) => PAD_T + (1 - v / maxBrv) * CHART_H;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -586,91 +587,120 @@ function HistoryAnalysis({ history }: { history: Record<string, YearData> }) {
     const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const totalH = CHART_H + PAD_T + PAD_B;
-
-    // Grid
+    // ── Grid lines ──
     [0,1,2,3,4].forEach(g => {
-      const yg = PAD_T + (g/4) * CHART_H;
-      ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(PAD_L, yg); ctx.lineTo(chartW-PAD_R, yg); ctx.stroke();
+      const yg = PAD_T + (g / 4) * CHART_H;
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(PAD_L, yg); ctx.lineTo(chartW - PAD_R, yg); ctx.stroke();
     });
 
-    // KM axis labels
+    // ── Left Y axis: KM ──
     if (showKm) {
-      [0,0.25,0.5,0.75,1].forEach(f => {
-        const v = Math.round(maxKm * (1-f) / 100) * 100;
+      [0, 0.25, 0.5, 0.75, 1].forEach(f => {
+        const v = Math.round(maxKm * (1 - f) / 100) * 100;
         const yg = PAD_T + f * CHART_H;
-        ctx.fillStyle = '#06b6d4'; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
-        ctx.fillText(v >= 1000 ? `${(v/1000).toFixed(1)}k` : String(v), PAD_L-4, yg+3);
+        ctx.fillStyle = '#06b6d4';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v), PAD_L - 6, yg + 4);
       });
     }
 
-    // Brevets bars (behind everything)
+    // ── Right Y axis: Elevation ──
+    if (showEl) {
+      [0, 0.25, 0.5, 0.75, 1].forEach(f => {
+        const v = Math.round(maxEl * (1 - f) / 1000) * 1000;
+        const yg = PAD_T + f * CHART_H;
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v), chartW - PAD_R + 6, yg + 4);
+      });
+    }
+
+    // ── Brevets bars — drawn FIRST (behind lines), full height, own scale ──
     if (showBrv) {
-      const barW = DOT_STEP * 0.55;
+      const barW = DOT_STEP * 0.5;
       data.forEach((d, i) => {
-        const x = xOf(i);
-        const barH = (d.brv / maxBrv) * CHART_H * 0.35;
-        ctx.fillStyle = 'rgba(59,130,246,0.35)';
+        const x   = xOf(i);
+        const barH = (d.brv / maxBrv) * CHART_H;
+        const y   = PAD_T + CHART_H - barH;
+        // Gradient fill: more visible
+        const grad = ctx.createLinearGradient(0, y, 0, PAD_T + CHART_H);
+        grad.addColorStop(0,   'rgba(99,160,255,0.75)');
+        grad.addColorStop(1,   'rgba(59,100,246,0.25)');
+        ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.roundRect(x - barW/2, PAD_T + CHART_H - barH, barW, barH, 3);
+        ctx.roundRect(x - barW / 2, y, barW, barH, 4);
         ctx.fill();
+        // Count label on top of bar
+        if (d.brv > 0) {
+          ctx.fillStyle = 'rgba(160,200,255,0.9)';
+          ctx.font = 'bold 10px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(String(d.brv), x, y - 3);
+        }
       });
     }
 
-    // Helper: draw smooth line + fill
+    // ── Helper: smooth bezier line + under-fill ──
     function drawLine(points: number[], color: string, fillAlpha: number) {
       if (points.length < 2) return;
-      ctx.beginPath();
-      ctx.moveTo(xOf(0), points[0]);
-      for (let i = 1; i < points.length; i++) {
-        const cx = (xOf(i-1) + xOf(i)) / 2;
-        ctx.bezierCurveTo(cx, points[i-1], cx, points[i], xOf(i), points[i]);
-      }
-      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
-
+      // Fill first
       if (fillAlpha > 0) {
         ctx.beginPath();
         ctx.moveTo(xOf(0), points[0]);
         for (let i = 1; i < points.length; i++) {
-          const cx = (xOf(i-1) + xOf(i)) / 2;
-          ctx.bezierCurveTo(cx, points[i-1], cx, points[i], xOf(i), points[i]);
+          const cx = (xOf(i - 1) + xOf(i)) / 2;
+          ctx.bezierCurveTo(cx, points[i - 1], cx, points[i], xOf(i), points[i]);
         }
-        ctx.lineTo(xOf(points.length-1), PAD_T+CHART_H);
-        ctx.lineTo(xOf(0), PAD_T+CHART_H);
+        ctx.lineTo(xOf(points.length - 1), PAD_T + CHART_H);
+        ctx.lineTo(xOf(0), PAD_T + CHART_H);
         ctx.closePath();
-        const g = ctx.createLinearGradient(0, PAD_T, 0, PAD_T+CHART_H);
-        g.addColorStop(0, color.replace(')', `,${fillAlpha})`).replace('rgb', 'rgba'));
-        g.addColorStop(1, color.replace(')', ',0)').replace('rgb', 'rgba'));
-        ctx.fillStyle = g; ctx.fill();
+        const g = ctx.createLinearGradient(0, PAD_T, 0, PAD_T + CHART_H);
+        g.addColorStop(0, color + '55');
+        g.addColorStop(1, color + '00');
+        ctx.fillStyle = g;
+        ctx.fill();
       }
+      // Then line on top
+      ctx.beginPath();
+      ctx.moveTo(xOf(0), points[0]);
+      for (let i = 1; i < points.length; i++) {
+        const cx = (xOf(i - 1) + xOf(i)) / 2;
+        ctx.bezierCurveTo(cx, points[i - 1], cx, points[i], xOf(i), points[i]);
+      }
+      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
     }
 
-    if (showEl) drawLine(data.map(d => yOfEl(d.el)), '#f59e0b', 0.15);
-    if (showKm) drawLine(data.map(d => yOfKm(d.km)), '#06b6d4', 0.2);
+    if (showEl) drawLine(data.map(d => yOfEl(d.el)), '#f59e0b', 0.18);
+    if (showKm) drawLine(data.map(d => yOfKm(d.km)), '#06b6d4', 0.22);
 
-    // Dots
+    // ── Dots on lines ──
     data.forEach((d, i) => {
       const x = xOf(i);
       if (showKm) {
-        ctx.beginPath(); ctx.arc(x, yOfKm(d.km), 3.5, 0, Math.PI*2);
-        ctx.fillStyle='#06b6d4'; ctx.fill();
+        ctx.beginPath(); ctx.arc(x, yOfKm(d.km), 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#06b6d4'; ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.stroke();
       }
       if (showEl) {
-        ctx.beginPath(); ctx.arc(x, yOfEl(d.el), 3, 0, Math.PI*2);
-        ctx.fillStyle='#f59e0b'; ctx.fill();
+        ctx.beginPath(); ctx.arc(x, yOfEl(d.el), 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#f59e0b'; ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1; ctx.stroke();
       }
     });
 
-    // Year labels
-    const step = data.length > 20 ? 2 : 1;
+    // ── Year labels — larger and brighter ──
+    const labelStep = data.length > 20 ? 2 : 1;
     data.forEach((d, i) => {
-      if (i % step !== 0) return;
+      if (i % labelStep !== 0) return;
       ctx.save();
-      ctx.translate(xOf(i), PAD_T + CHART_H + 10);
+      ctx.translate(xOf(i), PAD_T + CHART_H + 14);
       ctx.rotate(-0.5);
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
       ctx.fillText(d.year, 0, 0);
       ctx.restore();
     });

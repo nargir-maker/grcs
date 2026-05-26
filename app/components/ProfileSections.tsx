@@ -161,39 +161,52 @@ function ScrollRail({ children }: { children: React.ReactNode }) {
     setCanRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
   }
 
-  useEffect(() => { update(); }, []);
+  useEffect(() => {
+    update();
+    // re-check after images may have loaded and changed scroll width
+    const t = setTimeout(update, 400);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
-    <div style={{ position: 'relative' }}>
-      {/* Left fade */}
+    <div style={{ position: 'relative', overflow: 'hidden' }}>
+      {/* Left arrow — clickable */}
       {canLeft && (
-        <div style={{
-          position: 'absolute', left: 0, top: 0, bottom: 0, width: 40, zIndex: 2,
-          background: 'linear-gradient(to right, rgba(10,22,40,0.9), transparent)',
-          pointerEvents: 'none',
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-        }}>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 18, marginLeft: 4 }}>‹</span>
+        <div
+          onClick={() => { ref.current?.scrollBy({ left: -200, behavior: 'smooth' }); }}
+          style={{
+            position: 'absolute', left: 0, top: 0, bottom: 0, width: 44, zIndex: 3,
+            background: 'linear-gradient(to right, rgba(10,22,40,0.92), transparent)',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+          }}>
+          <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 26, marginLeft: 6, fontWeight: 700 }}>‹</span>
         </div>
       )}
-      {/* Right fade */}
+      {/* Right arrow — clickable */}
       {canRight && (
-        <div style={{
-          position: 'absolute', right: 0, top: 0, bottom: 0, width: 40, zIndex: 2,
-          background: 'linear-gradient(to left, rgba(10,22,40,0.9), transparent)',
-          pointerEvents: 'none',
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-        }}>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 18, marginRight: 4 }}>›</span>
+        <div
+          onClick={() => { ref.current?.scrollBy({ left: 200, behavior: 'smooth' }); }}
+          style={{
+            position: 'absolute', right: 0, top: 0, bottom: 0, width: 44, zIndex: 3,
+            background: 'linear-gradient(to left, rgba(10,22,40,0.92), transparent)',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+          }}>
+          <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 26, marginRight: 6, fontWeight: 700 }}>›</span>
         </div>
       )}
+      {/* Scroll container */}
       <div
         ref={ref}
         onScroll={update}
         style={{
-          display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8,
-          scrollbarWidth: 'none', msOverflowStyle: 'none',
-        }}
+          display: 'flex', gap: 16,
+          overflowX: 'auto', overflowY: 'visible',
+          paddingBottom: 8, paddingLeft: 4, paddingRight: 4,
+          scrollbarWidth: 'none',
+          WebkitOverflowScrolling: 'touch',
+        } as React.CSSProperties}
       >
         {children}
       </div>
