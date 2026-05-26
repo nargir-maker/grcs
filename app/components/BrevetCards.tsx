@@ -1,32 +1,27 @@
 'use client';
 
-// BrevetCards.tsx
-// Drop-in replacement for the YearCard component in profile/page.tsx
+// BrevetCards.tsx  — v2
+// Drop-in replacement for YearCard in profile/page.tsx
 //
-// HOW TO USE:
-//   1. Copy this file into  app/components/BrevetCards.tsx
-//   2. In profile/page.tsx, replace:
-//        import ... YearCard ...
-//      with:
+// INSTALL:
+//   1. Copy to  app/components/BrevetCards.tsx
+//   2. In profile/page.tsx:
 //        import { YearCard } from '@/app/components/BrevetCards';
-//   3. Delete the old YearCard function from page.tsx
-//   4. Done — the rest of page.tsx stays unchanged.
+//        (delete the old YearCard function)
+//   3. Done — everything else stays the same.
 //
-// Cards match Android YearlyDetailScreen exactly:
-//   • Yellow BRM card (default)
-//   • Orange PBP card with watermark
-//   • Blue HAR-only card
-//   • Dual ACP+HAR swipeable card (two sub-cards)
-//   • Flèche card
-//   • SRe card
+// LOGOS:  /public/logos/<filename>  (same names as in the Flutter app assets)
+//   pepa_logo3.png | ble_logo3.png | bioracer_logo3.png | har_logo3.png
+//   randonneurs_logo3.png | arg_logo1.png | pok_logo3.png | aiolos_logo3.png
+//   kassimatis_logo3.png | sfpip.png | peacock.png | GBT_logo_390.png
+//   Lepote_logo.png | LogoAudax-2022.png | lrm_logo.png | PBP_logo_trans.png
+//   acp_hom.png | har_stamp390.png | lrm_stamp.png | sre_logo.png | sre_medal2.png
+//   fleche_medal.png | (200|300|400|600|1000|1200)-100YEARS.png
 //
-// Behaviour:
-//   • Expand year → cards scroll horizontally, auto-play every 2.8 s
-//   • Click a card  → scroll pauses, card highlights (ring + scale)
-//   • Click again   → resumes auto-scroll
-//   • Dot indicators at bottom; click dot to jump + pause
+// Cards are FULLY EXPANDED — no inner collapse — taller on desktop.
+// Auto-scroll rail + click-to-pause, same as v1.
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface BrevetEvent {
@@ -50,21 +45,27 @@ interface YearData {
   events:  BrevetEvent[];
 }
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+const CARD_W = 260;   // px — card width in the rail
+const CARD_H = 420;   // px — fully expanded height
+const GAP    = 14;    // px — gap between cards
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
+function logo(name: string) {
+  return `/logos/${name}`;
+}
+
 function formatDate(dt: string): string {
   if (!dt || dt === 'null') return '';
   try {
     const d = new Date(dt);
     if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString('el-GR', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-      });
+      return d.toLocaleDateString('el-GR', { day:'2-digit', month:'2-digit', year:'numeric' });
     }
   } catch {}
-  // Fallback for "Sat Mar 08 2003 00:00:00 GMT+0200"
   const parts = dt.split(' ');
   if (parts.length >= 4) {
-    const months: Record<string, string> = {
+    const months: Record<string,string> = {
       Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',
       Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12',
     };
@@ -74,425 +75,660 @@ function formatDate(dt: string): string {
   return dt;
 }
 
-function getOrganizerInitials(og: string): string {
-  if (!og) return '?';
-  const words = og.trim().split(/[\s.]+/).filter(Boolean);
-  if (words.length === 1) return words[0].substring(0, 3).toUpperCase();
-  return words.slice(0, 3).map(w => w[0]).join('').toUpperCase();
+function getOrganizerLogo(og: string): string {
+  const u = og.toUpperCase();
+  if (u.includes('Π.Ε.Π.Α') || u.includes('ΠΕΠΑ'))                          return logo('pepa_logo3.png');
+  if (u.includes('BLE'))                                                        return logo('ble_logo3.png');
+  if (u.includes('BIORACER'))                                                   return logo('bioracer_logo3.png');
+  if (u.includes('HAR') || u.includes('H.A.R') || u.includes('HELLENIC AUTO')) return logo('har_logo3.png');
+  if (u.includes('GREEK RAND'))                                                 return logo('randonneurs_logo3.png');
+  if (u.includes('ΕΛΛΑΔΟΣ') || u.includes('AUDAX RAND') || u.includes('GRÈCE') || u.includes('GRECE')) return logo('arg_logo1.png');
+  if (u.includes('ΚΑΡΔΙΤΣ') || u.includes('Π.Ο.Κ'))                           return logo('pok_logo3.png');
+  if (og.includes('ΑΙΟΛΟΣ'))                                                    return logo('aiolos_logo3.png');
+  if (og.includes('KASSIMATIS'))                                                return logo('kassimatis_logo3.png');
+  if (og.includes('Σ.Φ.Π.Ι.Π'))                                               return logo('sfpip.png');
+  if (og.includes('PEACOCK'))                                                   return logo('peacock.png');
+  return logo('GBT_logo_390.png');
 }
 
-function getOrgColor(og: string): { bg: string; text: string } {
-  const u = og.toUpperCase();
-  if (u.includes('ΠΕΠΑ') || u.includes('Π.Ε.Π.Α')) return { bg:'#1e3a5f', text:'#60a5fa' };
-  if (u.includes('HAR') || u.includes('H.A.R') || u.includes('HELLENIC AUTO')) return { bg:'#0c3547', text:'#38bdf8' };
-  if (u.includes('BLE')) return { bg:'#1e1b4b', text:'#a78bfa' };
-  if (u.includes('AUDAX') || u.includes('ΕΛΛΑΔΟΣ') || u.includes('GRÈCE') || u.includes('GRECE')) return { bg:'#1a2e05', text:'#86efac' };
-  if (u.includes('ΚΑΡΔΙΤΣ') || u.includes('Π.Ο.Κ')) return { bg:'#450a0a', text:'#fca5a5' };
-  if (u.includes('ΑΙΟΛΟΣ')) return { bg:'#0c4a6e', text:'#7dd3fc' };
-  if (u.includes('GREEK RAND')) return { bg:'#2d1b69', text:'#c4b5fd' };
-  return { bg:'#1e293b', text:'#94a3b8' };
+function isEmpty(v: string | undefined | null) {
+  return !v || v === 'null' || v === '---' || v.trim() === '';
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-
 function DottedLine() {
   return (
-    <div className="flex justify-between items-center my-1.5">
-      {Array.from({ length: 30 }).map((_, i) => (
-        <div key={i} className="w-[3px] h-[3px] rounded-full" style={{ background: 'rgba(0,0,0,0.2)' }} />
+    <div className="flex justify-between items-center my-2">
+      {Array.from({ length: 34 }).map((_, i) => (
+        <div key={i} style={{ width:3, height:3, borderRadius:'50%', background:'rgba(0,0,0,0.2)' }} />
       ))}
     </div>
   );
 }
 
-function AcpStamp({ code }: { code: string }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ transform: 'rotate(-12deg)' }} className="flex-shrink-0">
-      <div className="border-2 border-[#1a3a7a] rounded px-2 py-1 bg-blue-50/90 text-center">
-        <div className="text-[7px] font-black tracking-widest text-[#1a3a7a] font-mono">HOMOLOGATION</div>
-        <div className="text-[9px] font-bold text-[#1a3a7a] font-mono">ACP</div>
-        {code && code !== '---' && (
-          <div className="text-[7px] text-[#1a3a7a] font-mono">{code}</div>
-        )}
-      </div>
+    <div className="flex justify-between items-center py-1">
+      <span style={{ fontSize:10, fontWeight:600, color:'rgba(0,0,0,0.45)', letterSpacing:0.5 }}>
+        {label}
+      </span>
+      <span style={{ fontSize:12, fontWeight:700, color:'rgba(0,0,0,0.8)', fontFamily:'Courier New, monospace' }}>
+        {value}
+      </span>
     </div>
   );
 }
 
-function HarStamp({ code }: { code: string }) {
-  return (
-    <div style={{ transform: 'rotate(-9deg)' }} className="flex-shrink-0">
-      <div className="border-2 border-[#0d47a1] rounded px-2 py-1 bg-blue-50/90 text-center">
-        <div className="text-[7px] font-black tracking-widest text-[#0d47a1] font-mono">H.A.R.</div>
-        <div className="text-[7px] font-black tracking-wider text-[#0d47a1] font-mono">HOMOLOGATION</div>
-        {code && code !== '---' && (
-          <div className="text-[7px] text-[#0d47a1] font-mono">{code}</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function FinishStamp({ rt, isLRM }: { rt: string; isLRM?: boolean }) {
+function FinishBadge({ rt, isLRM }: { rt: string; isLRM?: boolean }) {
   if (!rt || rt === '00:00' || rt === '--:--') return null;
   const isDNF = rt === 'DNF';
   const isOut = rt === 'ΕΚΤΟΣ ΧΡΟΝΟΥ';
-  const color = isDNF ? '#991b1b' : isOut ? 'rgba(220,38,38,0.85)' : isLRM ? 'rgba(147,51,234,0.85)' : 'rgba(30,64,175,0.85)';
+  const col   = isDNF ? '#991b1b' : isOut ? 'rgba(220,38,38,0.85)' : isLRM ? 'rgba(147,51,234,0.85)' : 'rgba(30,64,175,0.85)';
   return (
-    <div style={{ transform:'rotate(-11deg)', display:'inline-block', border:`2px solid ${color}`, borderRadius:3, padding:'1px 5px' }}>
-      <span style={{ color, fontWeight:700, fontSize:isDNF?12:8, letterSpacing: isDNF?2:1 }}>
+    <div style={{ display:'inline-block', transform:'rotate(-11deg)', border:`2px solid ${col}`, borderRadius:3, padding:'2px 6px' }}>
+      <span style={{ color:col, fontWeight:700, fontSize:isDNF?13:9, letterSpacing:isDNF?2:1 }}>
         {isDNF ? 'DNF' : isOut ? 'ΕΚΤΟΣ ΧΡΟΝΟΥ' : 'ΕΝΤΟΣ ΧΡΟΝΟΥ'}
       </span>
     </div>
   );
 }
 
-// ── Card types ────────────────────────────────────────────────────────────────
+// ── ACP stamp (uses real image) ───────────────────────────────────────────────
+function AcpStamp({ code }: { code: string }) {
+  return (
+    <div style={{ transform:'rotate(-11deg)', textAlign:'center' }}>
+      <img src={logo('acp_hom.png')} alt="ACP" style={{ height:80, objectFit:'contain', display:'block', margin:'0 auto' }} />
+      {!isEmpty(code) && (
+        <div style={{ fontSize:8, fontWeight:700, color:'#1a3a7a', fontFamily:'Courier New', marginTop:2 }}>{code}</div>
+      )}
+    </div>
+  );
+}
 
+// ── HAR stamp (uses real image, tinted blue) ──────────────────────────────────
+function HarStamp({ code }: { code: string }) {
+  return (
+    <div style={{ transform:'rotate(-9deg)', textAlign:'center' }}>
+      {/* The Flutter app uses colorBlendMode.srcIn with Color(0xFF0D47A1) — we replicate with CSS filter */}
+      <img
+        src={logo('har_stamp390.png')}
+        alt="HAR"
+        style={{ height:72, width:72, objectFit:'contain', display:'block', margin:'0 auto',
+                 filter:'brightness(0) saturate(100%) invert(13%) sepia(79%) saturate(3000%) hue-rotate(208deg) brightness(90%)' }}
+      />
+      <div style={{ fontSize:7, fontWeight:900, color:'#0d47a1', fontFamily:'Courier New', letterSpacing:1 }}>HOMOLOGATION</div>
+      {!isEmpty(code) && (
+        <div style={{ fontSize:9, fontWeight:700, color:'#0d47a1', fontFamily:'Courier New' }}>{code}</div>
+      )}
+    </div>
+  );
+}
+
+// ── LRM stamp ────────────────────────────────────────────────────────────────
+function LrmStamp() {
+  return (
+    <div style={{ transform:'rotate(-6deg)', textAlign:'center' }}>
+      <img src={logo('lrm_stamp.png')} alt="LRM" style={{ height:36, objectFit:'contain', display:'block', margin:'0 auto' }} />
+      <div style={{ fontSize:7, fontWeight:900, color:'#7e22ce', letterSpacing:1 }}>LRM HOMOLOGATION</div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CARD: Default yellow BRM (and LRM, 100YEARS variants)
+// ══════════════════════════════════════════════════════════════════════════════
 function BrmCard({ e }: { e: BrevetEvent }) {
-  const isLRM = e.t?.toUpperCase() === 'LRM';
-  const is100 = e.t?.toUpperCase() === 'BRM-100YEARS';
-  const acpOk = e.acp && e.acp !== 'null' && e.acp !== '' && e.acp !== '---';
-  const bg        = is100 ? '#e0d8cc' : isLRM ? '#f3e5f5' : '#f7e397';
-  const headerBg  = is100 ? '#c5b9a5' : isLRM ? '#e1bee7' : '#e5d186';
-  const { bg: orgBg, text: orgText } = getOrgColor(e.og);
+  const isLRM  = e.t?.toUpperCase() === 'LRM';
+  const is100  = e.t?.toUpperCase() === 'BRM-100YEARS';
+  const acpOk  = !isEmpty(e.acp);
+  const harOk  = !isEmpty(e.har);
+
+  const bg       = is100 ? '#e0d8cc' : isLRM ? '#f3e5f5' : '#f7e397';
+  const headerBg = is100 ? '#c5b9a5' : isLRM ? '#e1bee7' : '#e5d186';
+
+  const clubTitle = isLRM
+    ? 'LES RANDONNEURS MONDIAUX'
+    : 'ΛΕΣΧΗ ΠΟΔΗΛΑΤΙΚΟΥ ΤΟΥΡΙΣΜΟΥ ΕΛΛΑΔΑΣ';
+
+  const subTitle = is100
+    ? '1921 · BRM · 2021'
+    : isLRM
+    ? 'LRM EVENT'
+    : 'ΔΙΑΔΡΟΜΕΣ ΜΕΓΑΛΩΝ ΑΠΟΣΤΑΣΕΩΝ';
 
   return (
-    <div style={{ background: bg, border:'2px solid rgba(0,0,0,0.12)', borderRadius:4 }}
-         className="flex flex-col h-full overflow-hidden">
+    <div style={{ background: bg, border:'2px solid rgba(0,0,0,0.13)', borderRadius:4, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
-      {/* Header */}
-      <div style={{ background: headerBg }} className="px-3 py-1.5 flex-shrink-0 text-center">
-        <div className="text-[8px] font-bold tracking-wide text-black/70">
-          {isLRM ? 'LES RANDONNEURS MONDIAUX' : is100 ? '1921 · BRM · 2021' : 'ΛΕΣΧΗ ΠΟΔΗΛΑΤΙΚΟΥ ΤΟΥΡΙΣΜΟΥ ΕΛΛΑΔΑΣ'}
-        </div>
-        <div className="text-[7px] text-black/50 tracking-wider">
-          {isLRM ? 'LRM EVENT' : is100 ? '100 YEARS BRM' : 'ΔΙΑΔΡΟΜΕΣ ΜΕΓΑΛΩΝ ΑΠΟΣΤΑΣΕΩΝ'}
-        </div>
+      {/* ── Header ── */}
+      <div style={{ background: headerBg, padding:'8px 12px', textAlign:'center', flexShrink:0 }}>
+        {is100 && (
+          <>
+            <div style={{ fontWeight:700, fontSize:18, color:'#3e2723', letterSpacing:1.2 }}>1921 - 2021</div>
+            <div style={{ fontWeight:500, fontSize:11, color:'#3e2723' }}>100 YEARS BRM</div>
+          </>
+        )}
+        {!is100 && (
+          <>
+            <div style={{ fontWeight:700, fontSize:10, color:'rgba(0,0,0,0.75)', letterSpacing:0.4 }}>{clubTitle}</div>
+            <div style={{ fontWeight:500, fontSize:8, color: isLRM ? '#6a1b9a' : 'rgba(0,0,0,0.45)', letterSpacing:1.2, marginTop:1 }}>{subTitle}</div>
+          </>
+        )}
       </div>
 
-      {/* Body */}
-      <div className="flex-1 px-3 pt-2 pb-1 flex flex-col min-h-0">
-        {/* Organizer */}
-        <div className="flex items-center gap-2 mb-1.5">
-          <div style={{ background: orgBg }} className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0">
-            <span style={{ color: orgText }} className="text-[8px] font-black leading-none text-center">
-              {getOrganizerInitials(e.og)}
-            </span>
-          </div>
-          <div className="text-[9px] font-bold text-black/70 leading-tight line-clamp-2 flex-1">
+      {/* ── Organizer row ── */}
+      <div style={{ padding:'10px 12px 4px', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+        <img
+          src={getOrganizerLogo(e.og)}
+          alt={e.og}
+          style={{ height:64, maxWidth:80, objectFit:'contain' }}
+          onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
+        />
+        <div style={{ flex:1, minWidth:0 }}>
+          {isLRM && <div style={{ fontSize:11, fontWeight:700, color:'#7e22ce', marginBottom:2 }}>LRM EVENT</div>}
+          <div style={{ fontWeight:900, fontSize:14, color:'rgba(0,0,0,0.85)', lineHeight:1.2, wordBreak:'break-word' }}>
             {e.og}
           </div>
-        </div>
-
-        <DottedLine />
-
-        {/* Event name */}
-        <div className="text-[11px] font-black text-black/90 leading-tight line-clamp-2">
-          {e.n.toUpperCase()}
-        </div>
-
-        <DottedLine />
-
-        {/* Date */}
-        {formatDate(e.dt) && (
-          <div className="text-[12px] font-bold text-black/80">{formatDate(e.dt)}</div>
-        )}
-
-        <DottedLine />
-
-        {/* Distance */}
-        <div className="text-[16px] font-black text-black/90 leading-none">
-          {e.d}km{e.as > 0 ? ` · ▲+${e.as}m` : ''}
+          {/* Finish badge top-right */}
+          <div style={{ marginTop:6 }}>
+            <FinishBadge rt={e.rt} isLRM={isLRM} />
+          </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="px-3 py-1.5 flex items-center justify-between flex-shrink-0 border-t border-black/10">
-        <FinishStamp rt={e.rt} isLRM={isLRM} />
-        {acpOk && <AcpStamp code={e.acp} />}
+      <div style={{ padding:'0 12px' }}>
+        <DottedLine />
+      </div>
+
+      {/* ── Event name ── */}
+      <div style={{ padding:'0 12px', fontWeight:900, fontSize:14, color:'rgba(0,0,0,0.88)', lineHeight:1.3 }}>
+        {e.n.toUpperCase()}
+      </div>
+
+      <div style={{ padding:'0 12px' }}>
+        <DottedLine />
+      </div>
+
+      {/* ── Date ── */}
+      {formatDate(e.dt) && (
+        <div style={{ padding:'0 12px 2px', fontWeight:700, fontSize:14, color:'rgba(0,0,0,0.8)' }}>
+          {formatDate(e.dt)}
+        </div>
+      )}
+
+      <div style={{ padding:'0 12px' }}>
+        <DottedLine />
+      </div>
+
+      {/* ── Distance + ascent ── */}
+      <div style={{ padding:'0 12px 4px', fontWeight:900, fontSize:20, color:'rgba(0,0,0,0.88)' }}>
+        {e.d}km{e.as > 0 ? ` · ▲+${e.as}m` : ''}
+      </div>
+
+      {/* ── Details rows ── */}
+      <div style={{ padding:'0 12px', flex:1 }}>
+        {e.pc != null && e.pc > 0 && <Row label="ΣΥΜΜΕΤΟΧΕΣ / PARTICIPANTS" value={String(e.pc)} />}
+        {!isEmpty(e.rt) && e.rt !== '00:00' && <Row label="ΧΡΟΝΟΣ / TIME" value={e.rt} />}
+        {!isEmpty(e.mt) && e.mt !== '00:00' && <Row label="ΟΡΙΟ / LIMIT" value={e.mt} />}
+        {acpOk && <Row label={isLRM ? 'LRM No.' : 'BREVET No.'} value={e.acp} />}
+      </div>
+
+      {/* ── Homologation footer ── */}
+      <div style={{ padding:'8px 12px 10px', borderTop:'1px solid rgba(0,0,0,0.1)', flexShrink:0 }}>
+        {!isLRM && !is100 && (
+          <div style={{ fontWeight:900, fontSize:12, color:'rgba(0,0,0,0.75)', marginBottom:6, textAlign:'center' }}>
+            HOMOLOGATION
+          </div>
+        )}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <img src={logo('Lepote_logo.png')} alt="Lepote" style={{ height:42, objectFit:'contain' }}
+               onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }} />
+          {isLRM ? <LrmStamp /> : (acpOk || harOk) ? (
+            harOk && !acpOk ? <HarStamp code={e.har} /> : <AcpStamp code={e.acp} />
+          ) : <div style={{ width:60 }} />}
+          <img
+            src={logo(isLRM ? 'lrm_logo.png' : 'LogoAudax-2022.png')}
+            alt="Audax"
+            style={{ height:52, objectFit:'contain' }}
+            onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
+          />
+        </div>
       </div>
     </div>
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// CARD: PBP — orange/salmon with watermark logo
+// ══════════════════════════════════════════════════════════════════════════════
 function PbpCard({ e }: { e: BrevetEvent }) {
   return (
-    <div style={{ background:'#fdd0b1', border:'2px solid rgba(180,60,0,0.2)', borderRadius:12 }}
-         className="flex flex-col h-full overflow-hidden relative">
+    <div style={{ background:'#fdd0b1', border:'2px solid rgba(180,60,0,0.2)', borderRadius:12, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
 
       {/* Watermark */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-        <span style={{ fontSize:72, fontWeight:900, color:'#c0392b', opacity:0.07, transform:'rotate(-20deg)' }}>
-          PBP
-        </span>
+      <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none', overflow:'hidden' }}>
+        <img
+          src={logo('PBP_logo_trans.png')}
+          alt=""
+          style={{ height:200, objectFit:'contain', opacity:0.18 }}
+          onError={() => {}}
+        />
       </div>
 
-      <div className="relative z-10 flex flex-col h-full p-4">
+      <div style={{ position:'relative', zIndex:1, display:'flex', flexDirection:'column', height:'100%', padding:16 }}>
+
         {/* Date + ACP */}
-        <div className="flex justify-between items-start mb-1">
-          <div className="text-[13px] font-bold text-red-900">{formatDate(e.dt)}</div>
-          {e.acp && e.acp !== 'null' && (
-            <div className="text-[8px] font-bold text-orange-600 text-right leading-tight max-w-[100px]">{e.acp}</div>
-          )}
-        </div>
-        <div className="text-[9px] text-gray-500 font-bold mb-1">{e.og}</div>
-
-        {/* Name */}
-        <div className="font-bold text-red-900 leading-tight mb-2"
-             style={{ fontFamily:'Georgia,serif', fontSize:18 }}>
-          {e.n.toUpperCase()}
-        </div>
-
-        {/* Distance */}
-        <div className="flex justify-end mb-1">
-          <div className="text-right">
-            <div className="text-[8px] font-bold text-gray-500">DISTANCE</div>
-            <div className="text-[20px] font-black text-red-600">{e.d}km</div>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
+          <div style={{ fontSize:14, fontWeight:700, color:'#7f1d1d', fontFamily:'Georgia,serif' }}>
+            {formatDate(e.dt)}
           </div>
-        </div>
-
-        <div className="h-1 bg-red-500 rounded mb-2 ml-16" />
-
-        <div className="flex flex-col items-end gap-0.5 mt-auto">
-          {e.as > 0 && (
-            <>
-              <div className="text-[8px] font-bold text-gray-500">ASCENT</div>
-              <div className="text-[17px] font-black text-red-600">+{e.as}m</div>
-            </>
-          )}
-          {e.rt && e.rt !== '00:00' && (
-            <div className="flex items-center gap-1 mt-1">
-              <span className="text-[10px]">⏱</span>
-              <span className="text-[11px] font-bold text-gray-800">FINISH: {e.rt}</span>
+          {!isEmpty(e.acp) && (
+            <div style={{ fontSize:9, fontWeight:700, color:'#c2410c', textAlign:'right', maxWidth:120, lineHeight:1.3 }}>
+              {e.acp}
             </div>
           )}
         </div>
+
+        <div style={{ fontSize:9, color:'#6b7280', fontWeight:700, marginBottom:4 }}>{e.og}</div>
+
+        {/* Name */}
+        <div style={{ fontWeight:700, color:'#7f1d1d', lineHeight:1.25, marginBottom:8, fontFamily:'Georgia,serif', fontSize:22 }}>
+          {e.n.toUpperCase()}
+        </div>
+
+        {/* Distance */}
+        <div style={{ textAlign:'right', marginBottom:4 }}>
+          <div style={{ fontSize:9, fontWeight:700, color:'#9ca3af' }}>DISTANCE</div>
+          <div style={{ fontSize:26, fontWeight:900, color:'#dc2626' }}>{e.d}km</div>
+        </div>
+
+        {/* Red divider */}
+        <div style={{ height:4, background:'#dc2626', borderRadius:2, marginLeft:80, marginBottom:10 }} />
+
+        {/* Ascent */}
+        {e.as > 0 && (
+          <div style={{ textAlign:'right', marginBottom:4 }}>
+            <div style={{ fontSize:9, fontWeight:700, color:'#9ca3af' }}>ASCENT</div>
+            <div style={{ fontSize:22, fontWeight:900, color:'#dc2626' }}>+{e.as}m</div>
+          </div>
+        )}
+
+        {/* Details */}
+        <div style={{ flex:1 }}>
+          {e.pc != null && e.pc > 0 && <Row label="ΣΥΜΜΕΤΟΧΕΣ" value={String(e.pc)} />}
+          {!isEmpty(e.rt) && e.rt !== '00:00' && <Row label="ΧΡΟΝΟΣ / TIME" value={e.rt} />}
+          {!isEmpty(e.mt) && e.mt !== '00:00' && <Row label="ΟΡΙΟ / LIMIT" value={e.mt} />}
+        </div>
+
+        {/* Finish */}
+        {!isEmpty(e.rt) && e.rt !== '00:00' && (
+          <div style={{ marginTop:8, display:'flex', alignItems:'center', gap:6 }}>
+            <span style={{ fontSize:13 }}>⏱</span>
+            <span style={{ fontWeight:700, fontSize:13, color:'#1e3a5f' }}>FINISH: {e.rt}</span>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// CARD: HAR-only (blue)
+// ══════════════════════════════════════════════════════════════════════════════
 function HarCard({ e }: { e: BrevetEvent }) {
   return (
-    <div style={{ background:'rgba(162,229,248,0.55)', border:'1px solid rgba(30,120,180,0.35)', borderRadius:4 }}
-         className="flex flex-col h-full overflow-hidden">
+    <div style={{ background:'rgba(162,229,248,0.55)', border:'1px solid rgba(30,120,180,0.35)', borderRadius:4, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
       {/* Title bar */}
-      <div style={{ background:'#7eb5be' }} className="px-3 py-2 text-center flex-shrink-0">
-        <div className="font-bold text-black text-[13px]" style={{ fontFamily:'Georgia,serif' }}>
+      <div style={{ background:'#7eb5be', padding:'10px 12px', textAlign:'center', flexShrink:0 }}>
+        <div style={{ fontWeight:700, fontSize:17, color:'#000', fontFamily:'Georgia,serif' }}>
           Hellenic Autonomous Randonneurs
         </div>
-        <div className="text-[7px] font-bold text-black/70 tracking-widest">ΔΙΟΡΓΑΝΩΤΗΣ</div>
+        <div style={{ fontWeight:700, fontSize:8, color:'rgba(0,0,0,0.65)', letterSpacing:2, marginTop:2 }}>
+          ΔΙΟΡΓΑΝΩΤΗΣ
+        </div>
       </div>
 
-      {/* HAR logo circle */}
-      <div className="flex justify-center py-2 flex-shrink-0">
-        <div className="w-12 h-12 rounded-full border-2 border-[#0d47a1] flex items-center justify-center bg-white/60">
-          <span className="text-[8px] font-black text-[#0d47a1]">H.A.R.</span>
-        </div>
+      {/* HAR logo */}
+      <div style={{ display:'flex', justifyContent:'center', padding:'14px 0 6px', flexShrink:0 }}>
+        <img
+          src={logo('har_logo3.png')}
+          alt="HAR"
+          style={{ height:90, objectFit:'contain' }}
+          onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
+        />
       </div>
 
       {/* Body */}
-      <div className="flex-1 px-3 pb-1 flex flex-col min-h-0">
+      <div style={{ flex:1, padding:'0 12px', display:'flex', flexDirection:'column' }}>
         <DottedLine />
-        <div className="text-[11px] font-bold text-black/90 text-center leading-tight">
+        <div style={{ fontWeight:700, fontSize:14, color:'rgba(0,0,0,0.88)', textAlign:'center', lineHeight:1.3 }}>
           {e.n} · {e.d}km
         </div>
         <DottedLine />
-        <div className="text-[11px] font-bold text-black/80 text-center">{formatDate(e.dt)}</div>
+
+        {/* Finish badge */}
+        {!isEmpty(e.rt) && e.rt !== '00:00' && (
+          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:4 }}>
+            <FinishBadge rt={e.rt} />
+          </div>
+        )}
+
+        <div style={{ fontWeight:700, fontSize:13, color:'rgba(0,0,0,0.78)', textAlign:'center' }}>
+          {formatDate(e.dt)}
+        </div>
         <DottedLine />
 
-        {/* Details */}
-        <div className="mt-auto pt-1 space-y-0.5">
-          {e.rt && e.rt !== '00:00' && (
-            <div className="flex justify-between text-[8px] text-black/50">
-              <span className="font-bold">ΧΡΟΝΟΣ</span>
-              <span className="font-mono font-bold">{e.rt}</span>
-            </div>
-          )}
-          {e.mt && e.mt !== '00:00' && (
-            <div className="flex justify-between text-[8px] text-black/50">
-              <span className="font-bold">ΟΡΙΟ</span>
-              <span className="font-mono font-bold">{e.mt}</span>
-            </div>
-          )}
+        {/* "Brevet - χλμ" label like the app */}
+        <div style={{ fontFamily:'serif', fontWeight:100, fontSize:13, color:'rgba(0,0,0,0.5)', textAlign:'center', marginBottom:6 }}>
+          Brevet · χλμ
+        </div>
+        <DottedLine />
+
+        <div style={{ flex:1 }}>
+          {e.pc != null && e.pc > 0 && <Row label="ΣΥΜΜΕΤΟΧΕΣ" value={String(e.pc)} />}
+          {!isEmpty(e.rt) && e.rt !== '00:00' && <Row label="ΧΡΟΝΟΣ / TIME" value={e.rt} />}
+          {!isEmpty(e.mt) && e.mt !== '00:00' && <Row label="ΟΡΙΟ / LIMIT" value={e.mt} />}
         </div>
       </div>
 
-      {/* HAR stamp */}
-      <div className="flex justify-center py-2 border-t border-blue-300/40 flex-shrink-0">
+      {/* HAR stamp footer */}
+      <div style={{ borderTop:'1px solid rgba(30,120,180,0.25)', padding:'10px 12px', display:'flex', justifyContent:'center', flexShrink:0 }}>
         <HarStamp code={e.har} />
       </div>
     </div>
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// CARD: Dual ACP + HAR (swipeable — two sub-pages)
+// ══════════════════════════════════════════════════════════════════════════════
 function DualCard({ e }: { e: BrevetEvent }) {
   const [page, setPage] = useState(0);
-  const { bg: orgBg, text: orgText } = getOrgColor(e.og);
-  const PAGES = ['ACP', 'HAR'];
 
-  return (
-    <div className="flex flex-col h-full">
-      {/* Slide container */}
-      <div className="flex-1 relative overflow-hidden rounded" style={{ minHeight: 0 }}>
-        {/* ACP slide */}
-        <div style={{
-          position:'absolute', inset:0,
-          transform:`translateX(${page === 0 ? '0%' : '-100%'})`,
-          transition:'transform 0.35s ease',
-          background:'#f7e397',
-          border:'2px solid #d4b800',
-          borderRadius:4,
-          overflow:'hidden',
-        }}>
-          <div style={{ background:'linear-gradient(90deg,#e5d186,#d4b800)' }}
-               className="px-3 py-1.5 flex items-center justify-between flex-shrink-0">
-            <div className="text-[7px] font-bold text-black/70 flex-1 leading-tight">
-              ΛΕΣΧΗ ΠΟΔΗΛΑΤΙΚΟΥ ΤΟΥΡΙΣΜΟΥ ΕΛΛΑΔΑΣ
-            </div>
-            <div className="text-[6px] font-bold bg-black/20 text-white px-1.5 py-0.5 rounded ml-2 flex-shrink-0">
-              ⚡ ACP+HAR
-            </div>
-          </div>
-          <div className="p-3 flex gap-2">
-            <div className="flex-1 flex flex-col min-w-0">
-              <div style={{ background: orgBg }} className="w-8 h-8 rounded flex items-center justify-center mb-1.5 flex-shrink-0">
-                <span style={{ color: orgText }} className="text-[7px] font-black">{getOrganizerInitials(e.og)}</span>
-              </div>
-              <DottedLine />
-              <div className="text-[10px] font-black text-black/90 truncate">{e.n.toUpperCase()}</div>
-              <DottedLine />
-              <div className="text-[10px] font-bold text-black/80">{formatDate(e.dt)}</div>
-              <DottedLine />
-              <div className="text-[13px] font-black text-black/90">{e.d}km{e.as > 0 ? ` ▲+${e.as}m` : ''}</div>
-              {e.rt && e.rt !== '00:00' && (
-                <div className="text-[8px] text-black/50 mt-0.5">⏱ {e.rt}</div>
-              )}
-            </div>
-            <div className="flex items-center justify-center flex-shrink-0">
-              <AcpStamp code={e.acp} />
-            </div>
+  // Shared body content used in both sub-pages
+  function SharedBody({ tint }: { tint: 'acp' | 'har' }) {
+    return (
+      <div style={{ flex:1, padding:'0 12px', display:'flex', flexDirection:'column' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0 4px', flexShrink:0 }}>
+          <img
+            src={tint === 'acp' ? getOrganizerLogo(e.og) : logo('har_logo3.png')}
+            alt={tint}
+            style={{ height:60, maxWidth:80, objectFit:'contain' }}
+            onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
+          />
+          <div style={{ flex:1, fontWeight:900, fontSize:12, color:'rgba(0,0,0,0.8)', lineHeight:1.2 }}>
+            {tint === 'acp' ? e.og : 'Hellenic Autonomous Randonneurs'}
           </div>
         </div>
+        <DottedLine />
+        <div style={{ fontWeight:900, fontSize:13, color:'rgba(0,0,0,0.88)', lineHeight:1.3 }}>
+          {e.n.toUpperCase()}
+        </div>
+        <DottedLine />
+        <div style={{ fontWeight:700, fontSize:13, color:'rgba(0,0,0,0.78)' }}>{formatDate(e.dt)}</div>
+        <DottedLine />
+        <div style={{ fontWeight:900, fontSize:18, color:'rgba(0,0,0,0.88)', marginBottom:4 }}>
+          {e.d}km{e.as > 0 ? ` · ▲+${e.as}m` : ''}
+        </div>
+        <div style={{ flex:1 }}>
+          {e.pc != null && e.pc > 0 && <Row label="ΣΥΜΜΕΤΟΧΕΣ" value={String(e.pc)} />}
+          {!isEmpty(e.rt) && e.rt !== '00:00' && <Row label="ΧΡΟΝΟΣ / TIME" value={e.rt} />}
+          {!isEmpty(e.mt) && e.mt !== '00:00' && <Row label="ΟΡΙΟ / LIMIT" value={e.mt} />}
+          {tint === 'acp' && !isEmpty(e.acp) && <Row label="BREVET No." value={e.acp} />}
+          {tint === 'har' && !isEmpty(e.har) && <Row label="HAR No." value={e.har} />}
+        </div>
+        <div style={{ display:'flex', justifyContent:'center', padding:'8px 0' }}>
+          {tint === 'acp' ? <AcpStamp code={e.acp} /> : <HarStamp code={e.har} />}
+        </div>
+      </div>
+    );
+  }
 
-        {/* HAR slide */}
+  return (
+    <div style={{ height:'100%', display:'flex', flexDirection:'column' }}>
+      {/* Slide container */}
+      <div style={{ flex:1, position:'relative', overflow:'hidden', minHeight:0 }}>
+        {/* ACP page */}
         <div style={{
           position:'absolute', inset:0,
-          transform:`translateX(${page === 1 ? '0%' : '100%'})`,
-          transition:'transform 0.35s ease',
-          background:'rgba(162,229,248,0.55)',
-          border:'1px solid rgba(30,120,180,0.35)',
-          borderRadius:4,
-          overflow:'hidden',
+          transform: page === 0 ? 'translateX(0%)' : 'translateX(-100%)',
+          transition: 'transform 0.35s ease',
+          background:'#f7e397', border:'2px solid #d4b800', borderRadius:4,
+          display:'flex', flexDirection:'column', overflow:'hidden',
         }}>
-          <div style={{ background:'#7eb5be' }}
-               className="px-3 py-1.5 flex items-center justify-between flex-shrink-0">
-            <div className="text-[7px] font-bold text-black/80 flex-1">Hellenic Autonomous Randonneurs</div>
-            <div className="text-[6px] font-bold bg-black/20 text-white px-1.5 py-0.5 rounded ml-2 flex-shrink-0">
+          <div style={{ background:'linear-gradient(90deg,#e5d186,#d4b800)', padding:'6px 12px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+            <div style={{ fontSize:8, fontWeight:700, color:'rgba(0,0,0,0.7)', flex:1, lineHeight:1.3 }}>
+              ΛΕΣΧΗ ΠΟΔΗΛΑΤΙΚΟΥ ΤΟΥΡΙΣΜΟΥ ΕΛΛΑΔΑΣ
+            </div>
+            <div style={{ fontSize:7, fontWeight:700, background:'rgba(0,0,0,0.2)', color:'#fff', padding:'2px 6px', borderRadius:4, marginLeft:8, flexShrink:0 }}>
               ⚡ ACP+HAR
             </div>
           </div>
-          <div className="p-3 flex gap-2">
-            <div className="flex-1 flex flex-col min-w-0">
-              <div className="w-8 h-8 rounded-full border-2 border-[#0d47a1] flex items-center justify-center mb-1.5 flex-shrink-0 bg-white/60">
-                <span className="text-[7px] font-black text-[#0d47a1]">HAR</span>
-              </div>
-              <DottedLine />
-              <div className="text-[10px] font-black text-black/90 truncate">{e.n.toUpperCase()}</div>
-              <DottedLine />
-              <div className="text-[10px] font-bold text-black/80">{formatDate(e.dt)}</div>
-              <DottedLine />
-              <div className="text-[13px] font-black text-black/90">{e.d}km{e.as > 0 ? ` ▲+${e.as}m` : ''}</div>
-              {e.rt && e.rt !== '00:00' && (
-                <div className="text-[8px] text-black/50 mt-0.5">⏱ {e.rt}</div>
-              )}
+          <SharedBody tint="acp" />
+        </div>
+
+        {/* HAR page */}
+        <div style={{
+          position:'absolute', inset:0,
+          transform: page === 1 ? 'translateX(0%)' : 'translateX(100%)',
+          transition: 'transform 0.35s ease',
+          background:'rgba(162,229,248,0.55)', border:'1px solid rgba(30,120,180,0.35)', borderRadius:4,
+          display:'flex', flexDirection:'column', overflow:'hidden',
+        }}>
+          <div style={{ background:'#7eb5be', padding:'6px 12px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+            <div style={{ fontSize:8, fontWeight:700, color:'rgba(0,0,0,0.8)', flex:1 }}>
+              Hellenic Autonomous Randonneurs
             </div>
-            <div className="flex items-center justify-center flex-shrink-0">
-              <HarStamp code={e.har} />
+            <div style={{ fontSize:7, fontWeight:700, background:'rgba(0,0,0,0.2)', color:'#fff', padding:'2px 6px', borderRadius:4, marginLeft:8, flexShrink:0 }}>
+              ⚡ ACP+HAR
             </div>
           </div>
+          <SharedBody tint="har" />
         </div>
       </div>
 
       {/* Indicators */}
-      <div className="flex items-center justify-center gap-2 pt-1 pb-0.5 flex-shrink-0">
-        <div className="text-[6px] font-bold text-yellow-600 tracking-wider">ΔΙΠΛΗ ΟΜΟΛΟΓΗΣΗ</div>
-        {PAGES.map((_, i) => (
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'6px 0 2px', flexShrink:0 }}>
+        <span style={{ fontSize:7, fontWeight:700, color:'#a16207', letterSpacing:1 }}>ΔΙΠΛΗ ΟΜΟΛΟΓΗΣΗ</span>
+        {[0,1].map(i => (
           <button key={i} onClick={() => setPage(i)} style={{
-            width: page === i ? 14 : 5, height: 5, borderRadius: 3, border: 'none', cursor: 'pointer',
-            background: page === i ? (i === 0 ? '#d4b800' : '#7eb5be') : '#9ca3af',
+            width: page === i ? 18 : 6, height:6, borderRadius:3, border:'none', cursor:'pointer', padding:0,
+            background: page === i ? (i===0 ? '#d4b800' : '#7eb5be') : '#9ca3af',
             transition: 'all 0.25s',
-            padding: 0,
           }} />
         ))}
         {page === 0 && (
-          <div className="text-[7px] text-[#7eb5be] font-bold flex items-center gap-0.5">
-            HAR <span>→</span>
-          </div>
+          <span style={{ fontSize:8, color:'#7eb5be', fontWeight:700 }}>H.A.R. →</span>
         )}
       </div>
     </div>
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// CARD: Flèche Nationale
+// ══════════════════════════════════════════════════════════════════════════════
 function FlecheCard({ e }: { e: BrevetEvent }) {
   return (
-    <div style={{ background:'#FFFDE7', border:'2px solid rgba(200,160,0,0.3)', borderRadius:8 }}
-         className="flex flex-col h-full overflow-hidden">
-      <div className="px-3 py-2 flex items-center justify-between border-b border-yellow-200 flex-shrink-0"
-           style={{ background:'rgba(255,245,157,0.6)' }}>
-        <div className="text-[12px] font-bold text-yellow-900">⚡ Flèche Nationale</div>
-        <div className="text-[8px] font-bold text-yellow-700">24h TEAM</div>
-      </div>
-      <div className="flex-1 p-3 flex flex-col gap-1">
-        <div className="text-[8px] text-black/40 italic text-center">
-          24 hours of team cycling towards a concentration
+    <div style={{ background:'#FFFDE7', border:'2px solid rgba(200,160,0,0.3)', borderRadius:8, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+
+      {/* Header */}
+      <div style={{ background:'rgba(255,245,157,0.6)', padding:'8px 12px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid rgba(200,160,0,0.2)', flexShrink:0 }}>
+        <img
+          src={logo('LogoAudax-2022.png')}
+          alt="Audax"
+          style={{ height:44, objectFit:'contain' }}
+          onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
+        />
+        <div style={{ fontWeight:700, fontSize:18, color:'#78350f', fontFamily:'Georgia,serif' }}>
+          Flèche Nationale
         </div>
-        <div className="border-t border-yellow-200 my-1" />
-        <div className="text-[12px] font-black text-amber-900 leading-tight">{e.n.toUpperCase()}</div>
-        <div className="text-[9px] text-black/50">{formatDate(e.dt)}</div>
-        {e.acp && e.acp !== 'null' && (
-          <div className="text-[8px] text-black/40 font-mono">Homologation: {e.acp}</div>
-        )}
-        <div className="text-[18px] font-black text-blue-900 mt-auto">
-          {e.d}km {e.as > 0 ? `+${e.as}m` : ''}
+      </div>
+
+      <div style={{ fontSize:10, fontWeight:700, color:'#78350f', textAlign:'center', padding:'6px 12px 2px', fontStyle:'italic' }}>
+        24 hours of team cycling towards a concentration of cyclists
+      </div>
+
+      <div style={{ margin:'0 12px', borderTop:'1px solid rgba(0,0,0,0.12)' }} />
+
+      {/* Body */}
+      <div style={{ flex:1, padding:'10px 12px', display:'flex', flexDirection:'column', gap:6 }}>
+        <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+          <img
+            src={logo('fleche_medal.png')}
+            alt="medal"
+            style={{ height:100, objectFit:'contain', flexShrink:0 }}
+            onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
+          />
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:900, fontSize:14, color:'rgba(0,0,0,0.85)', lineHeight:1.3 }}>
+              {e.n.toUpperCase()}
+            </div>
+            <div style={{ fontSize:11, color:'rgba(0,0,0,0.5)', marginTop:4 }}>{formatDate(e.dt)}</div>
+            {!isEmpty(e.acp) && (
+              <div style={{ fontSize:11, color:'rgba(0,0,0,0.45)', fontFamily:'Courier New' }}>
+                Homologation: {e.acp}
+              </div>
+            )}
+            <div style={{ fontSize:20, fontWeight:700, color:'#1e3a5f', marginTop:8 }}>
+              {e.d}km {e.as > 0 ? `+${e.as}m` : ''}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ flex:1 }}>
+          {e.pc != null && e.pc > 0 && <Row label="ΣΥΜΜΕΤΟΧΕΣ" value={String(e.pc)} />}
+          {!isEmpty(e.rt) && e.rt !== '00:00' && <Row label="ΧΡΟΝΟΣ / TIME" value={e.rt} />}
+          {!isEmpty(e.mt) && e.mt !== '00:00' && <Row label="ΟΡΙΟ / LIMIT" value={e.mt} />}
         </div>
       </div>
     </div>
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// CARD: Super Randonnée Étoile (SRe)
+// ══════════════════════════════════════════════════════════════════════════════
 function SreCard({ e }: { e: BrevetEvent }) {
   return (
-    <div style={{ background:'rgb(224,177,232)', border:'1px solid rgba(213,73,238,0.5)', borderRadius:12 }}
-         className="flex flex-col h-full overflow-hidden">
-      <div className="px-3 py-2 flex items-center justify-between flex-shrink-0"
-           style={{ background:'rgba(150,40,180,0.15)' }}>
-        <div className="text-[9px] font-bold text-purple-900">PROVENCE Randonneurs</div>
-        <div className="text-[8px] font-bold text-purple-700">Super Randonnée</div>
-      </div>
-      <div className="flex-1 p-3 flex flex-col gap-1">
-        <div className="text-[8px] italic text-purple-700 text-center">"The route of the High Peaks"</div>
-        <div className="border-t border-purple-300 my-1" />
-        <div className="text-[11px] font-black text-purple-900 leading-tight">{e.n.toUpperCase()}</div>
-        <div className="text-[9px] text-black/50">{formatDate(e.dt)}</div>
-        {e.acp && e.acp !== 'null' && (
-          <div className="text-[8px] font-mono text-black/40">Homologation: {e.acp}</div>
-        )}
-        <div className="flex items-end gap-2 mt-auto">
-          <div className="text-[17px] font-black text-purple-700">{e.d}km</div>
-          {e.as > 0 && <div className="text-[13px] font-bold text-purple-500">+{e.as}m</div>}
+    <div style={{ background:'rgb(224,177,232)', border:'1px solid rgba(213,73,238,0.5)', borderRadius:12, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+
+      {/* Header row: SRe logo + title */}
+      <div style={{ padding:'10px 12px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, background:'rgba(150,40,180,0.1)' }}>
+        <img
+          src={logo('sre_logo.png')}
+          alt="SRe"
+          style={{ height:90, objectFit:'contain' }}
+          onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
+        />
+        <div style={{ textAlign:'right' }}>
+          <div style={{ fontWeight:700, fontSize:14, color:'#4a148c', lineHeight:1.3, fontFamily:'Georgia,serif' }}>
+            PROVENCE Randonneurs<br />Super Randonnée
+          </div>
         </div>
-        {e.rt && e.rt !== '00:00' && (
-          <div className="text-[8px] text-purple-600 font-bold">⏱ {e.rt}</div>
-        )}
       </div>
-      <div className="px-3 py-1.5 border-t border-purple-300/40 flex-shrink-0">
-        <span className="text-[7px] font-black tracking-widest text-purple-800 bg-purple-800/10 px-2 py-0.5 rounded">
-          OFFICIAL FINISHER
-        </span>
+
+      <div style={{ fontSize:12, fontStyle:'italic', color:'#5b21b6', textAlign:'center', padding:'4px 12px' }}>
+        "The route of the High Peaks"
+      </div>
+
+      <div style={{ margin:'0 12px', borderTop:'1px solid rgba(180,0,230,0.25)' }} />
+
+      {/* Organizer */}
+      <div style={{ padding:'8px 12px', display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+        <img
+          src={getOrganizerLogo(e.og)}
+          alt={e.og}
+          style={{ height:44, objectFit:'contain' }}
+          onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
+        />
+        <div style={{ fontWeight:700, fontSize:13, color:'#7b2d8b', letterSpacing:0.8, flex:1, lineHeight:1.2 }}>
+          {e.og.toUpperCase()}
+        </div>
+      </div>
+
+      <div style={{ margin:'0 12px', borderTop:'1px solid rgba(180,0,230,0.25)' }} />
+
+      {/* Body */}
+      <div style={{ flex:1, padding:'8px 12px', display:'flex', gap:10 }}>
+        <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
+          <div style={{ fontWeight:900, fontSize:13, color:'#4a148c', lineHeight:1.3 }}>
+            {e.n.toUpperCase()}
+          </div>
+          <div style={{ fontSize:11, color:'rgba(0,0,0,0.5)' }}>Date: {formatDate(e.dt)}</div>
+          {!isEmpty(e.acp) && (
+            <div style={{ fontSize:10, color:'rgba(0,0,0,0.45)', fontFamily:'Courier New' }}>Homologation: {e.acp}</div>
+          )}
+          <div style={{ fontSize:20, fontWeight:700, color:'#6d28d9', marginTop:6 }}>{e.d}km</div>
+          {e.as > 0 && <div style={{ fontSize:16, fontWeight:700, color:'#7c3aed' }}>+{e.as}m</div>}
+
+          <div style={{ flex:1 }}>
+            {e.pc != null && e.pc > 0 && <Row label="ΣΥΜΜΕΤΟΧΕΣ" value={String(e.pc)} />}
+            {!isEmpty(e.rt) && e.rt !== '00:00' && <Row label="ΧΡΟΝΟΣ / TIME" value={e.rt} />}
+            {!isEmpty(e.mt) && e.mt !== '00:00' && <Row label="ΟΡΙΟ / LIMIT" value={e.mt} />}
+          </div>
+
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:4 }}>
+            <span style={{ background:'#6d28d9', color:'#fff', fontSize:7, fontWeight:700, padding:'3px 8px', borderRadius:4, letterSpacing:0.5 }}>
+              OFFICIAL FINISHER
+            </span>
+          </div>
+        </div>
+
+        {/* Medal */}
+        <img
+          src={logo('sre_medal2.png')}
+          alt="medal"
+          style={{ height:110, objectFit:'contain', flexShrink:0, alignSelf:'center' }}
+          onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CARD: BRM-100YEARS — uses the French anniversary layout from Android
+// ══════════════════════════════════════════════════════════════════════════════
+function AnniversaryCard({ e }: { e: BrevetEvent }) {
+  const cleanDist = String(e.d);
+  return (
+    <div style={{ background:'#e0d8cc', border:'2px solid rgba(100,80,0,0.2)', borderRadius:4, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div style={{ background:'#c5b9a5', padding:'8px 12px', textAlign:'center', flexShrink:0 }}>
+        <div style={{ fontWeight:700, fontSize:18, color:'#3e2723', letterSpacing:1.2 }}>1921 - 2021</div>
+        <div style={{ fontSize:11, color:'#3e2723', fontWeight:500 }}>100 YEARS BRM</div>
+      </div>
+
+      <div style={{ flex:1, padding:'10px 12px', display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+        {/* Double border box */}
+        <div style={{ border:'1px solid #1a237e', padding:2 }}>
+          <div style={{ border:'1px solid #1a237e', padding:'4px 10px' }}>
+            <div style={{ color:'#1a237e', fontWeight:700, fontSize:14 }}>Brevet des Randonneurs Mondiaux</div>
+          </div>
+        </div>
+
+        <div style={{ color:'#1a237e', fontSize:20, fontWeight:900, letterSpacing:3 }}>CENTENAIRE</div>
+
+        <img
+          src={logo(`${cleanDist}-100YEARS.png`)}
+          alt={`${cleanDist}km`}
+          style={{ height:80, objectFit:'contain' }}
+          onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
+        />
+
+        {/* French details */}
+        <div style={{ width:'100%', fontSize:11, color:'#1a237e', lineHeight:1.6 }}>
+          <div><strong>Le Brevet</strong> {e.n}</div>
+          <div><strong>Randonnée de</strong> {e.d} km à bicyclette</div>
+          <div><strong>Organisée le</strong> {formatDate(e.dt)}</div>
+          <div><strong>Par</strong> {e.og}</div>
+        </div>
+
+        <div style={{ textAlign:'center', fontSize:10, color:'#1a237e', fontStyle:'italic', marginTop:'auto' }}>
+          Sous le contrôle et l'homologation exclusive de<br />
+          <strong style={{ fontSize:13 }}>L'AUDAX CLUB PARISIEN</strong><br />
+          Société fondée en 1904
+        </div>
       </div>
     </div>
   );
@@ -502,28 +738,130 @@ function SreCard({ e }: { e: BrevetEvent }) {
 function BrevetCard({ e }: { e: BrevetEvent }) {
   const type  = (e.t  ?? '').toUpperCase();
   const name  = (e.n  ?? '').toUpperCase();
-  const acpOk = e.acp && e.acp !== 'null' && e.acp !== '' && e.acp !== '---';
-  const harOk = e.har && e.har !== 'null' && e.har !== '' && e.har !== '---';
+  const acpOk = !isEmpty(e.acp);
+  const harOk = !isEmpty(e.har);
 
-  if (type === 'PBP')                              return <PbpCard    e={e} />;
-  if (name.includes('FLECHE') || type === 'FLC')  return <FlecheCard e={e} />;
-  if (type === 'SRE')                              return <SreCard    e={e} />;
-  if (acpOk && harOk)                              return <DualCard   e={e} />;
-  if (harOk && !acpOk)                             return <HarCard    e={e} />;
+  if (type === 'PBP')                             return <PbpCard e={e} />;
+  if (name.includes('FLECHE') || type === 'FLC') return <FlecheCard e={e} />;
+  if (type === 'SRE')                             return <SreCard e={e} />;
+  if (type === 'BRM-100YEARS')                    return <AnniversaryCard e={e} />;
+  if (acpOk && harOk)                             return <DualCard e={e} />;
+  if (harOk && !acpOk)                            return <HarCard e={e} />;
   return <BrmCard e={e} />;
 }
 
-// ── Horizontal scroll rail ────────────────────────────────────────────────────
-const CARD_W = 222;
-const CARD_H = 242;
-const GAP    = 12;
+// ══════════════════════════════════════════════════════════════════════════════
+// Horizontal scroll rail — auto-play + click-to-pause
+// ══════════════════════════════════════════════════════════════════════════════
+// ── Numbered selector button ──────────────────────────────────────────────────
+// Shows: number, distance badge, date — click scrolls the rail to that card.
+function SelectorButton({
+  idx, event, isActive, onClick,
+}: {
+  idx: number;
+  event: BrevetEvent;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
 
+  // Card-type colour for the badge accent
+  const type  = (event.t ?? '').toUpperCase();
+  const name  = (event.n ?? '').toUpperCase();
+  const acpOk = !isEmpty(event.acp);
+  const harOk = !isEmpty(event.har);
+
+  let accent = '#e5d186';          // yellow  — BRM default
+  if (type === 'PBP')                              accent = '#fb923c'; // orange
+  else if (name.includes('FLECHE') || type === 'FLC') accent = '#fde68a'; // cream
+  else if (type === 'SRE')                         accent = '#d8b4fe'; // purple
+  else if (type === 'BRM-100YEARS')               accent = '#c5b9a5'; // sepia
+  else if (type === 'LRM')                         accent = '#e9d5ff'; // lavender
+  else if (acpOk && harOk)                         accent = '#7eb5be'; // teal dual
+  else if (harOk)                                  accent = '#93c5fd'; // blue HAR
+
+  const isLit = isActive || hovered;
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      title={`${event.d}km · ${formatDate(event.dt)}`}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 3,
+        padding: '6px 8px',
+        borderRadius: 6,
+        border: `2px solid ${isActive ? accent : isLit ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)'}`,
+        background: isActive
+          ? `rgba(${hexToRgb(accent)},0.18)`
+          : isLit
+          ? 'rgba(255,255,255,0.07)'
+          : 'rgba(255,255,255,0.03)',
+        cursor: 'pointer',
+        minWidth: 48,
+        transition: 'all 0.18s ease',
+        outline: 'none',
+        boxShadow: isActive ? `0 0 10px rgba(${hexToRgb(accent)},0.35)` : 'none',
+      }}
+    >
+      {/* Number badge */}
+      <div style={{
+        width: 22, height: 22,
+        borderRadius: 4,
+        background: isActive ? accent : 'rgba(255,255,255,0.12)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontWeight: 900, fontSize: 11,
+        color: isActive ? '#000' : 'rgba(255,255,255,0.55)',
+        transition: 'all 0.18s ease',
+        flexShrink: 0,
+      }}>
+        {idx + 1}
+      </div>
+
+      {/* Distance */}
+      <div style={{
+        fontSize: 11, fontWeight: 700, lineHeight: 1,
+        color: isActive ? accent : 'rgba(255,255,255,0.6)',
+        transition: 'color 0.18s',
+      }}>
+        {event.d}km
+      </div>
+
+      {/* Short date — day/month only */}
+      <div style={{
+        fontSize: 9, fontWeight: 500, lineHeight: 1,
+        color: isActive ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)',
+        transition: 'color 0.18s',
+        fontFamily: 'Courier New, monospace',
+      }}>
+        {formatDate(event.dt).substring(0, 5) /* dd/mm */}
+      </div>
+    </button>
+  );
+}
+
+// tiny helper: '#rrggbb' → 'r,g,b'  (used for rgba() in SelectorButton)
+function hexToRgb(hex: string): string {
+  const clean = hex.replace('#', '');
+  if (clean.length !== 6) return '255,255,255';
+  const r = parseInt(clean.substring(0,2), 16);
+  const g = parseInt(clean.substring(2,4), 16);
+  const b = parseInt(clean.substring(4,6), 16);
+  return `${r},${g},${b}`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EventsScrollRail — numbered selector, no auto-scroll
+// ══════════════════════════════════════════════════════════════════════════════
 function EventsScrollRail({ events }: { events: BrevetEvent[] }) {
   const railRef    = useRef<HTMLDivElement>(null);
-  const [paused,    setPaused]    = useState(false);
-  const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const [activeIdx, setActiveIdx] = useState<number>(0);
 
-  // Sort ascending by date (same as Android)
+  // Sort ascending by date (same as Android sortedEvents)
   const sorted = [...events].sort((a, b) => {
     try { return new Date(a.dt).getTime() - new Date(b.dt).getTime(); } catch { return 0; }
   });
@@ -532,71 +870,48 @@ function EventsScrollRail({ events }: { events: BrevetEvent[] }) {
     railRef.current?.scrollTo({ left: idx * (CARD_W + GAP), behavior: 'smooth' });
   }, []);
 
-  // Auto-scroll
-  useEffect(() => {
-    if (paused || sorted.length <= 1) return;
-    const timer = setInterval(() => {
-      const rail = railRef.current;
-      if (!rail) return;
-      const maxScroll = rail.scrollWidth - rail.clientWidth;
-      if (rail.scrollLeft >= maxScroll - 8) {
-        rail.scrollTo({ left: 0, behavior: 'smooth' });
-      } else {
-        rail.scrollBy({ left: CARD_W + GAP, behavior: 'smooth' });
-      }
-    }, 2800);
-    return () => clearInterval(timer);
-  }, [paused, sorted.length]);
-
-  function handleCardClick(idx: number) {
-    if (activeIdx === idx) {
-      setActiveIdx(null);
-      setPaused(false);
-    } else {
-      setActiveIdx(idx);
-      setPaused(true);
-      scrollToIdx(idx);
-    }
+  function handleSelect(idx: number) {
+    setActiveIdx(idx);
+    scrollToIdx(idx);
   }
 
   return (
-    <div className="relative select-none">
-      {/* Scroll rail */}
+    <div style={{ userSelect: 'none' }}>
+
+      {/* ── Card rail ── */}
       <div
         ref={railRef}
-        className="flex overflow-x-auto"
         style={{
+          display: 'flex',
           gap: GAP,
-          paddingLeft: 16,
-          paddingRight: 16,
-          paddingBottom: 12,
-          paddingTop: 4,
+          overflowX: 'auto',
+          paddingLeft: 16, paddingRight: 16,
+          paddingBottom: 14, paddingTop: 4,
           scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
           scrollSnapType: 'x mandatory',
         }}
       >
         {sorted.map((e, i) => (
           <div
             key={i}
-            onClick={() => handleCardClick(i)}
+            onClick={() => handleSelect(i)}
             style={{
               width: CARD_W,
               minWidth: CARD_W,
               height: CARD_H,
-              scrollSnapAlign: 'start',
               flexShrink: 0,
+              scrollSnapAlign: 'start',
               cursor: 'pointer',
               borderRadius: 6,
-              outline: activeIdx === i ? '2px solid #06b6d4' : 'none',
-              outlineOffset: 2,
-              transform: activeIdx === i ? 'scale(1.03) translateY(-2px)' : 'scale(1)',
-              boxShadow: activeIdx === i
-                ? '0 8px 28px rgba(0,0,0,0.5)'
-                : '0 2px 10px rgba(0,0,0,0.3)',
-              opacity: activeIdx !== null && activeIdx !== i ? 0.6 : 1,
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, outline 0.15s ease',
               overflow: 'hidden',
+              outline: activeIdx === i ? '2.5px solid #06b6d4' : '2px solid transparent',
+              outlineOffset: 2,
+              transform: activeIdx === i ? 'scale(1.02) translateY(-3px)' : 'scale(1)',
+              boxShadow: activeIdx === i
+                ? '0 12px 36px rgba(0,0,0,0.6)'
+                : '0 3px 12px rgba(0,0,0,0.3)',
+              opacity: activeIdx !== i ? 0.62 : 1,
+              transition: 'transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease, outline 0.15s ease',
             }}
           >
             <BrevetCard e={e} />
@@ -604,51 +919,45 @@ function EventsScrollRail({ events }: { events: BrevetEvent[] }) {
         ))}
       </div>
 
-      {/* Pause indicator */}
-      {paused && (
-        <div
-          className="absolute top-2 right-4 flex items-center gap-1 rounded-full"
-          style={{ background:'rgba(0,0,0,0.65)', padding:'3px 8px' }}
-        >
-          <div style={{ width:3, height:10, background:'#06b6d4', borderRadius:1.5 }} />
-          <div style={{ width:3, height:10, background:'#06b6d4', borderRadius:1.5 }} />
-          <span style={{ fontSize:8, color:'#06b6d4', fontWeight:700, marginLeft:3 }}>PAUSE</span>
-        </div>
-      )}
-
-      {/* Dot indicators */}
+      {/* ── Numbered selector strip ── */}
       {sorted.length > 1 && (
-        <div className="flex justify-center items-center gap-1.5 pb-1">
-          {sorted.map((_, i) => (
-            <button
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 6,
+          padding: '8px 16px 12px',
+          justifyContent: sorted.length <= 8 ? 'center' : 'flex-start',
+          borderTop: '1px solid rgba(255,255,255,0.07)',
+        }}>
+          {/* "Jump to:" label */}
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            fontSize: 9, fontWeight: 700, letterSpacing: 1,
+            color: 'rgba(255,255,255,0.25)',
+            paddingRight: 4, alignSelf: 'center',
+            textTransform: 'uppercase',
+          }}>
+            {sorted.length} brevets ·
+          </div>
+
+          {sorted.map((ev, i) => (
+            <SelectorButton
               key={i}
-              onClick={() => { setActiveIdx(i); setPaused(true); scrollToIdx(i); }}
-              style={{
-                width: activeIdx === i ? 16 : 5,
-                height: 5,
-                borderRadius: 3,
-                background: activeIdx === i ? '#06b6d4' : 'rgba(255,255,255,0.2)',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-                transition: 'all 0.25s ease',
-              }}
+              idx={i}
+              event={ev}
+              isActive={activeIdx === i}
+              onClick={() => handleSelect(i)}
             />
           ))}
         </div>
-      )}
-
-      {/* Hint */}
-      {sorted.length > 1 && !paused && activeIdx === null && (
-        <p className="text-center text-[9px] pb-1" style={{ color:'rgba(255,255,255,0.2)', fontStyle:'italic' }}>
-          scroll · tap to pause
-        </p>
       )}
     </div>
   );
 }
 
-// ── YearCard (exported — drop-in replacement) ─────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// YearCard — exported drop-in replacement
+// ══════════════════════════════════════════════════════════════════════════════
 export function YearCard({ year, data }: { year: string; data: YearData }) {
   const [open, setOpen] = useState(false);
 
@@ -663,59 +972,60 @@ export function YearCard({ year, data }: { year: string; data: YearData }) {
   );
 
   return (
-    <div
-      className="rounded-xl overflow-hidden mb-3 transition-all duration-200"
-      style={{
-        background: open ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.05)',
-        border: `1px solid ${open ? 'rgba(6,182,212,0.35)' : 'rgba(255,255,255,0.1)'}`,
-      }}
-    >
-      {/* ── Year header (click to expand) ── */}
+    <div style={{
+      background: open ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.05)',
+      border: `1px solid ${open ? 'rgba(6,182,212,0.35)' : 'rgba(255,255,255,0.1)'}`,
+      borderRadius: 12,
+      overflow: 'hidden',
+      marginBottom: 12,
+      transition: 'border-color 0.2s, background 0.2s',
+    }}>
+      {/* ── Year header button ── */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 transition-colors hover:bg-white/5"
+        style={{
+          width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+          padding:'16px 20px', background:'transparent', border:'none', cursor:'pointer',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,0.03)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background='transparent'; }}
       >
-        <div className="flex items-center gap-4">
-          <div
-            className="rounded-xl px-3 py-2 text-center min-w-[56px] border transition-all duration-200"
-            style={{
-              background: open ? 'rgba(6,182,212,0.15)' : '#0A1628',
-              borderColor: open ? 'rgba(6,182,212,0.5)' : 'rgba(6,182,212,0.3)',
-            }}
-          >
-            <div className="text-cyan-400 font-bold text-lg leading-none">{year}</div>
+        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+          <div style={{
+            background: open ? 'rgba(6,182,212,0.15)' : '#0A1628',
+            border: `1px solid ${open ? 'rgba(6,182,212,0.5)' : 'rgba(6,182,212,0.3)'}`,
+            borderRadius:12, padding:'8px 12px', textAlign:'center', minWidth:56,
+            transition:'all 0.2s',
+          }}>
+            <div style={{ color:'#06b6d4', fontWeight:700, fontSize:18, lineHeight:1 }}>{year}</div>
           </div>
-          <div className="text-left">
-            <div className="text-white font-bold">{data.km.toLocaleString('el-GR')}km</div>
-            <div className="text-xs" style={{ color:'rgba(255,255,255,0.4)' }}>{data.brevets} brevets</div>
+          <div style={{ textAlign:'left' }}>
+            <div style={{ color:'#fff', fontWeight:700 }}>{data.km.toLocaleString('el-GR')}km</div>
+            <div style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>{data.brevets} brevets</div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {isSR  && <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-bold">SR</span>}
-          {isPBP && <span className="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-bold">PBP</span>}
-          {isFLC && <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-bold">FLECHE</span>}
-          <span
-            className="text-lg transition-transform duration-300"
-            style={{
-              display: 'inline-block',
-              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-              color: 'rgba(255,255,255,0.3)',
-            }}
-          >▼</span>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          {isSR  && <span style={{ fontSize:11, background:'rgba(239,68,68,0.2)', color:'#f87171', border:'1px solid rgba(239,68,68,0.3)', padding:'2px 8px', borderRadius:999, fontWeight:700 }}>SR</span>}
+          {isPBP && <span style={{ fontSize:11, background:'rgba(59,130,246,0.2)', color:'#93c5fd', border:'1px solid rgba(59,130,246,0.3)', padding:'2px 8px', borderRadius:999, fontWeight:700 }}>PBP</span>}
+          {isFLC && <span style={{ fontSize:11, background:'rgba(249,115,22,0.2)', color:'#fb923c', border:'1px solid rgba(249,115,22,0.3)', padding:'2px 8px', borderRadius:999, fontWeight:700 }}>FLECHE</span>}
+          <span style={{
+            color:'rgba(255,255,255,0.3)', fontSize:18,
+            display:'inline-block',
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition:'transform 0.3s',
+          }}>▼</span>
         </div>
       </button>
 
-      {/* ── Expanded card rail ── */}
+      {/* ── Card rail (expanded) ── */}
       {open && (
-        <div
-          className="border-t py-3"
-          style={{
-            borderColor:'rgba(255,255,255,0.1)',
-            background:'rgba(0,0,0,0.18)',
-          }}
-        >
+        <div style={{
+          borderTop:'1px solid rgba(255,255,255,0.1)',
+          background:'rgba(0,0,0,0.18)',
+          paddingTop:12, paddingBottom:4,
+        }}>
           {data.events.length === 0 ? (
-            <p className="px-5 text-sm" style={{ color:'rgba(255,255,255,0.3)' }}>
+            <p style={{ padding:'0 20px', color:'rgba(255,255,255,0.3)', fontSize:13 }}>
               Δεν βρέθηκαν brevets.
             </p>
           ) : (
