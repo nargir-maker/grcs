@@ -137,8 +137,8 @@ interface YearData {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const CARD_W = 260;   // px — card width in the rail
-const CARD_H = 500;   // px — fully expanded height (taller so footer logos are always visible)
+const CARD_W = 300;   // px — card width (wider so long brevet names don't truncate)
+const CARD_H = 560;   // px — card height (taller so footer logos always visible)
 const GAP    = 14;    // px — gap between cards
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1078,11 +1078,19 @@ export function YearCard({ year, data }: { year: string; data: YearData }) {
   const has300 = data.events.some(e => e.d >= 300 && e.d < 400);
   const has400 = data.events.some(e => e.d >= 400 && e.d < 600);
   const has600 = data.events.some(e => e.d >= 600);
-  const isSR   = has200 && has300 && has400 && has600;
-  const isPBP  = data.events.some(e => e.t?.toUpperCase() === 'PBP');
-  const isFLC  = data.events.some(e =>
+  const isSR    = has200 && has300 && has400 && has600;
+  const isPBP   = data.events.some(e => e.t?.toUpperCase() === 'PBP');
+  const isFLC   = data.events.some(e =>
     e.t?.toUpperCase() === 'FLC' || e.n?.toUpperCase().includes('FLECHE')
   );
+  const isLRM   = data.events.some(e => e.t?.toUpperCase() === 'LRM');
+  const isSRe   = data.events.some(e => e.t?.toUpperCase() === 'SRE');
+  const is100   = data.events.some(e => e.t?.toUpperCase() === 'BRM-100YEARS');
+  const hasDual = data.events.some(e => {
+    const acpOk = e.acp && e.acp !== 'null' && e.acp !== '---' && e.acp.trim() !== '';
+    const harOk = e.har && e.har !== 'null' && e.har !== '---' && e.har.trim() !== '';
+    return acpOk && harOk;
+  });
 
   return (
     <div style={{
@@ -1117,15 +1125,20 @@ export function YearCard({ year, data }: { year: string; data: YearData }) {
             <div style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>{data.brevets} brevets</div>
           </div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          {isSR  && <span style={{ fontSize:11, background:'rgba(239,68,68,0.2)', color:'#f87171', border:'1px solid rgba(239,68,68,0.3)', padding:'2px 8px', borderRadius:999, fontWeight:700 }}>SR</span>}
-          {isPBP && <span style={{ fontSize:11, background:'rgba(59,130,246,0.2)', color:'#93c5fd', border:'1px solid rgba(59,130,246,0.3)', padding:'2px 8px', borderRadius:999, fontWeight:700 }}>PBP</span>}
-          {isFLC && <span style={{ fontSize:11, background:'rgba(249,115,22,0.2)', color:'#fb923c', border:'1px solid rgba(249,115,22,0.3)', padding:'2px 8px', borderRadius:999, fontWeight:700 }}>FLECHE</span>}
+        <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap', justifyContent:'flex-end', maxWidth:220 }}>
+          {isSR    && <span style={{ fontSize:10, background:'rgba(239,68,68,0.2)',   color:'#f87171', border:'1px solid rgba(239,68,68,0.3)',   padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>SR</span>}
+          {isPBP   && <span style={{ fontSize:10, background:'rgba(249,115,22,0.2)', color:'#fb923c', border:'1px solid rgba(249,115,22,0.3)', padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>PBP</span>}
+          {isFLC   && <span style={{ fontSize:10, background:'rgba(234,179,8,0.2)',  color:'#facc15', border:'1px solid rgba(234,179,8,0.3)',  padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>FLÈCHE</span>}
+          {isLRM   && <span style={{ fontSize:10, background:'rgba(168,85,247,0.2)', color:'#c084fc', border:'1px solid rgba(168,85,247,0.3)', padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>LRM</span>}
+          {isSRe   && <span style={{ fontSize:10, background:'rgba(217,70,239,0.2)', color:'#e879f9', border:'1px solid rgba(217,70,239,0.3)', padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>SRe</span>}
+          {is100   && <span style={{ fontSize:10, background:'rgba(180,150,100,0.2)',color:'#d4a96a', border:'1px solid rgba(180,150,100,0.3)',padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>100Y</span>}
+          {hasDual && <span style={{ fontSize:10, background:'rgba(6,182,212,0.15)', color:'#67e8f9', border:'1px solid rgba(6,182,212,0.3)',  padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>ACP+HAR</span>}
           <span style={{
             color:'rgba(255,255,255,0.3)', fontSize:18,
             display:'inline-block',
             transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
             transition:'transform 0.3s',
+            marginLeft: 4,
           }}>▼</span>
         </div>
       </button>
