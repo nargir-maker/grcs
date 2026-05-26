@@ -28,7 +28,7 @@ interface YearData { km: number; brevets: number; events: BrevetEvent[]; }
 interface MemberProfile {
   totalKm: number; totalBrevets: number; pbpCount: number;
   lrmCount: number; flcCount: number; maxDist: number;
-  sreCount: number;  // super randonnée étoile count
+  sreCount?: number;  // super randonnée étoile count
   history: Record<string, YearData>;
 }
 

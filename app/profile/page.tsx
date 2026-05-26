@@ -16,6 +16,8 @@ import { db } from '@/app/lib/firebase';
 import { YearCard, ClubsProvider } from '@/app/components/BrevetCards';
 import { auth } from '@/app/lib/firebase';
 import { OrosimaDiadomon, TaksidiXrono, Epiteugmata } from '@/app/components/ProfileSections';
+import { FilteredProfile } from '@/app/components/ProfileDashboard';
+
 
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -539,62 +541,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ── STATS ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <StatCard
-            emoji="🚲"
-            value={member.totalKm.toLocaleString('el-GR')}
-            label="Χιλιόμετρα"
-            unit="km"
-            color="#06B6D4"
-          />
-          <StatCard
-            emoji="🏅"
-            value={member.totalBrevets.toString()}
-            label="Brevets"
-            unit="BRM"
-            color="#F59E0B"
-          />
-          <StatCard
-            emoji="⛰️"
-            value={Math.round(totalElevation).toLocaleString('el-GR')}
-            label="Υψομετρικά"
-            unit="m+"
-            color="#A78BFA"
-          />
-          <StatCard
-            emoji="🏆"
-            value={srCount.toString()}
-            label="Super Randonneur"
-            unit="SR"
-            color="#EF4444"
-          />
-        </div>
-
-        {/* ── ACHIEVEMENTS ── */}
-<Epiteugmata member={member} />
-<OrosimaDiadomon member={member} />
-<TaksidiXrono member={member} />
-
-        {/* ── HISTORY ── */}
-        <ClubsProvider>
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-          <h2 className="text-white font-bold text-lg mb-4">
-            📜 Ιστορικό ({sortedYears.length} χρόνια)
-          </h2>
-          {sortedYears.length === 0 ? (
-            <p className="text-white/30 text-sm">Δεν βρέθηκε ιστορικό.</p>
-          ) : (
-            sortedYears.map(year => (
-              <YearCard
-                key={year}
-                year={year}
-                data={member.history[year]}
-              />
-            ))
-          )}
-        </div>
-        </ClubsProvider>
+       <FilteredProfile member={member} />
 
       </div>
     </div>
