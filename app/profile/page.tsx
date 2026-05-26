@@ -10,10 +10,12 @@
 
 import { useEffect, useState } from 'react';
 import { useSession, signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
 import { YearCard } from '@/app/components/BrevetCards';
 import { auth } from '@/app/lib/firebase';
+
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface YearData {
@@ -193,6 +195,14 @@ function StatCard({ emoji, value, label, unit, color }: {
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function ProfilePage() {
   const { data: session, status } = useSession();
+    const router = useRouter();
+
+  // Redirect to landing page if not logged in
+  useEffect(() => {
+    if (status !== 'loading' && !session) {
+      router.replace('/');
+    }
+  }, [session, status, router]);
   const [member, setMember]         = useState<MemberProfile | null>(null);
   const [loading, setLoading]       = useState(true);
   const [needsLink, setNeedsLink]   = useState(false);

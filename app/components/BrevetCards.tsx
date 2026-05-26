@@ -1,27 +1,118 @@
 'use client';
 
-// BrevetCards.tsx  — v2
+// BrevetCards.tsx  — v3
 // Drop-in replacement for YearCard in profile/page.tsx
 //
 // INSTALL:
 //   1. Copy to  app/components/BrevetCards.tsx
-//   2. In profile/page.tsx:
-//        import { YearCard } from '@/app/components/BrevetCards';
-//        (delete the old YearCard function)
-//   3. Done — everything else stays the same.
+//   2. In profile/page.tsx replace the YearCard import and wrap the history
+//      section with ClubsProvider (see bottom of this file for instructions).
 //
-// LOGOS:  /public/logos/<filename>  (same names as in the Flutter app assets)
-//   pepa_logo3.png | ble_logo3.png | bioracer_logo3.png | har_logo3.png
-//   randonneurs_logo3.png | arg_logo1.png | pok_logo3.png | aiolos_logo3.png
-//   kassimatis_logo3.png | sfpip.png | peacock.png | GBT_logo_390.png
+// LOGOS: /public/logos/{clubId}.png  — same numeric IDs as Firestore clubs
+//   collection. The component fetches clubs once, builds an og-name → clubId
+//   map, and resolves logos automatically. No manual mapping needed.
+//
+// Special logos (not club-based) still live in /public/logos/:
 //   Lepote_logo.png | LogoAudax-2022.png | lrm_logo.png | PBP_logo_trans.png
 //   acp_hom.png | har_stamp390.png | lrm_stamp.png | sre_logo.png | sre_medal2.png
 //   fleche_medal.png | (200|300|400|600|1000|1200)-100YEARS.png
-//
-// Cards are FULLY EXPANDED — no inner collapse — taller on desktop.
-// Auto-scroll rail + click-to-pause, same as v1.
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect, createContext, useContext } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/app/lib/firebase';
+
+// ── Clubs context ─────────────────────────────────────────────────────────────
+// Fetches clubs once and exposes a resolver: organizer name → logo URL.
+// Wrap the history section in profile/page.tsx with <ClubsProvider>.
+
+interface ClubEntry {
+  id: string;            // Firestore doc id — e.g. "659999"
+  shortNameGr: string;   // CLUB_NAME_SHORT_GR
+  shortNameEn: string;   // ACP_CLUB_NAME_EN
+  fullNameGr:  string;   // CLUB_NAME_FULL_GR
+}
+
+interface ClubsContextValue {
+  // Given the raw `og` string from an event, returns the /public/logos URL.
+  // Falls back to a generic logo if no match found.
+  resolveOrgLogo: (og: string) => string;
+  // Display name — cleaned up version of og for the card text.
+  resolveOrgName: (og: string) => string;
+}
+
+const ClubsContext = createContext<ClubsContextValue>({
+  resolveOrgLogo: () => '/logos/GBT_logo_390.png',
+  resolveOrgName: (og) => og,
+});
+
+// Normalise a string for fuzzy matching — lowercase, strip punctuation/spaces.
+function norm(s: string): string {
+  return s.toLowerCase().replace(/[.\s\-_/\\]/g, '');
+}
+
+export function ClubsProvider({ children }: { children: React.ReactNode }) {
+  const [clubs, setClubs] = useState<ClubEntry[]>([]);
+
+  useEffect(() => {
+    getDocs(collection(db, 'clubs'))
+      .then(snap => {
+        setClubs(snap.docs.map(d => ({
+          id:          d.id,
+          shortNameGr: d.data().CLUB_NAME_SHORT_GR ?? '',
+          shortNameEn: d.data().ACP_CLUB_NAME_EN   ?? '',
+          fullNameGr:  d.data().CLUB_NAME_FULL_GR  ?? '',
+        })));
+      })
+      .catch(() => {/* silently ignore — fallback logo will be used */});
+  }, []);
+
+  function findClub(og: string): ClubEntry | undefined {
+    if (!og || !clubs.length) return undefined;
+    const ogN = norm(og);
+    // 1. Exact match on any name field
+    let match = clubs.find(c =>
+      norm(c.shortNameGr) === ogN ||
+      norm(c.shortNameEn) === ogN ||
+      norm(c.fullNameGr)  === ogN
+    );
+    if (match) return match;
+    // 2. Substring match — og contains club name or club name contains og
+    match = clubs.find(c =>
+      ogN.includes(norm(c.shortNameGr)) && norm(c.shortNameGr).length > 2 ||
+      ogN.includes(norm(c.shortNameEn)) && norm(c.shortNameEn).length > 2 ||
+      ogN.includes(norm(c.fullNameGr))  && norm(c.fullNameGr).length  > 2 ||
+      norm(c.shortNameGr).includes(ogN) && ogN.length > 2 ||
+      norm(c.fullNameGr).includes(ogN)  && ogN.length > 3
+    );
+    return match;
+  }
+
+  function resolveOrgLogo(og: string): string {
+    const club = findClub(og);
+    if (club) return `/logos/${club.id}.png`;
+    return '/logos/GBT_logo_390.png';
+  }
+
+  function resolveOrgName(og: string): string {
+    if (!og) return '';
+    const club = findClub(og);
+    if (club) {
+      // Prefer Greek full name, fall back to short, then the raw og value.
+      return club.fullNameGr || club.shortNameGr || og;
+    }
+    return og;
+  }
+
+  return (
+    <ClubsContext.Provider value={{ resolveOrgLogo, resolveOrgName }}>
+      {children}
+    </ClubsContext.Provider>
+  );
+}
+
+function useClubs() {
+  return useContext(ClubsContext);
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface BrevetEvent {
@@ -73,45 +164,6 @@ function formatDate(dt: string): string {
     if (m) return `${parts[2].padStart(2,'0')}/${m}/${parts[3]}`;
   }
   return dt;
-}
-
-function getOrganizerLogo(og: string): string {
-  const u = og.toUpperCase();
-  if (u.includes('Π.Ε.Π.Α') || u.includes('ΠΕΠΑ'))                          return logo('pepa_logo3.png');
-  if (u.includes('BLE'))                                                        return logo('ble_logo3.png');
-  if (u.includes('BIORACER'))                                                   return logo('bioracer_logo3.png');
-  if (u.includes('HAR') || u.includes('H.A.R') || u.includes('HELLENIC AUTO')) return logo('har_logo3.png');
-  if (u.includes('GREEK RAND'))                                                 return logo('randonneurs_logo3.png');
-  if (u.includes('ΕΛΛΑΔΟΣ') || u.includes('AUDAX RAND') || u.includes('GRÈCE') || u.includes('GRECE')) return logo('arg_logo1.png');
-  if (u.includes('ΚΑΡΔΙΤΣ') || u.includes('Π.Ο.Κ'))                           return logo('pok_logo3.png');
-  if (og.includes('ΑΙΟΛΟΣ'))                                                    return logo('aiolos_logo3.png');
-  if (og.includes('KASSIMATIS'))                                                return logo('kassimatis_logo3.png');
-  if (og.includes('Σ.Φ.Π.Ι.Π'))                                               return logo('sfpip.png');
-  if (og.includes('PEACOCK'))                                                   return logo('peacock.png');
-  return logo('GBT_logo_390.png');
-}
-
-// Maps the short organizer code stored in `og` to a human-readable display name.
-// The `og` field holds whatever the DB has — sometimes a full name, sometimes a
-// short code like "Π.Ε.Π.Α." or "AUDAX RANDONNEURS GRECE". We normalise here
-// so the card always shows something readable alongside the logo.
-function getOrganizerDisplayName(og: string): string {
-  const u = og.toUpperCase().trim();
-  // Already a readable full name — return as-is (longer than ~10 chars and not all dots/letters)
-  if (og.length > 14 && !u.match(/^[Α-Ωα-ωA-Z.\s]+$/)) return og;
-  if (u.includes('Π.Ε.Π.Α') || u === 'ΠΕΠΑ')           return 'Π.Ε.Π.Α.';
-  if (u.includes('BLE'))                                  return 'BLE Cycling';
-  if (u.includes('BIORACER'))                             return 'Bioracer';
-  if (u.includes('H.A.R') || u.includes('HELLENIC AUTO') || u === 'HAR') return 'Hellenic Autonomous Randonneurs';
-  if (u.includes('GREEK RAND'))                           return 'Greek Randonneurs';
-  if (u.includes('ΕΛΛΑΔΟΣ') || u.includes('AUDAX RAND') || u.includes('GRÈCE') || u.includes('GRECE')) return 'Audax Randonneurs Grèce';
-  if (u.includes('ΚΑΡΔΙΤΣ') || u.includes('Π.Ο.Κ'))     return 'Π.Ο. Καρδίτσας';
-  if (u.includes('ΑΙΟΛΟΣ'))                               return 'Α.Ο. Αίολος';
-  if (u.includes('KASSIMATIS'))                           return 'Kassimatis';
-  if (u.includes('Σ.Φ.Π.Ι.Π'))                          return 'Σ.Φ.Π.Ι.Π.';
-  if (u.includes('PEACOCK'))                              return 'Peacock';
-  // Fallback — return what we have
-  return og;
 }
 
 function isEmpty(v: string | undefined | null) {
@@ -201,6 +253,7 @@ function LrmStamp() {
 // CARD: Default yellow BRM (and LRM, 100YEARS variants)
 // ══════════════════════════════════════════════════════════════════════════════
 function BrmCard({ e }: { e: BrevetEvent }) {
+  const { resolveOrgLogo, resolveOrgName } = useClubs();
   const isLRM  = e.t?.toUpperCase() === 'LRM';
   const is100  = e.t?.toUpperCase() === 'BRM-100YEARS';
   const acpOk  = !isEmpty(e.acp);
@@ -241,7 +294,7 @@ function BrmCard({ e }: { e: BrevetEvent }) {
       {/* ── Organizer row: logo left + name right ── */}
       <div style={{ padding:'10px 12px 0', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
         <img
-          src={getOrganizerLogo(e.og)}
+          src={resolveOrgLogo(e.og)}
           alt={e.og}
           style={{ height:58, maxWidth:72, objectFit:'contain', flexShrink:0 }}
           onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
@@ -249,7 +302,7 @@ function BrmCard({ e }: { e: BrevetEvent }) {
         <div style={{ flex:1, minWidth:0 }}>
           {isLRM && <div style={{ fontSize:10, fontWeight:700, color:'#7e22ce', marginBottom:2 }}>LRM EVENT</div>}
           <div style={{ fontWeight:900, fontSize:13, color:'rgba(0,0,0,0.85)', lineHeight:1.2, wordBreak:'break-word' }}>
-            {getOrganizerDisplayName(e.og)}
+            {resolveOrgName(e.og)}
           </div>
         </div>
       </div>
@@ -401,6 +454,7 @@ function PbpCard({ e }: { e: BrevetEvent }) {
 // CARD: HAR-only (blue)
 // ══════════════════════════════════════════════════════════════════════════════
 function HarCard({ e }: { e: BrevetEvent }) {
+  const { resolveOrgLogo } = useClubs();
   return (
     <div style={{ background:'rgba(162,229,248,0.55)', border:'1px solid rgba(30,120,180,0.35)', borderRadius:4, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
@@ -473,6 +527,7 @@ function HarCard({ e }: { e: BrevetEvent }) {
 // ══════════════════════════════════════════════════════════════════════════════
 function DualCard({ e }: { e: BrevetEvent }) {
   const [page, setPage] = useState(0);
+  const { resolveOrgLogo, resolveOrgName } = useClubs();
 
   // Shared body content used in both sub-pages
   function SharedBody({ tint }: { tint: 'acp' | 'har' }) {
@@ -481,13 +536,13 @@ function DualCard({ e }: { e: BrevetEvent }) {
         {/* Organizer: logo left + name right */}
         <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0 4px', flexShrink:0 }}>
           <img
-            src={tint === 'acp' ? getOrganizerLogo(e.og) : logo('har_logo3.png')}
+            src={tint === 'acp' ? resolveOrgLogo(e.og) : logo('har_logo3.png')}
             alt={tint}
             style={{ height:52, maxWidth:68, objectFit:'contain', flexShrink:0 }}
             onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
           />
           <div style={{ flex:1, fontWeight:900, fontSize:11, color:'rgba(0,0,0,0.8)', lineHeight:1.2 }}>
-            {tint === 'acp' ? getOrganizerDisplayName(e.og) : 'Hellenic Autonomous Randonneurs'}
+            {tint === 'acp' ? resolveOrgName(e.og) : 'Hellenic Autonomous Randonneurs'}
           </div>
         </div>
         {/* Finish stamp — right-aligned, own row */}
@@ -646,6 +701,7 @@ function FlecheCard({ e }: { e: BrevetEvent }) {
 // CARD: Super Randonnée Étoile (SRe)
 // ══════════════════════════════════════════════════════════════════════════════
 function SreCard({ e }: { e: BrevetEvent }) {
+  const { resolveOrgLogo, resolveOrgName } = useClubs();
   return (
     <div style={{ background:'rgb(224,177,232)', border:'1px solid rgba(213,73,238,0.5)', borderRadius:12, height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
@@ -673,13 +729,13 @@ function SreCard({ e }: { e: BrevetEvent }) {
       {/* Organizer */}
       <div style={{ padding:'8px 12px', display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
         <img
-          src={getOrganizerLogo(e.og)}
+          src={resolveOrgLogo(e.og)}
           alt={e.og}
           style={{ height:44, objectFit:'contain' }}
           onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
         />
         <div style={{ fontWeight:700, fontSize:13, color:'#7b2d8b', letterSpacing:0.8, flex:1, lineHeight:1.2 }}>
-          {getOrganizerDisplayName(e.og).toUpperCase()}
+          {resolveOrgName(e.og).toUpperCase()}
         </div>
       </div>
 
@@ -993,6 +1049,27 @@ function EventsScrollRail({ events }: { events: BrevetEvent[] }) {
 
 // ══════════════════════════════════════════════════════════════════════════════
 // YearCard — exported drop-in replacement
+//
+// In profile/page.tsx, wrap the history section with ClubsProvider:
+//
+//   import { YearCard, ClubsProvider } from '@/app/components/BrevetCards';
+//
+//   // Inside the JSX, change:
+//   <div className="... rounded-2xl p-6">
+//     <h2 ...>📜 Ιστορικό ...</h2>
+//     {sortedYears.map(year => <YearCard key={year} year={year} data={...} />)}
+//   </div>
+//
+//   // To:
+//   <ClubsProvider>
+//     <div className="... rounded-2xl p-6">
+//       <h2 ...>📜 Ιστορικό ...</h2>
+//       {sortedYears.map(year => <YearCard key={year} year={year} data={...} />)}
+//     </div>
+//   </ClubsProvider>
+//
+// ClubsProvider fetches clubs once from Firestore, builds a name→id map,
+// and all YearCard/BrevetCard children resolve logos via /logos/{clubId}.png.
 // ══════════════════════════════════════════════════════════════════════════════
 export function YearCard({ year, data }: { year: string; data: YearData }) {
   const [open, setOpen] = useState(false);
