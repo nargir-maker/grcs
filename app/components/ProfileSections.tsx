@@ -28,6 +28,7 @@ interface YearData { km: number; brevets: number; events: BrevetEvent[]; }
 interface MemberProfile {
   totalKm: number; totalBrevets: number; pbpCount: number;
   lrmCount: number; flcCount: number; maxDist: number;
+  sreCount: number;  // super randonnée étoile count
   history: Record<string, YearData>;
 }
 
@@ -88,10 +89,14 @@ function calcMilestones(history: Record<string, YearData>): MilestoneMap {
 }
 
 // ── Has a 100-YEARS anniversary completion? ────────────────────────────────────
-// A distance is "complete" if the rider has ridden it during the 100y period (2021)
+// Matches Flutter exactly: e['t'] == "BRM-100YEARS" && e['d'] == distance
+// (has nothing to do with year 2021 — that was a wrong assumption)
 function hasAnniversary(history: Record<string, YearData>, dist: number): boolean {
-  return Object.entries(history).some(([year, y]) =>
-    parseInt(year) === 2021 && y.events.some(e => e.d === dist || String(e.d) === String(dist))
+  return Object.values(history).some(y =>
+    y.events.some(e =>
+      e.t?.toString() === 'BRM-100YEARS' &&
+      String(e.d) === String(dist)
+    )
   );
 }
 
@@ -203,14 +208,14 @@ function MedalTile({ src, label, sublabel, dimmed = false }: {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      gap: 6, minWidth: 90, opacity: dimmed ? 0.3 : 1,
+      gap: 6, minWidth: 110, opacity: dimmed ? 0.3 : 1,
       filter: dimmed ? 'grayscale(100%)' : 'none',
       transition: 'opacity 0.2s',
     }}>
       <img
         src={src}
         alt={label}
-        style={{ height: 80, width: 80, objectFit: 'contain' }}
+        style={{ height: 110, width: 110, objectFit: 'contain' }}
         onError={ev => { (ev.target as HTMLImageElement).style.opacity = '0'; }}
       />
       <div style={{ textAlign: 'center' }}>
@@ -232,7 +237,7 @@ function AwardTile({ src, label, current, target }: {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      gap: 6, minWidth: 90,
+      gap: 6, minWidth: 110,
       opacity: done ? 1 : 0.45,
       filter: done ? 'none' : 'grayscale(80%)',
     }}>
@@ -240,16 +245,16 @@ function AwardTile({ src, label, current, target }: {
         <img
           src={src}
           alt={label}
-          style={{ height: 80, width: 80, objectFit: 'contain' }}
+          style={{ height: 110, width: 110, objectFit: 'contain' }}
           onError={ev => { (ev.target as HTMLImageElement).style.opacity = '0'; }}
         />
         {done && (
           <div style={{
             position: 'absolute', top: -4, right: -4,
             background: '#22c55e', borderRadius: '50%',
-            width: 18, height: 18,
+            width: 20, height: 20,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 10, color: '#fff', fontWeight: 900,
+            fontSize: 11, color: '#fff', fontWeight: 900,
           }}>✓</div>
         )}
       </div>
@@ -260,7 +265,7 @@ function AwardTile({ src, label, current, target }: {
         </div>
         {/* Progress bar */}
         <div style={{
-          marginTop: 4, height: 3, width: 70, background: 'rgba(255,255,255,0.1)',
+          marginTop: 4, height: 3, width: 80, background: 'rgba(255,255,255,0.1)',
           borderRadius: 2, overflow: 'hidden',
         }}>
           <div style={{
@@ -440,43 +445,70 @@ export function TaksidiXrono({ member }: { member: MemberProfile }) {
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 3. ΕΠΙΤΕΎΓΜΑΤΑ (enhanced — medals with images)
+// Matches Flutter StatBadge list exactly:
+//   max_km_medal1, pbp_medal, lrm_medal, fleche_medal, sr_medal,
+//   sre_medal2, isr, lepertel
+// NOTE: sreCount needs to be added to parseMember in profile/page.tsx:
+//   sreCount: parseInt(stats.sre ?? '0') || 0,
 // ══════════════════════════════════════════════════════════════════════════════
 export function Epiteugmata({ member }: { member: MemberProfile }) {
   const sr = srCount(member.history);
 
+  // Each badge: always rendered (like Flutter StatBadge which shows 0 too),
+  // but dimmed when count is 0 so the rider can see what's possible.
   const badges = [
-    { src: img('max_km_medal1.png'), label: '═╡►km◄╞═', count: member.maxDist,    unit: 'km',  color: '#06b6d4', show: member.maxDist > 0 },
-    { src: img('pbp_medal.png'),     label: 'PBP',        count: member.pbpCount,  unit: '×',   color: '#fbbf24', show: member.pbpCount > 0 },
-    { src: img('lrm_medal.png'),     label: 'LRM',        count: member.lrmCount,  unit: '×',   color: '#c084fc', show: member.lrmCount > 0 },
-    { src: img('fleche_medal.png'),  label: 'Flèche',     count: member.flcCount,  unit: '×',   color: '#fb923c', show: member.flcCount > 0 },
-    { src: img('sr_medal.png'),      label: 'SR',         count: sr,               unit: '×',   color: '#f87171', show: sr > 0 },
-  ].filter(b => b.show);
+    { src: img('max_km_medal1.png'), label: '═╡►km◄╞═', value: member.maxDist.toLocaleString('el-GR'), unit: 'km',  color: '#06b6d4' },
+    { src: img('pbp_medal.png'),     label: 'PBP',        value: String(member.pbpCount),                unit: '×',   color: '#fbbf24' },
+    { src: img('lrm_medal.png'),     label: 'LRM',        value: String(member.lrmCount),                unit: '×',   color: '#c084fc' },
+    { src: img('fleche_medal.png'),  label: 'Flèche',     value: String(member.flcCount),                unit: '×',   color: '#fb923c' },
+    { src: img('sr_medal.png'),      label: 'SR',         value: String(sr),                             unit: '×',   color: '#f87171' },
+    { src: img('sre_medal2.png'),    label: 'SRe',        value: String(member.sreCount ?? 0),           unit: '×',   color: '#e879f9' },
+    { src: img('isr.png'),           label: 'ISR',        value: '1',                                    unit: '',    color: '#f87901' },
+    { src: img('lepertel.png'),      label: 'Lepertel',   value: '1',                                    unit: '',    color: '#94a3b8' },
+  ];
 
-  if (!badges.length) return null;
+  // Only show badges where the count is > 0 (isr/lepertel are existence-based,
+  // hide if member has 0 pbp etc — keep consistent with Flutter which always
+  // shows them but we can filter for cleanliness on the web)
+  const visible = badges.filter((b, i) => {
+    if (i === 0) return member.maxDist > 0;
+    if (i === 1) return member.pbpCount > 0;
+    if (i === 2) return member.lrmCount > 0;
+    if (i === 3) return member.flcCount > 0;
+    if (i === 4) return sr > 0;
+    if (i === 5) return (member.sreCount ?? 0) > 0;
+    if (i === 6) return member.pbpCount > 0; // ISR — only if they've done PBP
+    if (i === 7) return member.pbpCount > 0; // Lepertel — same
+    return false;
+  });
+
+  if (!visible.length) return null;
 
   return (
-    <SectionCard title="🎖️ Επιτεύγματα" icon="" headerColor="rgba(180,130,0,0.85)">
+    <SectionCard title="Τα επιτεύγματά μου" icon="🎖️" headerColor="rgba(180,130,0,0.9)">
       <ScrollRail>
-        {badges.map((b, i) => (
+        {visible.map((b, i) => (
           <div key={i} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',
-            gap: 8, minWidth: 100,
+            gap: 8, minWidth: 110,
           }}>
             <img
               src={b.src}
               alt={b.label}
-              style={{ height: 90, width: 90, objectFit: 'contain' }}
-              onError={ev => { (ev.target as HTMLImageElement).style.opacity = '0.1'; }}
+              style={{ height: 110, width: 110, objectFit: 'contain' }}
+              onError={ev => { (ev.target as HTMLImageElement).style.opacity = '0.15'; }}
             />
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>
                 {b.label}
               </div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: b.color, lineHeight: 1 }}>
-                {b.count.toLocaleString('el-GR')}
-                <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.4)', marginLeft: 2 }}>
-                  {b.unit}
-                </span>
+              <div style={{ fontSize: 24, fontWeight: 900, color: b.color, lineHeight: 1.1 }}>
+                {b.value}
+                {b.unit && (
+                  <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.4)', marginLeft: 2 }}>
+                    {b.unit}
+                  </span>
+                )}
               </div>
             </div>
           </div>
