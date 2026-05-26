@@ -47,7 +47,7 @@ interface YearData {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CARD_W = 260;   // px — card width in the rail
-const CARD_H = 420;   // px — fully expanded height
+const CARD_H = 500;   // px — fully expanded height (taller so footer logos are always visible)
 const GAP    = 14;    // px — gap between cards
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -89,6 +89,29 @@ function getOrganizerLogo(og: string): string {
   if (og.includes('Σ.Φ.Π.Ι.Π'))                                               return logo('sfpip.png');
   if (og.includes('PEACOCK'))                                                   return logo('peacock.png');
   return logo('GBT_logo_390.png');
+}
+
+// Maps the short organizer code stored in `og` to a human-readable display name.
+// The `og` field holds whatever the DB has — sometimes a full name, sometimes a
+// short code like "Π.Ε.Π.Α." or "AUDAX RANDONNEURS GRECE". We normalise here
+// so the card always shows something readable alongside the logo.
+function getOrganizerDisplayName(og: string): string {
+  const u = og.toUpperCase().trim();
+  // Already a readable full name — return as-is (longer than ~10 chars and not all dots/letters)
+  if (og.length > 14 && !u.match(/^[Α-Ωα-ωA-Z.\s]+$/)) return og;
+  if (u.includes('Π.Ε.Π.Α') || u === 'ΠΕΠΑ')           return 'Π.Ε.Π.Α.';
+  if (u.includes('BLE'))                                  return 'BLE Cycling';
+  if (u.includes('BIORACER'))                             return 'Bioracer';
+  if (u.includes('H.A.R') || u.includes('HELLENIC AUTO') || u === 'HAR') return 'Hellenic Autonomous Randonneurs';
+  if (u.includes('GREEK RAND'))                           return 'Greek Randonneurs';
+  if (u.includes('ΕΛΛΑΔΟΣ') || u.includes('AUDAX RAND') || u.includes('GRÈCE') || u.includes('GRECE')) return 'Audax Randonneurs Grèce';
+  if (u.includes('ΚΑΡΔΙΤΣ') || u.includes('Π.Ο.Κ'))     return 'Π.Ο. Καρδίτσας';
+  if (u.includes('ΑΙΟΛΟΣ'))                               return 'Α.Ο. Αίολος';
+  if (u.includes('KASSIMATIS'))                           return 'Kassimatis';
+  if (u.includes('Σ.Φ.Π.Ι.Π'))                          return 'Σ.Φ.Π.Ι.Π.';
+  if (u.includes('PEACOCK'))                              return 'Peacock';
+  // Fallback — return what we have
+  return og;
 }
 
 function isEmpty(v: string | undefined | null) {
@@ -215,25 +238,28 @@ function BrmCard({ e }: { e: BrevetEvent }) {
         )}
       </div>
 
-      {/* ── Organizer row ── */}
-      <div style={{ padding:'10px 12px 4px', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+      {/* ── Organizer row: logo left + name right ── */}
+      <div style={{ padding:'10px 12px 0', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
         <img
           src={getOrganizerLogo(e.og)}
           alt={e.og}
-          style={{ height:64, maxWidth:80, objectFit:'contain' }}
+          style={{ height:58, maxWidth:72, objectFit:'contain', flexShrink:0 }}
           onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
         />
         <div style={{ flex:1, minWidth:0 }}>
-          {isLRM && <div style={{ fontSize:11, fontWeight:700, color:'#7e22ce', marginBottom:2 }}>LRM EVENT</div>}
-          <div style={{ fontWeight:900, fontSize:14, color:'rgba(0,0,0,0.85)', lineHeight:1.2, wordBreak:'break-word' }}>
-            {e.og}
-          </div>
-          {/* Finish badge top-right */}
-          <div style={{ marginTop:6 }}>
-            <FinishBadge rt={e.rt} isLRM={isLRM} />
+          {isLRM && <div style={{ fontSize:10, fontWeight:700, color:'#7e22ce', marginBottom:2 }}>LRM EVENT</div>}
+          <div style={{ fontWeight:900, fontSize:13, color:'rgba(0,0,0,0.85)', lineHeight:1.2, wordBreak:'break-word' }}>
+            {getOrganizerDisplayName(e.og)}
           </div>
         </div>
       </div>
+
+      {/* ── Finish stamp — its own row, right-aligned so it never overlaps the logo ── */}
+      {!isEmpty(e.rt) && e.rt !== '00:00' && (
+        <div style={{ padding:'4px 12px 0', display:'flex', justifyContent:'flex-end' }}>
+          <FinishBadge rt={e.rt} isLRM={isLRM} />
+        </div>
+      )}
 
       <div style={{ padding:'0 12px' }}>
         <DottedLine />
@@ -388,15 +414,25 @@ function HarCard({ e }: { e: BrevetEvent }) {
         </div>
       </div>
 
-      {/* HAR logo */}
-      <div style={{ display:'flex', justifyContent:'center', padding:'14px 0 6px', flexShrink:0 }}>
+      {/* HAR logo + organizer name row */}
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 12px 4px', flexShrink:0 }}>
         <img
           src={logo('har_logo3.png')}
           alt="HAR"
-          style={{ height:90, objectFit:'contain' }}
+          style={{ height:72, maxWidth:80, objectFit:'contain', flexShrink:0 }}
           onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
         />
+        <div style={{ flex:1, fontWeight:900, fontSize:12, color:'rgba(0,0,0,0.8)', lineHeight:1.3 }}>
+          Hellenic Autonomous<br />Randonneurs
+        </div>
       </div>
+
+      {/* Finish stamp — right-aligned, own row */}
+      {!isEmpty(e.rt) && e.rt !== '00:00' && (
+        <div style={{ padding:'2px 12px 0', display:'flex', justifyContent:'flex-end' }}>
+          <FinishBadge rt={e.rt} />
+        </div>
+      )}
 
       {/* Body */}
       <div style={{ flex:1, padding:'0 12px', display:'flex', flexDirection:'column' }}>
@@ -405,13 +441,6 @@ function HarCard({ e }: { e: BrevetEvent }) {
           {e.n} · {e.d}km
         </div>
         <DottedLine />
-
-        {/* Finish badge */}
-        {!isEmpty(e.rt) && e.rt !== '00:00' && (
-          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:4 }}>
-            <FinishBadge rt={e.rt} />
-          </div>
-        )}
 
         <div style={{ fontWeight:700, fontSize:13, color:'rgba(0,0,0,0.78)', textAlign:'center' }}>
           {formatDate(e.dt)}
@@ -449,17 +478,24 @@ function DualCard({ e }: { e: BrevetEvent }) {
   function SharedBody({ tint }: { tint: 'acp' | 'har' }) {
     return (
       <div style={{ flex:1, padding:'0 12px', display:'flex', flexDirection:'column' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0 4px', flexShrink:0 }}>
+        {/* Organizer: logo left + name right */}
+        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0 4px', flexShrink:0 }}>
           <img
             src={tint === 'acp' ? getOrganizerLogo(e.og) : logo('har_logo3.png')}
             alt={tint}
-            style={{ height:60, maxWidth:80, objectFit:'contain' }}
+            style={{ height:52, maxWidth:68, objectFit:'contain', flexShrink:0 }}
             onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
           />
-          <div style={{ flex:1, fontWeight:900, fontSize:12, color:'rgba(0,0,0,0.8)', lineHeight:1.2 }}>
-            {tint === 'acp' ? e.og : 'Hellenic Autonomous Randonneurs'}
+          <div style={{ flex:1, fontWeight:900, fontSize:11, color:'rgba(0,0,0,0.8)', lineHeight:1.2 }}>
+            {tint === 'acp' ? getOrganizerDisplayName(e.og) : 'Hellenic Autonomous Randonneurs'}
           </div>
         </div>
+        {/* Finish stamp — right-aligned, own row */}
+        {!isEmpty(e.rt) && e.rt !== '00:00' && (
+          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:2 }}>
+            <FinishBadge rt={e.rt} />
+          </div>
+        )}
         <DottedLine />
         <div style={{ fontWeight:900, fontSize:13, color:'rgba(0,0,0,0.88)', lineHeight:1.3 }}>
           {e.n.toUpperCase()}
@@ -643,7 +679,7 @@ function SreCard({ e }: { e: BrevetEvent }) {
           onError={(ev) => { (ev.target as HTMLImageElement).style.display='none'; }}
         />
         <div style={{ fontWeight:700, fontSize:13, color:'#7b2d8b', letterSpacing:0.8, flex:1, lineHeight:1.2 }}>
-          {e.og.toUpperCase()}
+          {getOrganizerDisplayName(e.og).toUpperCase()}
         </div>
       </div>
 
@@ -926,7 +962,7 @@ function EventsScrollRail({ events }: { events: BrevetEvent[] }) {
           flexWrap: 'wrap',
           gap: 6,
           padding: '8px 16px 12px',
-          justifyContent: sorted.length <= 8 ? 'center' : 'flex-start',
+          justifyContent: 'center',
           borderTop: '1px solid rgba(255,255,255,0.07)',
         }}>
           {/* "Jump to:" label */}
