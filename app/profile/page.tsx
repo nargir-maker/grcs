@@ -12,6 +12,8 @@ import { useEffect, useState } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
+import { YearCard } from '@/app/components/BrevetCards';
+import { auth } from '@/app/lib/firebase';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface YearData {
@@ -131,7 +133,7 @@ function StatCard({ emoji, value, label, unit, color }: {
 }
 
 // ── Year card ──────────────────────────────────────────────────────────────────
-function YearCard({ year, data }: { year: string; data: YearData }) {
+/*function YearCard({ year, data }: { year: string; data: YearData }) {
   const [open, setOpen] = useState(false);
 
   // SR check
@@ -186,7 +188,7 @@ function YearCard({ year, data }: { year: string; data: YearData }) {
       )}
     </div>
   );
-}
+}*/
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function ProfilePage() {
@@ -199,6 +201,9 @@ export default function ProfilePage() {
   const [linking, setLinking]       = useState(false);
   const [linkError, setLinkError]   = useState('');
 
+
+
+
   // ── Fetch profile ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (status === 'loading') return;
@@ -206,7 +211,10 @@ export default function ProfilePage() {
     fetchProfile(session.user.email);
   }, [session, status]);
 
+ 
   async function fetchProfile(email: string) {
+      console.log('Firebase auth user:', auth.currentUser);
+  console.log('Firebase auth uid:', auth.currentUser?.uid);
     setLoading(true);
     try {
       // 1. Find users doc by email
