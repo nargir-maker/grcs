@@ -343,7 +343,7 @@ function milestoneLabel(key: string): string {
     '200': '1ο 200άρι', '300': '1ο 300άρι',
     '400': '1ο 400άρι', '600': '1ο 600άρι',
     '1000': '1ο 1000άρι', '1200': '1ο 1200άρι',
-    PBP: '1ο PBP', LRM: '1ο LRM', FLECHE: '1η Flèche',
+    PBP: '1ο PBP', LRM: '1ο LRM', FLECHE: '1ο Flèche',
   };
   return map[key] ?? `Ορόσημο ${key}`;
 }

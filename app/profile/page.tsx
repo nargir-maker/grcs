@@ -118,7 +118,7 @@ function parseMember(id: string, data: any): MemberProfile {
     pbpCount:       parseInt(stats.pbp         ?? '0') || 0,
     lrmCount:       parseInt(stats.lrm         ?? '0') || 0,
     flcCount:       parseInt(stats.flc         ?? '0') || 0,
-    sreCount: parseInt(stats.sre ?? '0') || 0,
+    sreCount:       parseInt(stats.sre ?? '0') || 0,
     maxDist:        parseInt(stats.max_dist    ?? '0') || 0,
     history,
   };

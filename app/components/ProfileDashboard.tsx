@@ -190,7 +190,7 @@ function ClubFilterBar({ member, active, onToggle }: {
       <div style={{ textAlign: 'center', marginTop: 12, fontSize: 13 }}>
         {active === 'ALL' ? (
           <span style={{ color: 'rgba(255,255,255,0.7)', fontStyle: 'italic', fontWeight: 500 }}>
-            {(hasLepote || hasHar) ? '👆 Πάτα λογότυπο για φίλτρο ανά σύλλογο' : ''}
+            {(hasLepote || hasHar) ? '👆 Πάτα στο λογότυπο για εμφάνιση στοιχείων ανά φορέα' : ''}
           </span>
         ) : (
           <span style={{ color: active === 'ACP' ? '#60a5fa' : '#a78bfa', fontWeight: 700, fontSize: 13 }}>
