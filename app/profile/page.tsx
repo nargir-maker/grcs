@@ -541,7 +541,7 @@ export default function ProfilePage() {
   </div>
 
   {/* Bottom info band */}
-  <div className="rounded-b-2xl pt-16 pb-6 px-6 text-center" style={{
+  <div className="rounded-b-2xl pt-24 pb-6 px-6 text-center" style={{
     background: 'linear-gradient(180deg, #111827 0%, #0f172a 100%)',
     borderLeft: '1px solid rgba(255,255,255,0.1)',
     borderRight: '1px solid rgba(255,255,255,0.1)',
