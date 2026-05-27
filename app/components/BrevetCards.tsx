@@ -166,6 +166,22 @@ function formatDate(dt: string): string {
   return dt;
 }
 
+// Short date for selector buttons: "Κυρ 01", "Σαβ 15" etc.
+// Always zero-pads the day so it never shows as a single digit.
+function formatShortDate(dt: string): string {
+  if (!dt || dt === 'null') return '';
+  try {
+    const d = new Date(dt);
+    if (!isNaN(d.getTime())) {
+      const dayName = d.toLocaleDateString('el-GR', { weekday: 'short' }); // Κυρ, Σαβ...
+      const dayNum  = String(d.getDate()).padStart(2, '0');                 // 01..31
+      return `${dayName} ${dayNum}`;
+    }
+  } catch {}
+  // Fallback: dd/mm from formatDate
+  return formatDate(dt).substring(0, 5);
+}
+
 function isEmpty(v: string | undefined | null) {
   return !v || v === 'null' || v === '---' || v.trim() === '';
 }
@@ -884,8 +900,8 @@ function SelectorButton({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 3,
-        padding: '6px 8px',
+        gap: 5,
+        padding: '8px 12px',
         borderRadius: 6,
         border: `2px solid ${isActive ? accent : isLit ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)'}`,
         background: isActive
@@ -894,7 +910,7 @@ function SelectorButton({
           ? 'rgba(255,255,255,0.07)'
           : 'rgba(255,255,255,0.03)',
         cursor: 'pointer',
-        minWidth: 48,
+        minWidth: 72,
         transition: 'all 0.18s ease',
         outline: 'none',
         boxShadow: isActive ? `0 0 10px rgba(${hexToRgb(accent)},0.35)` : 'none',
@@ -902,11 +918,11 @@ function SelectorButton({
     >
       {/* Number badge */}
       <div style={{
-        width: 22, height: 22,
+        width: 28, height: 28,
         borderRadius: 4,
         background: isActive ? accent : 'rgba(255,255,255,0.12)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontWeight: 900, fontSize: 11,
+        fontWeight: 900, fontSize: 14,
         color: isActive ? '#000' : 'rgba(255,255,255,0.55)',
         transition: 'all 0.18s ease',
         flexShrink: 0,
@@ -916,21 +932,23 @@ function SelectorButton({
 
       {/* Distance */}
       <div style={{
-        fontSize: 11, fontWeight: 700, lineHeight: 1,
-        color: isActive ? accent : 'rgba(255,255,255,0.6)',
+        fontSize: 14, fontWeight: 700, lineHeight: 1,
+        color: isActive ? accent : 'rgba(255,255,255,0.75)',
         transition: 'color 0.18s',
+        whiteSpace: 'nowrap',
       }}>
         {event.d}km
       </div>
 
-      {/* Short date — day/month only */}
+      {/* Date — short day name + zero-padded day number */}
       <div style={{
-        fontSize: 9, fontWeight: 500, lineHeight: 1,
-        color: isActive ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)',
+        fontSize: 12, fontWeight: 600, lineHeight: 1,
+        color: isActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.5)',
         transition: 'color 0.18s',
-        fontFamily: 'Courier New, monospace',
+        whiteSpace: 'nowrap',
+        letterSpacing: 0.3,
       }}>
-        {formatDate(event.dt).substring(0, 5) /* dd/mm */}
+        {formatShortDate(event.dt)}
       </div>
     </button>
   );
@@ -1131,7 +1149,7 @@ export function YearCard({ year, data }: { year: string; data: YearData }) {
           {isFLC   && <span style={{ fontSize:10, background:'rgba(234,179,8,0.2)',  color:'#facc15', border:'1px solid rgba(234,179,8,0.3)',  padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>FLÈCHE</span>}
           {isLRM   && <span style={{ fontSize:10, background:'rgba(168,85,247,0.2)', color:'#c084fc', border:'1px solid rgba(168,85,247,0.3)', padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>LRM</span>}
           {isSRe   && <span style={{ fontSize:10, background:'rgba(217,70,239,0.2)', color:'#e879f9', border:'1px solid rgba(217,70,239,0.3)', padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>SRe</span>}
-          {is100   && <span style={{ fontSize:10, background:'rgba(180,150,100,0.2)',color:'#d4a96a', border:'1px solid rgba(180,150,100,0.3)',padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>100 YEARS ΕΠΕΤΕΙΑΚΟ</span>}
+          {is100   && <span style={{ fontSize:10, background:'rgba(180,150,100,0.2)',color:'#d4a96a', border:'1px solid rgba(180,150,100,0.3)',padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>100Y</span>}
           {hasDual && <span style={{ fontSize:10, background:'rgba(6,182,212,0.15)', color:'#67e8f9', border:'1px solid rgba(6,182,212,0.3)',  padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>ACP+HAR</span>}
           <span style={{
             color:'rgba(255,255,255,0.3)', fontSize:18,
