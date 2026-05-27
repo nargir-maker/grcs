@@ -147,19 +147,22 @@ export default function Nav() {
                   <img
                     src={user.image}
                     alt=""
-                    className="w-6 h-6 rounded-full object-cover"
+                    className="w-9 h-9 rounded-full object-cover ring-2 ring-cyan-500/40"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <span className="text-cyan-400 text-xs font-bold w-6 h-6 rounded-full
+                  <span className="text-cyan-400 text-sm font-bold w-9 h-9 rounded-full
                     bg-cyan-500/20 flex items-center justify-center">
                     {user.name?.[0]}
                   </span>
                 )}
-                <span className="text-white text-sm font-medium">
-                  {user.name?.split(' ')[0]}
-                </span>
-                <span className="text-cyan-400 text-xs">→</span>
+                <div className="flex flex-col leading-tight">
+                  <span className="text-white/50 text-xs">Το προφίλ μου</span>
+                  <span className="text-white text-sm font-semibold">
+                    {user.name?.split(' ')[0]}
+                  </span>
+                </div>
+                <span className="text-cyan-400 text-xs ml-1">→</span>
               </Link>
 
               {/* Sign out */}

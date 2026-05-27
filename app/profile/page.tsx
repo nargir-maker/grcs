@@ -519,8 +519,8 @@ export default function ProfilePage() {
   </div>
 
   {/* Avatar — straddles the two halves */}
-  <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 60 }}>
-    <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#0A1628]
+  <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 72 }}>
+    <div className="w-36 h-36 rounded-full overflow-hidden border-4 border-[#0A1628]
       shadow-2xl ring-2 ring-cyan-500/40">
       {session?.user?.image ? (
         <img
