@@ -501,54 +501,85 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
       <div className="max-w-3xl mx-auto">
 
-        {/* ── HEADER ── */}
-        <div className="bg-gradient-to-br from-[#0D3B5E] to-[#1a1a4e]
-          rounded-2xl p-8 mb-6 text-center border border-white/10">
-<div className="w-20 h-20 rounded-full bg-cyan-500/20 border-2
-  border-cyan-500/40 flex items-center justify-center mx-auto mb-4 overflow-hidden">
-  {session?.user?.image ? (
-    <img
-      src={session.user.image}
-      alt="Profile"
-      className="w-full h-full object-cover"
-      referrerPolicy="no-referrer"
-    />
-  ) : (
-    <span className="text-3xl font-bold text-cyan-400">
-      {member.firstName[0]}{member.lastName[0]}
-    </span>
-  )}
-</div>
-          <h1 className="text-white font-bold text-2xl">
-            {member.firstName} {member.lastName}
-          </h1>
-          {member.fatherNameEl && (
-            <p className="text-white/40 text-sm mt-1">
-              του {member.fatherNameEl}
-            </p>
-          )}
-          <div className="flex justify-center gap-3 mt-4 flex-wrap">
-            {member.lepoteId && (
-              <span className="bg-blue-900/40 border border-blue-500/30
-                text-blue-300 text-xs font-bold px-3 py-1.5 rounded-full">
-                ΛΕ.ΠΟ.Τ.Ε. {member.lepoteId}
-              </span>
-            )}
-            {member.harId && (
-              <span className="bg-purple-900/40 border border-purple-500/30
-                text-purple-300 text-xs font-bold px-3 py-1.5 rounded-full">
-                H.A.R. {member.harId}
-              </span>
-            )}
-            <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${
-              member.isInsured
-                ? 'bg-green-500/10 border-green-500/30 text-green-400'
-                : 'bg-red-500/10 border-red-500/30 text-red-400'
-            }`}>
-              {member.isInsured ? '🛡️ Ασφαλισμένος' : '⚠️ Ανασφάλιστος'}
-            </span>
-          </div>
+{/* ── HERO HEADER ── */}
+<div className="relative mb-10">
+
+  {/* Top gradient band */}
+  <div className="h-36 rounded-t-2xl overflow-hidden" style={{
+    background: 'linear-gradient(135deg, #0D3B5E 0%, #1a1a4e 45%, #2d1b69 100%)',
+    borderLeft: '1px solid rgba(255,255,255,0.1)',
+    borderRight: '1px solid rgba(255,255,255,0.1)',
+    borderTop: '1px solid rgba(255,255,255,0.1)',
+  }}>
+    {/* Subtle pattern overlay */}
+    <div className="absolute inset-0 opacity-10" style={{
+      backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.4) 1px, transparent 0)',
+      backgroundSize: '28px 28px',
+    }} />
+  </div>
+
+  {/* Avatar — straddles the two halves */}
+  <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 60 }}>
+    <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#0A1628]
+      shadow-2xl ring-2 ring-cyan-500/40">
+      {session?.user?.image ? (
+        <img
+          src={session.user.image}
+          alt="Profile"
+          className="w-full h-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center"
+          style={{ background: 'linear-gradient(135deg, #0D3B5E, #2d1b69)' }}>
+          <span className="text-3xl font-bold text-cyan-400">
+            {member.firstName[0]}{member.lastName[0]}
+          </span>
         </div>
+      )}
+    </div>
+  </div>
+
+  {/* Bottom info band */}
+  <div className="rounded-b-2xl pt-16 pb-6 px-6 text-center" style={{
+    background: 'linear-gradient(180deg, #111827 0%, #0f172a 100%)',
+    borderLeft: '1px solid rgba(255,255,255,0.1)',
+    borderRight: '1px solid rgba(255,255,255,0.1)',
+    borderBottom: '1px solid rgba(255,255,255,0.1)',
+  }}>
+    <h1 className="text-white font-bold text-2xl tracking-wide">
+      {member.firstName} {member.lastName}
+    </h1>
+    {member.fatherNameEl && (
+      <p className="text-white/40 text-sm mt-1">του {member.fatherNameEl}</p>
+    )}
+
+    {/* Badges row */}
+    <div className="flex justify-center gap-3 mt-4 flex-wrap">
+      {member.lepoteId && (
+        <span className="bg-blue-900/40 border border-blue-500/30
+          text-blue-300 text-xs font-bold px-3 py-1.5 rounded-full">
+          ΛΕ.ΠΟ.Τ.Ε. {member.lepoteId}
+        </span>
+      )}
+      {member.harId && (
+        <span className="bg-purple-900/40 border border-purple-500/30
+          text-purple-300 text-xs font-bold px-3 py-1.5 rounded-full">
+          H.A.R. {member.harId}
+        </span>
+      )}
+      <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${
+        member.isInsured
+          ? 'bg-green-500/10 border-green-500/30 text-green-400'
+          : 'bg-red-500/10 border-red-500/30 text-red-400'
+      }`}>
+        {member.isInsured ? '🛡️ Ασφαλισμένος' : '⚠️ Ανασφάλιστος'}
+      </span>
+    </div>
+  </div>
+
+</div>
+
 
        <FilteredProfile member={member} />
 

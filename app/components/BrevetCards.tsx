@@ -167,16 +167,16 @@ function formatDate(dt: string): string {
 }
 
 // Short date for selector buttons: "Κυρ 01", "Σαβ 15" etc.
-// Handles all date formats including Greek "Κυρ Φεβ 01 2026 00:00:00 GMT+0200"
+// Handles Greek date strings: "Κυρ Φεβ 01 2026 00:00:00 GMT+0200"
+// and ISO strings: "2026-02-01T08:00:00+02:00"
 function formatShortDate(dt: string): string {
   if (!dt || dt === 'null') return '';
 
-  // Day name map — Greek abbreviations
   const dayNames: Record<number, string> = {
     0:'Κυρ', 1:'Δευ', 2:'Τρί', 3:'Τετ', 4:'Πέμ', 5:'Παρ', 6:'Σαβ',
   };
 
-  // Try standard ISO / parseable format first
+  // 1. Try standard ISO / parseable format
   try {
     const d = new Date(dt);
     if (!isNaN(d.getTime())) {
@@ -186,12 +186,16 @@ function formatShortDate(dt: string): string {
     }
   } catch {}
 
-  // Fallback: scan the string for a 1-or-2-digit day number
-  // Works for "Κυρ Φεβ 1 2026...", "Sun Feb 01 2026...", "01/02/2026" etc.
-  const numMatch = dt.match(/\b(\d{1,2})\b/);
-  if (numMatch) {
-    const day = String(parseInt(numMatch[1])).padStart(2, '0');
-    return day; // no day-name available but at least 2 digits
+  // 2. Greek format: "Κυρ Φεβ 1 2026 00:00:00 GMT+0200"
+  //    Split by spaces → parts[2] is the day number (1-2 digits)
+  //    parts[0] is already the Greek day name (Κυρ, Σαβ, etc.)
+  const parts = dt.trim().split(/\s+/);
+  if (parts.length >= 3) {
+    const dayName = parts[0]; // "Κυρ"
+    const dayNum  = parseInt(parts[2]);
+    if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
+      return `${dayName} ${String(dayNum).padStart(2, '0')}`;
+    }
   }
 
   return '';
