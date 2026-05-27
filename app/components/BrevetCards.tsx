@@ -1131,7 +1131,7 @@ export function YearCard({ year, data }: { year: string; data: YearData }) {
           {isFLC   && <span style={{ fontSize:10, background:'rgba(234,179,8,0.2)',  color:'#facc15', border:'1px solid rgba(234,179,8,0.3)',  padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>FLÈCHE</span>}
           {isLRM   && <span style={{ fontSize:10, background:'rgba(168,85,247,0.2)', color:'#c084fc', border:'1px solid rgba(168,85,247,0.3)', padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>LRM</span>}
           {isSRe   && <span style={{ fontSize:10, background:'rgba(217,70,239,0.2)', color:'#e879f9', border:'1px solid rgba(217,70,239,0.3)', padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>SRe</span>}
-          {is100   && <span style={{ fontSize:10, background:'rgba(180,150,100,0.2)',color:'#d4a96a', border:'1px solid rgba(180,150,100,0.3)',padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>100Y</span>}
+          {is100   && <span style={{ fontSize:10, background:'rgba(180,150,100,0.2)',color:'#d4a96a', border:'1px solid rgba(180,150,100,0.3)',padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>100 YEARS ΕΠΕΤΕΙΑΚΟ</span>}
           {hasDual && <span style={{ fontSize:10, background:'rgba(6,182,212,0.15)', color:'#67e8f9', border:'1px solid rgba(6,182,212,0.3)',  padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>ACP+HAR</span>}
           <span style={{
             color:'rgba(255,255,255,0.3)', fontSize:18,
