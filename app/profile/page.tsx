@@ -504,12 +504,21 @@ export default function ProfilePage() {
         {/* ── HEADER ── */}
         <div className="bg-gradient-to-br from-[#0D3B5E] to-[#1a1a4e]
           rounded-2xl p-8 mb-6 text-center border border-white/10">
-          <div className="w-20 h-20 rounded-full bg-cyan-500/20 border-2
-            border-cyan-500/40 flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl font-bold text-cyan-400">
-              {member.firstName[0]}{member.lastName[0]}
-            </span>
-          </div>
+<div className="w-20 h-20 rounded-full bg-cyan-500/20 border-2
+  border-cyan-500/40 flex items-center justify-center mx-auto mb-4 overflow-hidden">
+  {session?.user?.image ? (
+    <img
+      src={session.user.image}
+      alt="Profile"
+      className="w-full h-full object-cover"
+      referrerPolicy="no-referrer"
+    />
+  ) : (
+    <span className="text-3xl font-bold text-cyan-400">
+      {member.firstName[0]}{member.lastName[0]}
+    </span>
+  )}
+</div>
           <h1 className="text-white font-bold text-2xl">
             {member.firstName} {member.lastName}
           </h1>
