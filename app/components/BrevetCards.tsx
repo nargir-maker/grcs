@@ -167,19 +167,34 @@ function formatDate(dt: string): string {
 }
 
 // Short date for selector buttons: "Κυρ 01", "Σαβ 15" etc.
-// Always zero-pads the day so it never shows as a single digit.
+// Handles all date formats including Greek "Κυρ Φεβ 01 2026 00:00:00 GMT+0200"
 function formatShortDate(dt: string): string {
   if (!dt || dt === 'null') return '';
+
+  // Day name map — Greek abbreviations
+  const dayNames: Record<number, string> = {
+    0:'Κυρ', 1:'Δευ', 2:'Τρί', 3:'Τετ', 4:'Πέμ', 5:'Παρ', 6:'Σαβ',
+  };
+
+  // Try standard ISO / parseable format first
   try {
     const d = new Date(dt);
     if (!isNaN(d.getTime())) {
-      const dayName = d.toLocaleDateString('el-GR', { weekday: 'short' }); // Κυρ, Σαβ...
-      const dayNum  = String(d.getDate()).padStart(2, '0');                 // 01..31
-      return `${dayName} ${dayNum}`;
+      const name = dayNames[d.getDay()] ?? '';
+      const day  = String(d.getDate()).padStart(2, '0');
+      return `${name} ${day}`;
     }
   } catch {}
-  // Fallback: dd/mm from formatDate
-  return formatDate(dt).substring(0, 5);
+
+  // Fallback: scan the string for a 1-or-2-digit day number
+  // Works for "Κυρ Φεβ 1 2026...", "Sun Feb 01 2026...", "01/02/2026" etc.
+  const numMatch = dt.match(/\b(\d{1,2})\b/);
+  if (numMatch) {
+    const day = String(parseInt(numMatch[1])).padStart(2, '0');
+    return day; // no day-name available but at least 2 digits
+  }
+
+  return '';
 }
 
 function isEmpty(v: string | undefined | null) {
@@ -1042,9 +1057,9 @@ function EventsScrollRail({ events }: { events: BrevetEvent[] }) {
           {/* "Jump to:" label */}
           <div style={{
             display: 'flex', alignItems: 'center',
-            fontSize: 9, fontWeight: 700, letterSpacing: 1,
-            color: 'rgba(255,255,255,0.25)',
-            paddingRight: 4, alignSelf: 'center',
+            fontSize: 13, fontWeight: 700, letterSpacing: 1,
+            color: 'rgba(255,255,255,0.55)',
+            paddingRight: 6, alignSelf: 'center',
             textTransform: 'uppercase',
           }}>
             {sorted.length} brevets ·
