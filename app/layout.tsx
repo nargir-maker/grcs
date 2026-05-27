@@ -7,7 +7,27 @@ import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   title: 'GRC — Greek Randonneuring Community',
-  description: 'Η πλατφόρμα του Ελληνικού Randonneuring.',
+  description: 'Η πλατφόρμα του Ελληνικού Randonneuring. Brevets, αποτελέσματα, ιστορικό αναβατών και διοργανωτές.',
+  metadataBase: new URL('https://grcs-vert.vercel.app'),
+  openGraph: {
+    title: 'GRC — Greek Randonneuring Community',
+    description: 'Brevets, αποτελέσματα, ιστορικό αναβατών.',
+    url: 'https://grcs-vert.vercel.app',
+    siteName: 'GRC Platform',
+    locale: 'el_GR',
+    type: 'website',
+    images: [{ url: '/grc-logo.png', width: 512, height: 512, alt: 'GRC Logo' }],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'GRC — Greek Randonneuring Community',
+    description: 'Brevets, αποτελέσματα, ιστορικό αναβατών.',
+    images: ['/grc-logo.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -33,13 +53,13 @@ export default function RootLayout({
                   </span>
                 </div>
                 <div className="text-white/30 text-xs">
-                  © 2026 GRC. Υπό κατασκευή.
+                  © 2026 GRC. Greek Randonneuring Community. Υπό κατασκευή.
                 </div>
               </div>
             </footer>
           </AuthProvider>
         </SessionProviderWrapper>
-      <Analytics />  {/* ← ADD HERE */}
+      <Analytics /> 
       </body>
     </html>
   );
