@@ -152,7 +152,7 @@ export default function LoginPage() {
                   <img
                     src={`/logos/${club.id}.png`}
                     alt={club.shortNameGr}
-                    className="h-32 w-32 object-contain drop-shadow-lg"
+                    className="h-28 w-28 object-contain drop-shadow-lg"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = '/logos/000000.png';
                     }}
