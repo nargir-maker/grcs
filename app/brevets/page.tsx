@@ -477,7 +477,33 @@ export default function BrevetsPage() {
     
     {/* Scrollable logo strip */}
     <div className="flex gap-2 overflow-x-auto pb-1"
-      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', cursor: 'grab' }}
+  ref={(el) => {
+    if (!el) return;
+    // Mouse wheel → horizontal scroll
+    el.onwheel = (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+    // Click drag → horizontal scroll
+    let isDown = false, startX = 0, scrollLeft = 0;
+    el.onmousedown = (e) => {
+      isDown = true;
+      el.style.cursor = 'grabbing';
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
+    };
+    el.onmouseleave = () => { isDown = false; el.style.cursor = 'grab'; };
+    el.onmouseup   = () => { isDown = false; el.style.cursor = 'grab'; };
+    el.onmousemove = (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      el.scrollLeft = scrollLeft - (e.pageX - el.offsetLeft - startX);
+    };
+  }}
+    >
       
       {/* All button */}
       <button
