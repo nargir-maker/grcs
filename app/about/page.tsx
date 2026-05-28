@@ -48,7 +48,7 @@ export default function AboutPage() {
           </h2>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
             <p className="text-white/70 leading-relaxed">
-              Το GRC Platform γεννήθηκε από την ανάγκη μιας κοινότητας που αξίζει καλύτερα εργαλεία. Ένας τόπος όπου κάθε αναβάτης μπορεί να βρει τα brevets της σεζόν, να παρακολουθεί το ιστορικό του και να βλέπει την πορεία χρόνων στο σέλο.
+              Το GRC Platform γεννήθηκε από την ανάγκη μιας κοινότητας που αξίζει καλύτερα εργαλεία. Ένας τόπος όπου κάθε αναβάτης μπορεί να βρει τα brevets της σεζόν, να παρακολουθεί το ιστορικό του και να βλέπει την πορεία χρόνων στη σέλα.
             </p>
             <p className="text-white/70 leading-relaxed">
               Η πλατφόρμα δεν ανήκει σε κάποια εταιρεία. Φτιάχτηκε από έναν αναβάτη, για αναβάτες — με σεβασμό στην κουλτούρα του Randonneuring και αγάπη για την ελληνική ύπαιθρο που διασχίζουμε κάθε χρόνο.
@@ -116,7 +116,7 @@ export default function AboutPage() {
           <p className="text-white/30 text-sm italic">
             "Il faut du temps pour aller vite."
           </p>
-          <p className="text-white/20 text-xs mt-1">
+          <p className="text-white text-xs mt-1">
             Χρειάζεται χρόνος για να πας γρήγορα.
           </p>
         </div>
