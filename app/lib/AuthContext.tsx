@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [organizer, setOrganizer] = useState<OrganizerSession | null>(null);
 
   const signInWithGoogle = async () => {
-    await signIn('google');
+     await signIn('google', { callbackUrl: '/profile' }, { prompt: 'select_account' });
   };
 
   const logout = async () => {

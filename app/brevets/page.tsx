@@ -4,6 +4,19 @@ import { useEffect, useState } from 'react';
 import { db } from '@/app/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
+const scrollStyle = `
+  @keyframes brevScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .brevet-scroll {
+    animation: brevScroll 35s linear infinite;
+  }
+  .brevet-scroll:hover {
+    animation-play-state: paused;
+  }
+`;
+
 // ── Module-level cache ─────────────────────────────────────────────
 let cachedBrevets: Brevet[] = [];
 let cachedClubs: Record<string, string> = {};
@@ -222,7 +235,107 @@ export default function BrevetsPage() {
   return (
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
       <div className="max-w-5xl mx-auto">
+{/* ── BREVETS ΤΟΥ ΜΗΝΑ SCROLLER ── */}
+        {(() => {
+          const now = new Date();
+          const thisMonth = now.getMonth();
+          const thisYear  = now.getFullYear();
+          const monthBrevets = brevets.filter(b => {
+            if (!b.date) return false;
+            const d = new Date(b.date);
+            return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+          });
 
+          if (monthBrevets.length === 0 || loading) return null;
+
+          const monthName = now.toLocaleDateString('el-GR', { month: 'long' });
+          const doubled   = [...monthBrevets, ...monthBrevets];
+
+          return (
+            <div className="mb-10 -mx-6 overflow-hidden">
+              <style>{scrollStyle}</style>
+
+              {/* Title */}
+              <div className="px-6 mb-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-white/10" />
+                <span className="text-white/70 text-sm font-bold tracking-widest uppercase">
+                  🚴 Τα Brevets του {monthName}
+                </span>
+                <div className="h-px flex-1 bg-white/10" />
+              </div>
+
+              {/* Scrolling cards */}
+              <div className="w-full overflow-hidden">
+                <div className="flex brevet-scroll gap-4 w-max px-6">
+                  {doubled.map((b, i) => {
+                    const hasImage = b.imageUrl && b.imageUrl.length > 0;
+                    const dateStr  = b.date
+                      ? new Date(b.date).toLocaleDateString('el-GR', {
+                          day: 'numeric', month: 'short',
+                        })
+                      : '';
+
+                    return (
+                      <a
+                        key={i}
+                        href={`/brevets/${b.id}`}
+                        className="flex-shrink-0 w-52 h-32 rounded-2xl overflow-hidden
+                          relative border border-white/10 hover:border-cyan-500/50
+                          transition-all no-underline block"
+                        style={hasImage ? {
+                          backgroundImage: `url(${b.imageUrl})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                        } : {
+                          backgroundColor: 'rgba(255,255,255,0.04)',
+                        }}
+                      >
+                        {/* Gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t
+                          from-[#0A1628] via-[#0A1628]/60 to-transparent" />
+
+                        {/* Distance badge */}
+                        <div className="absolute top-2 right-2">
+                          <span className="bg-cyan-500/80 text-black text-xs
+                            font-black px-2 py-0.5 rounded-full">
+                            {b.distance}km
+                          </span>
+                        </div>
+
+                        {/* Organizer logo */}
+                        <div className="absolute top-2 left-2">
+                          <img
+                            src={b.organizerLogo}
+                            alt={b.organizer}
+                            className="w-8 h-8 object-contain rounded-full
+                              bg-white/10 backdrop-blur-sm"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/logos/000000.png';
+                            }}
+                          />
+                        </div>
+
+                        {/* Content */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <div className="text-white font-bold text-sm
+                            leading-tight truncate drop-shadow-md">
+                            {b.title}
+                          </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-white/50 text-xs">{dateStr}</span>
+                            <span className="text-white/40 text-xs">📍 {b.start}</span>
+                          </div>
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── HEADER ── */}
         {/* ── HEADER ─────────────────────────────────── */}
         <div className="mb-10">
           <h1 className="text-3xl font-bold text-white mb-2">
