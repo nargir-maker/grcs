@@ -267,7 +267,7 @@ export default function LoginPage() {
     alt={allClubs.find(c => c.id === selectedClubId)?.shortNameGr ?? ''}
     className="h-24 w-24 object-contain drop-shadow-lg"
     onError={(e) => {
-      (e.target as HTMLImageElement).style.display = 'none';
+       (e.target as HTMLImageElement).src = '/logos/000000.png';
     }}
   />
 ) : (
