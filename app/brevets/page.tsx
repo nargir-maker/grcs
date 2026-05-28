@@ -471,59 +471,56 @@ export default function BrevetsPage() {
                 Δες όλα →
               </button>
             </div>
-          ) : organizers.length > 1 ? (
-            <div className="flex gap-2 flex-wrap items-center">
-              <span className="text-white/30 text-xs w-16">Διοργ.:</span>
-              {myOrganizerClubId && (
-                <button
-                  onClick={() => {
-                    setOrganizerFilter(myOrganizerClubId);
-                    setIsOrganizerView(true);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-full
-                    text-xs font-bold border bg-purple-500/20
-                    border-purple-400/40 text-purple-300
-                    hover:bg-purple-500/30 transition-all"
-                >
-                  🏁 Τα δικά μου
-                </button>
-              )}
-              <button
-                onClick={() => setOrganizerFilter(null)}
-                className={`px-3 py-2 rounded-full text-xs font-bold
-                  transition-colors border ${
-                  organizerFilter === null
-                    ? 'bg-cyan-500 text-black border-transparent'
-                    : 'bg-white/5 text-white/60 hover:text-white border-white/10'
-                }`}
-              >
-                Όλοι
-              </button>
-              {organizers.map((org) => {
-                const isSelected = organizerFilter === org.id;
-                return (
-                  <button
-                    key={org.id}
-                    onClick={() => setOrganizerFilter(isSelected ? null : org.id)}
-                    title={org.name}
-                    className={`flex items-center gap-2 pl-1 pr-3 py-1
-                      rounded-full text-xs font-bold transition-all border ${
-                      isSelected
-                        ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400'
-                        : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/30'
-                    }`}
-                  >
-                    <img
-                      src={org.logo} alt={org.name}
-                      className="w-6 h-6 rounded-full object-contain bg-white/10"
-                      onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
-                    />
-                    <span className="max-w-[100px] truncate">{org.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
+) : organizers.length > 1 ? (
+  <div className="flex items-center gap-3">
+    <span className="text-white/30 text-xs w-16 flex-shrink-0">Διοργ.:</span>
+    
+    {/* Scrollable logo strip */}
+    <div className="flex gap-2 overflow-x-auto pb-1"
+      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      
+      {/* All button */}
+      <button
+        onClick={() => setOrganizerFilter(null)}
+        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold
+          transition-colors border ${
+          organizerFilter === null
+            ? 'bg-cyan-500 text-black border-transparent'
+            : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+        }`}
+      >
+        Όλοι
+      </button>
+
+      {/* Organizer logo buttons — logos only, name on hover */}
+      {organizers.map((org) => {
+        const isSelected = organizerFilter === org.id;
+        return (
+          <button
+            key={org.id}
+            onClick={() => setOrganizerFilter(isSelected ? null : org.id)}
+            title={org.name}
+            className={`flex-shrink-0 w-10 h-10 rounded-full
+              transition-all border-2 overflow-hidden
+              ${isSelected
+                ? 'border-cyan-500 scale-110 shadow-lg shadow-cyan-500/30'
+                : 'border-white/10 hover:border-white/40 hover:scale-105'
+              }`}
+          >
+            <img
+              src={org.logo}
+              alt={org.name}
+              className="w-full h-full object-contain bg-white/5"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/logos/000000.png';
+              }}
+            />
+          </button>
+        );
+      })}
+    </div>
+  </div>
+) : null}
 
         </div>
 
