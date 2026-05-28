@@ -13,7 +13,8 @@ export default function NotFound() {
         </p>
         <p className="text-white/40 text-sm mb-8">
           Η σελίδα που ψάχνεις δεν υπάρχει ή μετακινήθηκε.
-          Ίσως έχασες στρίψιμο κάπου.
+          Ίσως έχασες κάποια στροφή; Ας επιστρέψουμε στην αρχή και να ξεκινήσουμε ξανά!
+          (Μπορεί απλά να είναι ακόμη υπό κατασκευή 😉)
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
