@@ -59,6 +59,10 @@ export default function LoginPage() {
   // ── Load clubs when organizer mode selected ────────────────────────────
   useEffect(() => {
     if (mode !== 'organizer') return;
+      // Pre-select first club from allClubs immediately — no waiting
+  if (allClubs.length > 0 && !selectedClubId) {
+    setSelectedClubId(allClubs[0].id);
+  }
     setClubsLoading(true);
     getDocs(collection(db, 'clubs'))
       .then((snap) => {
@@ -255,8 +259,21 @@ export default function LoginPage() {
                   className="flex items-center gap-1 text-purple-300 hover:text-white text-sm mb-6 transition-colors">
                   ← Πίσω
                 </button>
-                <div className="text-center mb-6">
-                  <div className="text-4xl mb-3">🏁</div>
+<div className="text-center mb-6">
+                  <div className="flex justify-center mb-3">
+{selectedClubId && allClubs.length > 0 ? (
+  <img
+    src={`/logos/${selectedClubId}.png`}
+    alt={allClubs.find(c => c.id === selectedClubId)?.shortNameGr ?? ''}
+    className="h-24 w-24 object-contain drop-shadow-lg"
+    onError={(e) => {
+      (e.target as HTMLImageElement).style.display = 'none';
+    }}
+  />
+) : (
+  <div className="text-4xl">🏁</div>
+)}
+                  </div>
                   <h2 className="text-white font-semibold text-lg">Σύνδεση Διοργανωτή</h2>
                   <p className="text-purple-200 text-sm mt-1">Επέλεξε σύλλογο και εισήγαγε κωδικό</p>
                 </div>
