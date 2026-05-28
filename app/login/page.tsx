@@ -152,9 +152,9 @@ export default function LoginPage() {
                   <img
                     src={`/logos/${club.id}.png`}
                     alt={club.shortNameGr}
-                    className="h-40 w-40 object-contain drop-shadow-lg"
+                    className="h-32 w-32 object-contain drop-shadow-lg"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).src = '/logos/000000.png';
                     }}
                   />
                   <span className="text-white/50 text-xs text-center max-w-[120px] truncate">
@@ -265,7 +265,7 @@ export default function LoginPage() {
   <img
     src={`/logos/${selectedClubId}.png`}
     alt={allClubs.find(c => c.id === selectedClubId)?.shortNameGr ?? ''}
-    className="h-24 w-24 object-contain drop-shadow-lg"
+    className="h-40 w-40 object-contain drop-shadow-lg"
     onError={(e) => {
        (e.target as HTMLImageElement).src = '/logos/000000.png';
     }}
