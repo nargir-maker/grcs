@@ -500,7 +500,7 @@ export default function BrevetsPage() {
             key={org.id}
             onClick={() => setOrganizerFilter(isSelected ? null : org.id)}
             title={org.name}
-            className={`flex-shrink-0 w-12 h-12 rounded-full
+            className={`flex-shrink-0 w-14 h-14 rounded-full
               transition-all border-2 overflow-hidden
               ${isSelected
                 ? 'border-cyan-500 scale-110 shadow-lg shadow-cyan-500/30'
