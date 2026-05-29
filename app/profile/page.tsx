@@ -575,6 +575,28 @@ export default function ProfilePage() {
       }`}>
         {member.isInsured ? '🛡️ Ασφαλισμένος' : '⚠️ Ανασφάλιστος'}
       </span>
+      {/* Privacy toggle — only show on own profile */}
+<button
+  onClick={async () => {
+    const newType = member.profileType === 'public' ? 'private' : 'public';
+    try {
+      await updateDoc(doc(db, 'members', member.id), {
+        profile_type: newType,
+      });
+      setMember(prev => prev ? { ...prev, profileType: newType } : prev);
+    } catch (e) {
+      console.error('Privacy update failed:', e);
+    }
+  }}
+  className={`text-xs font-bold px-3 py-1.5 rounded-full border
+    transition-all cursor-pointer ${
+    member.profileType === 'public'
+      ? 'bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20'
+      : 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
+  }`}
+>
+  {member.profileType === 'public' ? '🌍 Δημόσιο' : '🔒 Ιδιωτικό'}
+</button>
     </div>
   </div>
 

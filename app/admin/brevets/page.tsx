@@ -2,6 +2,14 @@
 
 // app/admin/brevets/page.tsx
 // Admin brevet list — filter by year, click to edit
+// ── TODO: SECURITY ─────────────────────────────────────────────────
+// Currently all_brevets allows write: if true in Firestore rules.
+// This means anyone with Firestore knowledge could edit brevet data.
+// Fix: create app/api/admin/brevet/route.ts using Firebase Admin SDK
+// (same pattern as app/api/admin/settings/route.ts)
+// and change Firestore rule back to: allow write: if false;
+// Priority: after go-live, Phase 2.
+// ──────────────────────────────────────────────────────────────────
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
