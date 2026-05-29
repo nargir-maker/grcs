@@ -2,45 +2,23 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 
-// ── Types ─────────────────────────────────────────────────────────────────
 interface ClimbSegment {
-  startKm: number;
-  endKm: number;
-  category: string;
-  avgGrade: number;
-  maxGrade: number;
-  elevationGain: number;
+  startKm: number; endKm: number; category: string;
+  avgGrade: number; maxGrade: number; elevationGain: number;
 }
-
-interface ElevationPoint {
-  km: number;
-  elevation: number;
-  grade: number;
-}
-
-interface RawPoint {
-  lat: number;
-  lng: number;
-  ele: number;
-  distKm: number;
-}
-
+interface ElevationPoint { km: number; elevation: number; grade: number; }
+interface RawPoint { lat: number; lng: number; ele: number; distKm: number; }
 interface ElevationChartProps {
-  gpxUrl: string;
-  climbProfile?: ClimbSegment[];
-  storedAscent?: number;
-  scrubberKm?: number | null;
-  onScrub?: (km: number | null) => void;
-  defaultZoomed?: boolean;
-  zoomedPxPerKm?: number;
+  gpxUrl: string; climbProfile?: ClimbSegment[]; storedAscent?: number;
+  scrubberKm?: number | null; onScrub?: (km: number | null) => void;
+  defaultZoomed?: boolean; zoomedPxPerKm?: number;
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────
 const CLIMB_COLORS: Record<string, string> = {
   HC: '#6A1B9A', C1: '#D32F2F', C2: '#E65100', C3: '#F9A825', C4: '#2E7D32',
 };
 const PAD = { top: 24, right: 16, bottom: 32, left: 44 };
-const CHART_H = 170;
+const CHART_H = 180;
 
 function getCategoryColor(cat: string): string { return CLIMB_COLORS[cat] ?? '#06b6d4'; }
 
@@ -122,15 +100,10 @@ function buildDisplayPoints(raw: RawPoint[], smoothed: number[], targetCount: nu
   for (let i = 0; i < n; i += step) {
     const prevI = Math.max(0, i - step);
     const dM = (raw[i].distKm - raw[prevI].distKm) * 1000;
-    // ── Round grade to 1 decimal to kill float noise ──
     const grade = i > 0 && dM > 0
       ? Math.round(Math.max(-30, Math.min(30, ((smoothed[i] - smoothed[prevI]) / dM) * 100)) * 10) / 10
       : 0;
-    result.push({
-      km: Math.round(raw[i].distKm * 10) / 10,
-      elevation: Math.round(smoothed[i]),
-      grade,
-    });
+    result.push({ km: Math.round(raw[i].distKm * 10) / 10, elevation: Math.round(smoothed[i]), grade });
   }
   const lastRaw = raw[n - 1];
   const lastKm = Math.round(lastRaw.distKm * 10) / 10;
@@ -140,21 +113,13 @@ function buildDisplayPoints(raw: RawPoint[], smoothed: number[], targetCount: nu
   return result;
 }
 
-// ── Shared SVG chart ──────────────────────────────────────────────────────
 interface SvgElevationProps {
-  points: ElevationPoint[];
-  width: number;
-  height: number;
-  climbSegments?: ClimbSegment[];
-  showClimbLabels?: boolean;
-  scrubberKm: number | null;
-  onScrub: (km: number | null) => void;
+  points: ElevationPoint[]; width: number; height: number;
+  climbSegments?: ClimbSegment[]; showClimbLabels?: boolean;
+  scrubberKm: number | null; onScrub: (km: number | null) => void;
 }
 
-function SvgElevationChart({
-  points, width, height, climbSegments = [], showClimbLabels = true,
-  scrubberKm, onScrub,
-}: SvgElevationProps) {
+function SvgElevationChart({ points, width, height, climbSegments = [], showClimbLabels = true, scrubberKm, onScrub }: SvgElevationProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const cw = width - PAD.left - PAD.right;
   const ch = height - PAD.top - PAD.bottom;
@@ -204,13 +169,9 @@ function SvgElevationChart({
     return (
       <g key={`zone-${i}`}>
         <rect x={zx1} y={PAD.top} width={zx2-zx1} height={ch} fill={col} fillOpacity={0.10} />
-        <line x1={zx1} y1={PAD.top} x2={zx1} y2={PAD.top+ch}
-          stroke={col} strokeWidth={1.5} strokeOpacity={0.7} strokeDasharray="4 2" />
+        <line x1={zx1} y1={PAD.top} x2={zx1} y2={PAD.top+ch} stroke={col} strokeWidth={1.5} strokeOpacity={0.7} strokeDasharray="4 2" />
         {showClimbLabels && zx2-zx1 > 18 && (
-          <text x={zx1+(zx2-zx1)/2} y={PAD.top-6}
-            textAnchor="middle" fill={col} fontSize={9} fontWeight="bold">
-            {c.category}
-          </text>
+          <text x={zx1+(zx2-zx1)/2} y={PAD.top-6} textAnchor="middle" fill={col} fontSize={9} fontWeight="bold">{c.category}</text>
         )}
       </g>
     );
@@ -218,8 +179,7 @@ function SvgElevationChart({
 
   const scrubberX = scrubberKm !== null ? toX(scrubberKm) : null;
   const scrubPoint = scrubberKm !== null
-    ? points.reduce((best, p) =>
-        Math.abs(p.km - scrubberKm) < Math.abs(best.km - scrubberKm) ? p : best)
+    ? points.reduce((best, p) => Math.abs(p.km - scrubberKm) < Math.abs(best.km - scrubberKm) ? p : best)
     : null;
 
   const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
@@ -234,9 +194,9 @@ function SvgElevationChart({
 
   const handlePointerLeave = useCallback(() => onScrub(null), [onScrub]);
 
-return (
+  return (
     <svg ref={svgRef}
-      viewBox={`0 0 ${width} ${height}`} width="100%"  height={height}
+      viewBox={`0 0 ${width} ${height}`} width={width} height={height}
       style={{ display: 'block', cursor: 'crosshair', touchAction: 'pan-x' }}
       onPointerMove={handlePointerMove} onPointerLeave={handlePointerLeave}
     >
@@ -246,22 +206,18 @@ return (
         </clipPath>
       </defs>
       {yLabels.map(({ y }, i) => (
-        <line key={i} x1={PAD.left} y1={y} x2={PAD.left+cw} y2={y}
-          stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
+        <line key={i} x1={PAD.left} y1={y} x2={PAD.left+cw} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
       ))}
       <g clipPath={`url(#chart-clip-${width})`}>
         {climbZones}
         {segments}
       </g>
-      <line x1={PAD.left} y1={yBase} x2={PAD.left+cw} y2={yBase}
-        stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
+      <line x1={PAD.left} y1={yBase} x2={PAD.left+cw} y2={yBase} stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
       {yLabels.map(({ elev, y }) => (
-        <text key={elev} x={PAD.left-4} y={y+4}
-          textAnchor="end" fill="rgba(255,255,255,0.45)" fontSize={10}>{elev}m</text>
+        <text key={elev} x={PAD.left-4} y={y+4} textAnchor="end" fill="rgba(255,255,255,0.45)" fontSize={10}>{elev}m</text>
       ))}
       {xLabels.map(({ km, x }) => (
-        <text key={km} x={x} y={height-PAD.bottom+14}
-          textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize={10}>{km}km</text>
+        <text key={km} x={x} y={height-PAD.bottom+14} textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize={10}>{km}km</text>
       ))}
       {scrubberX !== null && scrubPoint && (() => {
         const dotX = toX(scrubPoint.km);
@@ -269,8 +225,7 @@ return (
         const col = gradeColor(scrubPoint.grade);
         return (
           <g>
-            <line x1={scrubberX} y1={PAD.top} x2={scrubberX} y2={PAD.top+ch}
-              stroke="rgba(255,255,255,0.75)" strokeWidth={1.5} strokeDasharray="3 2" />
+            <line x1={scrubberX} y1={PAD.top} x2={scrubberX} y2={PAD.top+ch} stroke="rgba(255,255,255,0.75)" strokeWidth={1.5} strokeDasharray="3 2" />
             <circle cx={dotX} cy={dotY} r={5} fill="white" />
             <circle cx={dotX} cy={dotY} r={3.5} fill={col} />
           </g>
@@ -280,7 +235,6 @@ return (
   );
 }
 
-// ── Scrubber info bar ─────────────────────────────────────────────────────
 function ScrubberBar({ point }: { point: ElevationPoint | null }) {
   if (!point) return (
     <div className="h-8 flex items-center justify-center">
@@ -302,24 +256,15 @@ function ScrubberBar({ point }: { point: ElevationPoint | null }) {
   );
 }
 
-// ── Climb Modal ───────────────────────────────────────────────────────────
-function ClimbModal({ climb, allRaw, onClose }: {
-  climb: ClimbSegment;
-  allRaw: RawPoint[];
-  onClose: () => void;
-}) {
+function ClimbModal({ climb, allRaw, onClose }: { climb: ClimbSegment; allRaw: RawPoint[]; onClose: () => void; }) {
   const [points, setPoints] = useState<ElevationPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [scrubberKm, setScrubberKm] = useState<number | null>(null);
-
-  // ── Measure chart container width for dynamic 2:1 ratio ──────────────
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [chartW, setChartW] = useState(600);
 
   useEffect(() => {
-    const obs = new ResizeObserver(entries => {
-      setChartW(Math.floor(entries[0].contentRect.width));
-    });
+    const obs = new ResizeObserver(entries => { setChartW(Math.floor(entries[0].contentRect.width)); });
     if (chartContainerRef.current) obs.observe(chartContainerRef.current);
     return () => obs.disconnect();
   }, []);
@@ -327,7 +272,7 @@ function ClimbModal({ climb, allRaw, onClose }: {
   const color = getCategoryColor(climb.category);
   const buffer = (climb.endKm - climb.startKm) * 0.15;
   const fromKm = Math.max(0, climb.startKm - buffer);
-  const toKm = climb.endKm ;
+  const toKm = climb.endKm;
 
   useEffect(() => {
     if (allRaw.length === 0) return;
@@ -337,10 +282,7 @@ function ClimbModal({ climb, allRaw, onClose }: {
     const smoothed = savitzkyGolay(sliceRel, 150);
     const pts: ElevationPoint[] = sliceRel.map((p, i) => {
       const dM = i > 0 ? (p.distKm - sliceRel[i-1].distKm) * 1000 : 0;
-      // ── Round grade to 1 decimal ──────────────────────────────────────
-      const grade = dM > 0
-        ? Math.round(Math.max(-30, Math.min(30, ((smoothed[i]-smoothed[i-1])/dM)*100)) * 10) / 10
-        : 0;
+      const grade = dM > 0 ? Math.round(Math.max(-30, Math.min(30, ((smoothed[i]-smoothed[i-1])/dM)*100)) * 10) / 10 : 0;
       return { km: slice[0].distKm + p.distKm, elevation: Math.round(smoothed[i]), grade };
     });
     setPoints(pts);
@@ -352,60 +294,30 @@ function ClimbModal({ climb, allRaw, onClose }: {
     : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-      onClick={onClose}>
-      <div className="bg-[#0A1628] border border-white/10 rounded-2xl p-6 w-full max-w-4xl mx-4 shadow-2xl"
-        onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-[#0A1628] border border-white/10 rounded-2xl p-6 w-full max-w-4xl mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-              style={{ backgroundColor: color }}>{climb.category}</span>
+            <span className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ backgroundColor: color }}>{climb.category}</span>
             <div>
               <p className="text-white font-bold">km {climb.startKm.toFixed(1)} → {climb.endKm.toFixed(1)}</p>
-              <p className="text-white/50 text-xs">
-                {(climb.endKm - climb.startKm).toFixed(1)}km ·
-                +{climb.elevationGain.toFixed(0)}m ·
-                avg {climb.avgGrade.toFixed(1)}% ·
-                max {climb.maxGrade.toFixed(1)}%
-              </p>
+              <p className="text-white/50 text-xs">{(climb.endKm - climb.startKm).toFixed(1)}km · +{climb.elevationGain.toFixed(0)}m · avg {climb.avgGrade.toFixed(1)}% · max {climb.maxGrade.toFixed(1)}%</p>
             </div>
           </div>
           <button onClick={onClose} className="text-white/40 hover:text-white text-2xl leading-none">×</button>
         </div>
-
-        {/* Scrubber bar */}
-        <div className="bg-white/5 rounded-lg border border-white/10 mb-2">
-          <ScrubberBar point={scrubPoint} />
-        </div>
-
-{/* Chart — ref always mounted so ResizeObserver measures correctly */}
+        <div className="bg-white/5 rounded-lg border border-white/10 mb-2"><ScrubberBar point={scrubPoint} /></div>
         <div ref={chartContainerRef} className="w-full overflow-hidden rounded-lg">
           {loading ? (
             <div className="h-48 flex items-center justify-center">
               <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
-            <SvgElevationChart
-              points={points}
-              width={chartW}
-              height={Math.round(chartW / 2)}
-              climbSegments={[climb]}
-              showClimbLabels={false}
-              scrubberKm={scrubberKm}
-              onScrub={setScrubberKm}
-            />
+            <SvgElevationChart points={points} width={chartW} height={Math.round(chartW / 2)} climbSegments={[climb]} showClimbLabels={false} scrubberKm={scrubberKm} onScrub={setScrubberKm} />
           )}
         </div>
-
-        {/* Grade legend */}
         <div className="flex gap-4 justify-center mt-3 flex-wrap">
-          {[
-            { label: '0-3%', color: '#FFFFFF' }, { label: '3-6%', color: '#00E5FF' },
-            { label: '6-9%', color: '#FFD600' }, { label: '9-12%', color: '#FF6D00' },
-            { label: '>12%', color: '#FF1744' },
-          ].map(({ label, color: c }) => (
+          {[{ label: '0-3%', color: '#FFFFFF' },{ label: '3-6%', color: '#00E5FF' },{ label: '6-9%', color: '#FFD600' },{ label: '9-12%', color: '#FF6D00' },{ label: '>12%', color: '#FF1744' }].map(({ label, color: c }) => (
             <div key={label} className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: c, boxShadow: `0 0 4px ${c}80` }} />
               <span className="text-white/50 text-xs">{label}</span>
@@ -418,13 +330,10 @@ function ClimbModal({ climb, allRaw, onClose }: {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────
 export default function ElevationChart({
   gpxUrl, climbProfile = [], storedAscent,
-  scrubberKm: controlledScrubberKm,
-  onScrub: controlledOnScrub,
-  defaultZoomed = false,
-  zoomedPxPerKm = 6,
+  scrubberKm: controlledScrubberKm, onScrub: controlledOnScrub,
+  defaultZoomed = false, zoomedPxPerKm = 6,
 }: ElevationChartProps) {
   const [displayPoints, setDisplayPoints] = useState<ElevationPoint[]>([]);
   const [allRaw, setAllRaw] = useState<RawPoint[]>([]);
@@ -440,19 +349,26 @@ export default function ElevationChart({
   const isControlled = controlledOnScrub !== undefined;
   const scrubberKm = isControlled ? (controlledScrubberKm ?? null) : internalScrubberKm;
   const onScrub = useCallback((km: number | null) => {
-    if (isControlled) { controlledOnScrub?.(km); }
-    else { setInternalScrubberKm(km); }
+    if (isControlled) { controlledOnScrub?.(km); } else { setInternalScrubberKm(km); }
   }, [isControlled, controlledOnScrub]);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerW, setContainerW] = useState(600);
+  const [containerW, setContainerW] = useState(300);
 
+  // ── FIX: ResizeObserver + delayed re-measure for glassmorphism panels ──
   useEffect(() => {
-    const obs = new ResizeObserver(entries => {
-      setContainerW(Math.floor(entries[0].contentRect.width));
-    });
+    const measure = () => {
+      if (containerRef.current) {
+        const w = Math.floor(containerRef.current.getBoundingClientRect().width);
+        if (w > 0) setContainerW(w);
+      }
+    };
+    const obs = new ResizeObserver(measure);
     if (containerRef.current) obs.observe(containerRef.current);
-    return () => obs.disconnect();
+    // Delay re-measure to catch late modal/panel renders
+    const t1 = setTimeout(measure, 100);
+    const t2 = setTimeout(measure, 400);
+    return () => { obs.disconnect(); clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   useEffect(() => {
@@ -471,11 +387,8 @@ export default function ElevationChart({
         setTotalAscent(Math.round(ascent));
         setMaxElevation(Math.round(Math.max(...smoothed)));
         setMinElevation(Math.round(Math.min(...smoothed)));
-      } catch {
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
+      } catch { setError(true); }
+      finally { setLoading(false); }
     }
     load();
   }, [gpxUrl]);
@@ -483,14 +396,13 @@ export default function ElevationChart({
   const displayAscent = storedAscent && storedAscent > 0 ? storedAscent : totalAscent;
   const totalKm = displayPoints.length > 0 ? displayPoints[displayPoints.length-1].km : 0;
 
-  // ── Use the zoomedPxPerKm PROP (not the old constant) ────────────────
-const svgWidth = zoomed
-  ? Math.round(totalKm * zoomedPxPerKm) + PAD.left + PAD.right
-  : containerW;  // always use measured width
+  // ── Zoomed: big scrollable canvas. Fit: exactly fill container width ──
+  const svgWidth = zoomed
+    ? Math.round(totalKm * zoomedPxPerKm) + PAD.left + PAD.right
+    : Math.max(containerW, 300);
 
   const scrubPoint = scrubberKm !== null && displayPoints.length > 0
-    ? displayPoints.reduce((best, p) =>
-        Math.abs(p.km-scrubberKm) < Math.abs(best.km-scrubberKm) ? p : best)
+    ? displayPoints.reduce((best, p) => Math.abs(p.km-scrubberKm) < Math.abs(best.km-scrubberKm) ? p : best)
     : null;
 
   if (loading) return (
@@ -505,9 +417,7 @@ const svgWidth = zoomed
 
   return (
     <div className="mt-4">
-      {selectedClimb && (
-        <ClimbModal climb={selectedClimb} allRaw={allRaw} onClose={() => setSelectedClimb(null)} />
-      )}
+      {selectedClimb && <ClimbModal climb={selectedClimb} allRaw={allRaw} onClose={() => setSelectedClimb(null)} />}
 
       {/* Stats + zoom toggle */}
       <div className="flex flex-wrap gap-4 items-end mb-4">
@@ -527,44 +437,24 @@ const svgWidth = zoomed
           <button
             onClick={() => { setZoomed(z => !z); onScrub(null); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-              zoomed
-                ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400'
-                : 'bg-white/5 border-white/20 text-white/50 hover:border-white/40 hover:text-white/70'
+              zoomed ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400' : 'bg-white/5 border-white/20 text-white/50 hover:border-white/40 hover:text-white/70'
             }`}
           >
             {zoomed ? (
-              <>
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16M4 16h16" />
-                </svg>
-                Fit στην οθόνη
-              </>
+              <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16M4 16h16" /></svg>Fit στην οθόνη</>
             ) : (
-              <>
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round"
-                    d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
-                </svg>
-                {/* Show the actual prop value in the label */}
-                Zoom ({zoomedPxPerKm}px/km)
-              </>
+              <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" /></svg>Zoom ({zoomedPxPerKm}px/km)</>
             )}
           </button>
         </div>
       </div>
 
       {/* Scrubber bar */}
-      <div className="bg-white/5 rounded-lg border border-white/10 mb-2">
-        <ScrubberBar point={scrubPoint} />
-      </div>
+      <div className="bg-white/5 rounded-lg border border-white/10 mb-2"><ScrubberBar point={scrubPoint} /></div>
 
       {/* Grade legend */}
       <div className="flex gap-3 flex-wrap mb-2 items-center">
-        {[
-          { label: '0-3%', color: '#FFFFFF' }, { label: '3-6%', color: '#00E5FF' },
-          { label: '6-9%', color: '#FFD600' }, { label: '9-12%', color: '#FF6D00' },
-          { label: '>12%', color: '#FF1744' },
-        ].map(({ label, color: c }) => (
+        {[{ label: '0-3%', color: '#FFFFFF' },{ label: '3-6%', color: '#00E5FF' },{ label: '6-9%', color: '#FFD600' },{ label: '9-12%', color: '#FF6D00' },{ label: '>12%', color: '#FF1744' }].map(({ label, color: c }) => (
           <div key={label} className="flex items-center gap-1">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: c, boxShadow: `0 0 4px ${c}80` }} />
             <span className="text-white/50 text-xs">{label}</span>
@@ -573,10 +463,18 @@ const svgWidth = zoomed
         {zoomed && <span className="text-white/25 text-xs ml-1">← σκρολ για πλοήγηση</span>}
       </div>
 
-      {/* Main chart */}
-<div ref={containerRef}
-  className="rounded-xl border border-white/10 overflow-x-auto"
-  style={{ background: 'rgba(255,255,255,0.03)', width: '100%' }}>
+      {/* ── Main chart container ── */}
+      {/* overflow-x-auto only when zoomed; overflow-hidden when fit so no scroll */}
+      <div
+        ref={containerRef}
+        className="rounded-xl border border-white/10"
+        style={{
+          background: 'rgba(255,255,255,0.03)',
+          overflowX: zoomed ? 'auto' : 'hidden',
+          overflowY: 'hidden',   // ← never vertical scroll
+          width: '100%',
+        }}
+      >
         <SvgElevationChart
           points={displayPoints} width={svgWidth} height={CHART_H}
           climbSegments={climbProfile} showClimbLabels={true}
@@ -590,12 +488,7 @@ const svgWidth = zoomed
           {['HC','C1','C2','C3','C4'].map(cat => {
             const count = climbProfile.filter(c => c.category === cat).length;
             if (count === 0) return null;
-            return (
-              <span key={cat} className="text-xs font-bold px-3 py-1 rounded-full text-white"
-                style={{ backgroundColor: getCategoryColor(cat) }}>
-                {count}×{cat}
-              </span>
-            );
+            return <span key={cat} className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ backgroundColor: getCategoryColor(cat) }}>{count}×{cat}</span>;
           })}
         </div>
       )}
@@ -605,16 +498,9 @@ const svgWidth = zoomed
         <div className="bg-white/5 rounded-xl p-3 mb-4">
           <p className="text-white/40 text-xs font-bold mb-2">Κατηγορίες ανηφόρων:</p>
           <div className="flex flex-wrap gap-2">
-            {[
-              { cat: 'HC', label: 'Hors Catégorie — Ακραία' },
-              { cat: 'C1', label: 'Cat. 1 — Πολύ δύσκολη' },
-              { cat: 'C2', label: 'Cat. 2 — Δύσκολη' },
-              { cat: 'C3', label: 'Cat. 3 — Μέτρια' },
-              { cat: 'C4', label: 'Cat. 4 — Μικρή' },
-            ].map(({ cat, label }) => (
+            {[{ cat: 'HC', label: 'Hors Catégorie — Ακραία' },{ cat: 'C1', label: 'Cat. 1 — Πολύ δύσκολη' },{ cat: 'C2', label: 'Cat. 2 — Δύσκολη' },{ cat: 'C3', label: 'Cat. 3 — Μέτρια' },{ cat: 'C4', label: 'Cat. 4 — Μικρή' }].map(({ cat, label }) => (
               <div key={cat} className="flex items-center gap-2">
-                <span className="text-white text-xs font-bold px-2 py-0.5 rounded"
-                  style={{ backgroundColor: getCategoryColor(cat) }}>{cat}</span>
+                <span className="text-white text-xs font-bold px-2 py-0.5 rounded" style={{ backgroundColor: getCategoryColor(cat) }}>{cat}</span>
                 <span className="text-white/50 text-xs">{label}</span>
               </div>
             ))}
@@ -625,32 +511,21 @@ const svgWidth = zoomed
       {/* Climb cards */}
       {climbProfile.length > 0 && (
         <div className="mt-2">
-          <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider mb-3">
-            Ανηφόρες — κλικ για ανάλυση
-          </h3>
+          <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider mb-3">Ανηφόρες — κλικ για ανάλυση</h3>
           <div className="flex flex-col gap-2">
             {climbProfile.map((climb, i) => (
               <button key={i} onClick={() => setSelectedClimb(climb)}
                 className="flex items-center gap-3 rounded-xl px-4 py-3 border text-left w-full transition-all hover:scale-[1.01] hover:brightness-110 group"
-                style={{
-                  backgroundColor: getCategoryColor(climb.category) + '10',
-                  borderColor: getCategoryColor(climb.category) + '30',
-                }}>
+                style={{ backgroundColor: getCategoryColor(climb.category) + '10', borderColor: getCategoryColor(climb.category) + '30' }}>
                 <span className="text-xs font-bold px-2 py-1 rounded-lg shrink-0 min-w-8 text-center"
-                  style={{
-                    backgroundColor: getCategoryColor(climb.category) + '25',
-                    color: getCategoryColor(climb.category),
-                    border: `1px solid ${getCategoryColor(climb.category)}50`,
-                  }}>{climb.category}</span>
+                  style={{ backgroundColor: getCategoryColor(climb.category) + '25', color: getCategoryColor(climb.category), border: `1px solid ${getCategoryColor(climb.category)}50` }}>{climb.category}</span>
                 <div className="flex-1 flex items-center gap-4 text-xs">
                   <span className="text-white/60">km {climb.startKm} → {climb.endKm}</span>
                   <span className="text-white/40">{(climb.endKm - climb.startKm).toFixed(1)}km</span>
                   <span className="text-white/40">↑{climb.elevationGain.toFixed(0)}m</span>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-sm font-bold" style={{ color: getCategoryColor(climb.category) }}>
-                    {climb.avgGrade.toFixed(1)}%
-                  </div>
+                  <div className="text-sm font-bold" style={{ color: getCategoryColor(climb.category) }}>{climb.avgGrade.toFixed(1)}%</div>
                   <div className="text-white/30 text-xs">max {climb.maxGrade.toFixed(1)}%</div>
                 </div>
                 <span className="text-white/20 group-hover:text-white/50 transition-colors text-lg ml-1">›</span>
