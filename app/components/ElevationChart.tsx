@@ -40,7 +40,7 @@ const CLIMB_COLORS: Record<string, string> = {
   HC: '#6A1B9A', C1: '#D32F2F', C2: '#E65100', C3: '#F9A825', C4: '#2E7D32',
 };
 const PAD = { top: 24, right: 16, bottom: 32, left: 44 };
-const CHART_H = 280;
+const CHART_H = 180;
 
 function getCategoryColor(cat: string): string { return CLIMB_COLORS[cat] ?? '#06b6d4'; }
 
@@ -484,9 +484,9 @@ export default function ElevationChart({
   const totalKm = displayPoints.length > 0 ? displayPoints[displayPoints.length-1].km : 0;
 
   // ── Use the zoomedPxPerKm PROP (not the old constant) ────────────────
-  const svgWidth = zoomed
-    ? Math.round(totalKm * zoomedPxPerKm) + PAD.left + PAD.right
-    : Math.max(containerW, 300);
+const svgWidth = zoomed
+  ? Math.round(totalKm * zoomedPxPerKm) + PAD.left + PAD.right
+  : containerW > 0 ? containerW : 300;
 
   const scrubPoint = scrubberKm !== null && displayPoints.length > 0
     ? displayPoints.reduce((best, p) =>
@@ -574,9 +574,9 @@ export default function ElevationChart({
       </div>
 
       {/* Main chart */}
-      <div ref={containerRef}
-        className="rounded-xl border border-white/10 overflow-x-auto"
-        style={{ background: 'rgba(255,255,255,0.03)' }}>
+<div ref={containerRef}
+  className="rounded-xl border border-white/10 overflow-x-auto"
+  style={{ background: 'rgba(255,255,255,0.03)', width: '100%' }}>
         <SvgElevationChart
           points={displayPoints} width={svgWidth} height={CHART_H}
           climbSegments={climbProfile} showClimbLabels={true}
