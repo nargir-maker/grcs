@@ -235,8 +235,8 @@ function FullscreenMap({
         <div
           className="absolute bottom-0 left-0 right-0 z-[1000]"
           style={{
-            background: 'linear-gradient(to top, rgba(10,22,40,0.96) 0%, rgba(10,22,40,0.85) 75%, rgba(10,22,40,0.50) 100%)',
-            backdropFilter: 'blur(12px)',
+            background: 'linear-gradient(to top, rgba(10,22,40,0.85) 0%, rgba(10,22,40,0.60) 75%, rgba(10,22,40,0.20) 100%)',
+            backdropFilter: 'blur(6px)',
             WebkitBackdropFilter: 'blur(12px)',
             borderTop: '1px solid rgba(6,182,212,0.15)',
             padding: '16px 20px 12px',
