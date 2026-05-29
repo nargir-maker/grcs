@@ -16,6 +16,14 @@ export default function Nav() {
     logoutOrganizer,
   } = useAuth();
 
+// ── Admin Cog ─────────────────────────────────  
+{user?.email === 'your.actual@gmail.com' && (
+  <Link href="/admin"
+    className="text-white/30 hover:text-white text-xs transition-colors">
+    ⚙️
+  </Link>
+)}
+
   // ── ORGANIZER NAV ─────────────────────────────────
   if (isOrganizer && organizer) {
     return (
