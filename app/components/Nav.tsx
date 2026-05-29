@@ -138,7 +138,7 @@ export default function Nav() {
             <div className="flex items-center gap-3">
 
               {/*── Admin Cog ───────────────────────────────── */}    
-                {user?.email === 'your.actual@gmail.com' && (
+                {user?.email === 'nikos.argiropoulos@gmail.com' && (
                 <Link href="/admin"
                   className="text-white/30 hover:text-white text-xs transition-colors">
                 ⚙️
