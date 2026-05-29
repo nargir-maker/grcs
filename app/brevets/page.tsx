@@ -103,14 +103,6 @@ export default function BrevetsPage() {
   const [isOrganizerView, setIsOrganizerView] = useState(false);
   const [myOrganizerClubId, setMyOrganizerClubId] = useState<string | null>(null);
 
-const enabled = usePageEnabled('brevets');
-if (enabled === null) return (
-  <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
-    <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-  </div>
-);
-if (enabled === false) return <ComingSoon label="Brevets" />;
-
   // ── DETECT ORGANIZER VIEW ON MOUNT ────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -240,6 +232,15 @@ if (enabled === false) return <ComingSoon label="Brevets" />;
 
   const hasCoOrg = (b: Brevet) =>
     b.coOrganizerId && b.coOrganizerId !== '' && b.coOrganizerId !== '0';
+
+  // ✅ PAGE GUARD — after ALL hooks
+  const enabled = usePageEnabled('brevets');
+  if (enabled === null) return (
+    <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  if (enabled === false) return <ComingSoon label="Brevets" />;
 
   return (
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
