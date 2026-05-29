@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 
-// Lazy import ElevationChart inside the modal (avoids circular dep issues)
 const ElevationChart = dynamic(() => import('./ElevationChart'), { ssr: false });
 
 interface BrevetMapProps {
@@ -11,10 +10,9 @@ interface BrevetMapProps {
   startCoords?: string;
   finishCoords?: string;
   controls?: { km: number; name: string; lat: number; lng: number }[];
-  scrubberKm?: number | null; // from parent — drives the moving dot
+  scrubberKm?: number | null;
 }
 
-// ── Coord store — parsed once, reused by both inline and fullscreen ────────
 interface ParsedCoord {
   lat: number;
   lng: number;
@@ -29,7 +27,6 @@ function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): num
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// Interpolate lat/lng from parsed coords at a given km position
 function interpolateLatLng(coords: ParsedCoord[], km: number): [number, number] | null {
   if (coords.length === 0) return null;
   if (km <= coords[0].distKm) return [coords[0].lat, coords[0].lng];
@@ -37,7 +34,6 @@ function interpolateLatLng(coords: ParsedCoord[], km: number): [number, number] 
     const last = coords[coords.length-1];
     return [last.lat, last.lng];
   }
-  // Binary search for surrounding segment
   let lo = 0, hi = coords.length - 1;
   while (lo < hi - 1) {
     const mid = Math.floor((lo + hi) / 2);
@@ -50,7 +46,6 @@ function interpolateLatLng(coords: ParsedCoord[], km: number): [number, number] 
   return [a.lat + t * (b.lat - a.lat), a.lng + t * (b.lng - a.lng)];
 }
 
-// ── Shared Leaflet initializer ─────────────────────────────────────────────
 async function initLeafletMap(
   container: HTMLDivElement,
   gpxUrl: string,
@@ -78,13 +73,8 @@ async function initLeafletMap(
     attribution: '© OpenStreetMap contributors', maxZoom: 18,
   }).addTo(map);
 
-  // Scrubber dot marker — hidden initially
   const dotIcon = L.divIcon({
-    html: `<div style="
-      width:14px;height:14px;border-radius:50%;
-      background:#06b6d4;border:2px solid white;
-      box-shadow:0 0 8px rgba(6,182,212,0.8);
-    "></div>`,
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:#06b6d4;border:2px solid white;box-shadow:0 0 8px rgba(6,182,212,0.8);"></div>`,
     className: '',
     iconAnchor: [7, 7],
   });
@@ -113,8 +103,9 @@ async function initLeafletMap(
       }
     });
 
-    if (coords.length === 0) { map.setView([38.0, 23.7], 7); }
-    else {
+    if (coords.length === 0) {
+      map.setView([38.0, 23.7], 7);
+    } else {
       const polyline = L.polyline(coords, { color: '#ff3d02', weight: 3, opacity: 0.9 }).addTo(map);
       map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
 
@@ -142,7 +133,6 @@ async function initLeafletMap(
         }).addTo(map).bindPopup(`CP${i+1}: ${cp.name}`);
       });
 
-      // Notify parent of parsed coords for interpolation
       onCoordsReady?.(parsedCoords);
     }
   } catch (e) {
@@ -163,12 +153,13 @@ function FullscreenMap({
   climbProfile?: any[];
   storedAscent?: number;
 }) {
-  const modalMapRef = useRef<HTMLDivElement>(null);
+  const modalMapRef         = useRef<HTMLDivElement>(null);
   const modalMapInstanceRef = useRef<any>(null);
-  const modalDotMarkerRef = useRef<any>(null);
-  const [modalCoords, setModalCoords] = useState<ParsedCoord[]>([]);
-  const [modalScrubberKm, setModalScrubberKm] = useState<number | null>(null);
+  const modalDotMarkerRef   = useRef<any>(null);
+  const [modalCoords, setModalCoords]           = useState<ParsedCoord[]>([]);
+  const [modalScrubberKm, setModalScrubberKm]   = useState<number | null>(null);
 
+  // ── Init modal map ─────────────────────────────────────────────────
   useEffect(() => {
     if (!modalMapRef.current) return;
     let destroyed = false;
@@ -178,7 +169,7 @@ function FullscreenMap({
     }).then(({ map, markerRef }) => {
       if (destroyed) { map.remove(); return; }
       modalMapInstanceRef.current = map;
-      modalDotMarkerRef.current = markerRef.current;
+      modalDotMarkerRef.current   = markerRef.current;
     });
 
     return () => {
@@ -190,7 +181,7 @@ function FullscreenMap({
     };
   }, [gpxUrl]);
 
-  // Move dot on modal map when modal scrubber changes
+  // ── Move dot when scrubber changes ────────────────────────────────
   useEffect(() => {
     const marker = modalDotMarkerRef.current;
     if (!marker) return;
@@ -205,23 +196,30 @@ function FullscreenMap({
     }
   }, [modalScrubberKm, modalCoords]);
 
+  // ── Escape key ────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
+  // ── Render ────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-      onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
-        className="relative w-[96vw] h-[90vh] rounded-2xl overflow-hidden border border-white/10 shadow-2xl flex flex-col bg-[#0A1628]"
+        className="relative w-[96vw] h-[90vh] rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0A1628]"
         onClick={e => e.stopPropagation()}
       >
         {/* Close button */}
-        <button onClick={onClose} title="Κλείσιμο (Esc)"
-          className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm"
-          style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}>
+        <button
+          onClick={onClose}
+          title="Κλείσιμο (Esc)"
+          className="absolute top-3 right-3 z-[1001] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm"
+          style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}
+        >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none"
             viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round"
@@ -230,22 +228,30 @@ function FullscreenMap({
           Κλείσιμο
         </button>
 
-        {/* Map — takes ~55% of height */}
-        <div ref={modalMapRef} style={{ width: '100%', flex: '0 0 55%' }} />
+        {/* MAP — full height, full width */}
+        <div ref={modalMapRef} style={{ position: 'absolute', inset: 0 }} />
 
-        {/* Divider */}
-        <div className="border-t border-white/10" />
-
-        {/* Elevation chart — takes remaining ~45% */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2" style={{ background: '#0A1628' }}>
+        {/* ELEVATION — glassmorphism panel floating over map at bottom */}
+        <div
+          className="absolute bottom-0 left-0 right-0 z-[1000]"
+          style={{
+            background: 'linear-gradient(to top, rgba(10,22,40,0.96) 0%, rgba(10,22,40,0.85) 75%, rgba(10,22,40,0.50) 100%)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderTop: '1px solid rgba(6,182,212,0.15)',
+            padding: '16px 20px 12px',
+            maxHeight: '42%',
+            overflowY: 'auto',
+          }}
+        >
           <ElevationChart
             gpxUrl={gpxUrl}
             climbProfile={climbProfile}
             storedAscent={storedAscent}
             scrubberKm={modalScrubberKm}
             onScrub={setModalScrubberKm}
-            defaultZoomed={true}  // ← ADD
-            zoomedPxPerKm={10}  // ← ADD
+            defaultZoomed={true}
+            zoomedPxPerKm={10}
           />
         </div>
       </div>
@@ -257,16 +263,16 @@ function FullscreenMap({
 export default function BrevetMap({
   gpxUrl, startCoords, finishCoords, controls = [], scrubberKm,
 }: BrevetMapProps) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const dotMarkerRef = useRef<any>(null);
-  const initializedRef = useRef(false);
+  const mapRef          = useRef<HTMLDivElement>(null);
+  const mapInstanceRef  = useRef<any>(null);
+  const dotMarkerRef    = useRef<any>(null);
+  const initializedRef  = useRef(false);
   const [parsedCoords, setParsedCoords] = useState<ParsedCoord[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(f => !f), []);
 
-  // Initialize inline map once
+  // Init inline map once
   useEffect(() => {
     if (!mapRef.current || initializedRef.current) return;
     initializedRef.current = true;
@@ -275,7 +281,7 @@ export default function BrevetMap({
       setParsedCoords(coords);
     }).then(({ map, markerRef }) => {
       mapInstanceRef.current = map;
-      dotMarkerRef.current = markerRef.current;
+      dotMarkerRef.current   = markerRef.current;
     });
 
     return () => {
@@ -287,7 +293,7 @@ export default function BrevetMap({
     };
   }, [gpxUrl]);
 
-  // Move dot on inline map when scrubberKm changes
+  // Move dot on inline map
   useEffect(() => {
     const marker = dotMarkerRef.current;
     if (!marker) return;
@@ -316,14 +322,19 @@ export default function BrevetMap({
         />
       )}
 
-      {/* Inline map — stays put, hidden when fullscreen open */}
+      {/* Inline map */}
       <div className="relative" style={{ visibility: isFullscreen ? 'hidden' : 'visible' }}>
-        <div ref={mapRef} style={{ height: '400px', width: '100%' }}
-          className="rounded-xl overflow-hidden border border-white/10" />
-
-        <button onClick={toggleFullscreen} title="Πλήρης οθόνη"
+        <div
+          ref={mapRef}
+          style={{ height: '400px', width: '100%' }}
+          className="rounded-xl overflow-hidden border border-white/10"
+        />
+        <button
+          onClick={toggleFullscreen}
+          title="Πλήρης οθόνη"
           className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm transition-all hover:brightness-110"
-          style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}>
+          style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}
+        >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none"
             viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round"
@@ -331,7 +342,6 @@ export default function BrevetMap({
           </svg>
           Πλήρης οθόνη
         </button>
-
         <p className="text-white/20 text-xs text-right mt-1">© OpenStreetMap contributors</p>
       </div>
     </>
