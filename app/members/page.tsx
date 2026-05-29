@@ -82,13 +82,13 @@ function MemberCard({ m }: { m: PublicMember }) {
         <div className="absolute top-3 right-3 flex gap-1.5">
           {hasLepote && (
             <img src="/logos/650000.png" alt="ΛΕ.ΠΟ.Τ.Ε."
-              className="w-7 h-7 object-contain rounded-full bg-white/10"
+              className="w-9 h-9 object-contain rounded-full bg-white/10"
               onError={e => { (e.target as HTMLImageElement).style.display='none'; }}
             />
           )}
           {hasHar && (
             <img src="/logos/659999.png" alt="H.A.R."
-              className="w-7 h-7 object-contain rounded-full bg-white/10"
+              className="w-9 h-9 object-contain rounded-full bg-white/10"
               onError={e => { (e.target as HTMLImageElement).style.display='none'; }}
             />
           )}
