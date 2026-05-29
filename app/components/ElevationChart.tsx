@@ -40,7 +40,7 @@ const CLIMB_COLORS: Record<string, string> = {
   HC: '#6A1B9A', C1: '#D32F2F', C2: '#E65100', C3: '#F9A825', C4: '#2E7D32',
 };
 const PAD = { top: 24, right: 16, bottom: 32, left: 44 };
-const CHART_H = 180;
+const CHART_H = 170;
 
 function getCategoryColor(cat: string): string { return CLIMB_COLORS[cat] ?? '#06b6d4'; }
 
@@ -236,7 +236,7 @@ function SvgElevationChart({
 
 return (
     <svg ref={svgRef}
-      viewBox={`0 0 ${width} ${height}`} width={width} height={height}
+      viewBox={`0 0 ${width} ${height}`} width="100%"  height={height}
       style={{ display: 'block', cursor: 'crosshair', touchAction: 'pan-x' }}
       onPointerMove={handlePointerMove} onPointerLeave={handlePointerLeave}
     >
@@ -486,7 +486,7 @@ export default function ElevationChart({
   // ── Use the zoomedPxPerKm PROP (not the old constant) ────────────────
 const svgWidth = zoomed
   ? Math.round(totalKm * zoomedPxPerKm) + PAD.left + PAD.right
-  : containerW > 0 ? containerW : 300;
+  : containerW;  // always use measured width
 
   const scrubPoint = scrubberKm !== null && displayPoints.length > 0
     ? displayPoints.reduce((best, p) =>
