@@ -17,8 +17,14 @@ interface ElevationChartProps {
 const CLIMB_COLORS: Record<string, string> = {
   HC: '#6A1B9A', C1: '#D32F2F', C2: '#E65100', C3: '#F9A825', C4: '#2E7D32',
 };
-const PAD = { top: 24, right: 16, bottom: 32, left: 44 };
-const CHART_H = 160; // ← Fix 3: shorter height, no vertical scroll needed
+const PAD = { top: 24, right: 16, bottom: 32, left: 48 };
+const CHART_H = 160;
+
+// Text style for all axis labels — bright with shadow for glassmorphism
+const LABEL_STYLE: React.CSSProperties = {
+  filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))',
+};
+const LABEL_FILL = 'rgba(255,255,255,0.90)';
 
 function getCategoryColor(cat: string): string { return CLIMB_COLORS[cat] ?? '#06b6d4'; }
 
@@ -170,7 +176,10 @@ function SvgElevationChart({ points, width, height, climbSegments = [], showClim
         <rect x={zx1} y={PAD.top} width={zx2-zx1} height={ch} fill={col} fillOpacity={0.10} />
         <line x1={zx1} y1={PAD.top} x2={zx1} y2={PAD.top+ch} stroke={col} strokeWidth={1.5} strokeOpacity={0.7} strokeDasharray="4 2" />
         {showClimbLabels && zx2-zx1 > 18 && (
-          <text x={zx1+(zx2-zx1)/2} y={PAD.top-6} textAnchor="middle" fill={col} fontSize={9} fontWeight="bold">{c.category}</text>
+          <text x={zx1+(zx2-zx1)/2} y={PAD.top-6} textAnchor="middle"
+            fill={col} fontSize={10} fontWeight="bold" style={LABEL_STYLE}>
+            {c.category}
+          </text>
         )}
       </g>
     );
@@ -203,28 +212,53 @@ function SvgElevationChart({ points, width, height, climbSegments = [], showClim
         <clipPath id={`chart-clip-${width}`}>
           <rect x={PAD.left} y={PAD.top} width={cw} height={ch} />
         </clipPath>
+        <filter id="text-shadow">
+          <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="black" floodOpacity="0.9" />
+        </filter>
       </defs>
+
+      {/* Grid lines */}
       {yLabels.map(({ y }, i) => (
-        <line key={i} x1={PAD.left} y1={y} x2={PAD.left+cw} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
+        <line key={i} x1={PAD.left} y1={y} x2={PAD.left+cw} y2={y}
+          stroke="rgba(255,255,255,0.08)" strokeWidth={1} />
       ))}
+
       <g clipPath={`url(#chart-clip-${width})`}>
         {climbZones}
         {segments}
       </g>
-      <line x1={PAD.left} y1={yBase} x2={PAD.left+cw} y2={yBase} stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
+
+      {/* Baseline */}
+      <line x1={PAD.left} y1={yBase} x2={PAD.left+cw} y2={yBase}
+        stroke="rgba(255,255,255,0.20)" strokeWidth={1} />
+
+      {/* Y axis labels — bright with shadow */}
       {yLabels.map(({ elev, y }) => (
-        <text key={elev} x={PAD.left-4} y={y+4} textAnchor="end" fill="rgba(255,255,255,0.45)" fontSize={10}>{elev}m</text>
+        <text key={elev} x={PAD.left-5} y={y+4}
+          textAnchor="end" fill={LABEL_FILL} fontSize={11} fontWeight="600"
+          filter="url(#text-shadow)">
+          {elev}m
+        </text>
       ))}
+
+      {/* X axis labels — bright with shadow */}
       {xLabels.map(({ km, x }) => (
-        <text key={km} x={x} y={height-PAD.bottom+14} textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize={10}>{km}km</text>
+        <text key={km} x={x} y={height-PAD.bottom+14}
+          textAnchor="middle" fill={LABEL_FILL} fontSize={11} fontWeight="600"
+          filter="url(#text-shadow)">
+          {km}km
+        </text>
       ))}
+
+      {/* Scrubber */}
       {scrubberX !== null && scrubPoint && (() => {
         const dotX = toX(scrubPoint.km);
         const dotY = toY(scrubPoint.elevation);
         const col = gradeColor(scrubPoint.grade);
         return (
           <g>
-            <line x1={scrubberX} y1={PAD.top} x2={scrubberX} y2={PAD.top+ch} stroke="rgba(255,255,255,0.75)" strokeWidth={1.5} strokeDasharray="3 2" />
+            <line x1={scrubberX} y1={PAD.top} x2={scrubberX} y2={PAD.top+ch}
+              stroke="rgba(255,255,255,0.85)" strokeWidth={1.5} strokeDasharray="3 2" />
             <circle cx={dotX} cy={dotY} r={5} fill="white" />
             <circle cx={dotX} cy={dotY} r={3.5} fill={col} />
           </g>
@@ -237,7 +271,7 @@ function SvgElevationChart({ points, width, height, climbSegments = [], showClim
 function ScrubberBar({ point }: { point: ElevationPoint | null }) {
   if (!point) return (
     <div className="h-8 flex items-center justify-center">
-      <span className="text-white/25 text-xs">Σύρε πάνω στο γράφημα για λεπτομέρειες</span>
+      <span className="text-white/30 text-xs">Σύρε πάνω στο γράφημα για λεπτομέρειες</span>
     </div>
   );
   const col = gradeColor(point.grade);
@@ -312,14 +346,15 @@ function ClimbModal({ climb, allRaw, onClose }: { climb: ClimbSegment; allRaw: R
               <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
-            <SvgElevationChart points={points} width={chartW} height={Math.round(chartW / 2)} climbSegments={[climb]} showClimbLabels={false} scrubberKm={scrubberKm} onScrub={setScrubberKm} />
+            <SvgElevationChart points={points} width={chartW} height={Math.round(chartW / 2)}
+              climbSegments={[climb]} showClimbLabels={false} scrubberKm={scrubberKm} onScrub={setScrubberKm} />
           )}
         </div>
         <div className="flex gap-4 justify-center mt-3 flex-wrap">
           {[{ label: '0-3%', color: '#FFFFFF' },{ label: '3-6%', color: '#00E5FF' },{ label: '6-9%', color: '#FFD600' },{ label: '9-12%', color: '#FF6D00' },{ label: '>12%', color: '#FF1744' }].map(({ label, color: c }) => (
             <div key={label} className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: c, boxShadow: `0 0 4px ${c}80` }} />
-              <span className="text-white/50 text-xs">{label}</span>
+              <span className="text-white/70 text-xs">{label}</span>
             </div>
           ))}
         </div>
@@ -332,7 +367,7 @@ function ClimbModal({ climb, allRaw, onClose }: { climb: ClimbSegment; allRaw: R
 export default function ElevationChart({
   gpxUrl, climbProfile = [], storedAscent,
   scrubberKm: controlledScrubberKm, onScrub: controlledOnScrub,
-  defaultZoomed = false, zoomedPxPerKm = 8,  // ← Fix 2: default 8px/km
+  defaultZoomed = false, zoomedPxPerKm = 8,
 }: ElevationChartProps) {
   const [displayPoints, setDisplayPoints] = useState<ElevationPoint[]>([]);
   const [allRaw, setAllRaw] = useState<RawPoint[]>([]);
@@ -343,7 +378,6 @@ export default function ElevationChart({
   const [minElevation, setMinElevation] = useState(0);
   const [selectedClimb, setSelectedClimb] = useState<ClimbSegment | null>(null);
   const [zoomed, setZoomed] = useState(defaultZoomed);
-  // ── Fix 2: slider state — px per km, range 5-10 ──
   const [pxPerKm, setPxPerKm] = useState(zoomedPxPerKm);
 
   const [internalScrubberKm, setInternalScrubberKm] = useState<number | null>(null);
@@ -356,7 +390,6 @@ export default function ElevationChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(600);
 
-  // ── Fix 1: ResizeObserver + two delayed re-measures for modal panels ──
   useEffect(() => {
     const measure = () => {
       if (containerRef.current) {
@@ -396,7 +429,6 @@ export default function ElevationChart({
   const displayAscent = storedAscent && storedAscent > 0 ? storedAscent : totalAscent;
   const totalKm = displayPoints.length > 0 ? displayPoints[displayPoints.length-1].km : 0;
 
-  // ── Fix 1: fit uses containerW exactly; zoom uses slider pxPerKm ──
   const svgWidth = zoomed
     ? Math.round(totalKm * pxPerKm) + PAD.left + PAD.right
     : Math.max(containerW, 300);
@@ -409,7 +441,7 @@ export default function ElevationChart({
     <div className="h-48 flex items-center justify-center">
       <div className="text-center">
         <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-        <p className="text-white/30 text-xs">Φόρτωση προφίλ υψομέτρου...</p>
+        <p className="text-white/40 text-xs">Φόρτωση προφίλ υψομέτρου...</p>
       </div>
     </div>
   );
@@ -423,34 +455,35 @@ export default function ElevationChart({
       <div className="flex flex-wrap gap-4 items-end mb-3">
         <div>
           <div className="text-cyan-400 font-bold text-lg">{displayAscent.toLocaleString()}m</div>
-          <div className="text-white/40 text-xs">Συνολική ανάβαση</div>
+          <div className="text-white/50 text-xs">Συνολική ανάβαση</div>
         </div>
         <div>
           <div className="text-cyan-400 font-bold text-lg">{maxElevation}m</div>
-          <div className="text-white/40 text-xs">Μέγιστο υψόμετρο</div>
+          <div className="text-white/50 text-xs">Μέγιστο υψόμετρο</div>
         </div>
         <div>
           <div className="text-cyan-400 font-bold text-lg">{minElevation}m</div>
-          <div className="text-white/40 text-xs">Ελάχιστο υψόμετρο</div>
+          <div className="text-white/50 text-xs">Ελάχιστο υψόμετρο</div>
         </div>
-        <div className="ml-auto flex items-center gap-3">
-          {/* ── Fix 2: zoom slider — only visible when zoomed ── */}
+        <div className="ml-auto flex items-center gap-3 flex-wrap justify-end">
+          {/* Zoom slider — visible only when zoomed */}
           {zoomed && (
             <div className="flex items-center gap-2">
-              <span className="text-white/30 text-xs">5×</span>
+              <span className="text-white/70 text-xs font-semibold">Μεγέθυνση</span>
+              <span className="text-white/50 text-xs">5×</span>
               <input
                 type="range" min={5} max={10} step={1} value={pxPerKm}
                 onChange={e => { setPxPerKm(Number(e.target.value)); onScrub(null); }}
-                className="w-20 accent-cyan-500"
+                className="w-24 accent-cyan-500"
               />
-              <span className="text-white/30 text-xs">10×</span>
+              <span className="text-white/50 text-xs">10×</span>
               <span className="text-cyan-400 text-xs font-bold">{pxPerKm}px/km</span>
             </div>
           )}
           <button
             onClick={() => { setZoomed(z => !z); onScrub(null); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-              zoomed ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400' : 'bg-white/5 border-white/20 text-white/50 hover:border-white/40 hover:text-white/70'
+              zoomed ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400' : 'bg-white/5 border-white/20 text-white/60 hover:border-white/40 hover:text-white/80'
             }`}
           >
             {zoomed ? (
@@ -472,29 +505,47 @@ export default function ElevationChart({
         {[{ label: '0-3%', color: '#FFFFFF' },{ label: '3-6%', color: '#00E5FF' },{ label: '6-9%', color: '#FFD600' },{ label: '9-12%', color: '#FF6D00' },{ label: '>12%', color: '#FF1744' }].map(({ label, color: c }) => (
           <div key={label} className="flex items-center gap-1">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: c, boxShadow: `0 0 4px ${c}80` }} />
-            <span className="text-white/50 text-xs">{label}</span>
+            <span className="text-white/70 text-xs">{label}</span>
           </div>
         ))}
-        {zoomed && <span className="text-white/25 text-xs ml-1">← σκρολ για πλοήγηση</span>}
+        {/* Updated scroll hint text */}
+        {zoomed && (
+          <span className="text-white/40 text-xs ml-1">
+            ← Σύρε δεξιά-αριστερά για πλοήγηση →
+          </span>
+        )}
       </div>
 
-      {/* ── Fix 3: fixed height, no vertical scroll ever ── */}
-      <div
-        ref={containerRef}
-        className="rounded-xl border border-white/10"
-        style={{
-          background: 'rgba(255,255,255,0.03)',
-          overflowX: zoomed ? 'auto' : 'hidden',
-          overflowY: 'hidden',
-          height: CHART_H,
-          width: '100%',
-        }}
-      >
-        <SvgElevationChart
-          points={displayPoints} width={svgWidth} height={CHART_H}
-          climbSegments={climbProfile} showClimbLabels={true}
-          scrubberKm={scrubberKm} onScrub={onScrub}
-        />
+      {/* Main chart with chevron overlay when zoomed */}
+      <div className="relative">
+        <div
+          ref={containerRef}
+          className="rounded-xl border border-white/10"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            overflowX: zoomed ? 'auto' : 'hidden',
+            overflowY: 'hidden',
+            height: CHART_H,
+            width: '100%',
+          }}
+        >
+          <SvgElevationChart
+            points={displayPoints} width={svgWidth} height={CHART_H}
+            climbSegments={climbProfile} showClimbLabels={true}
+            scrubberKm={scrubberKm} onScrub={onScrub}
+          />
+        </div>
+        {/* Chevron hint — only when zoomed, fades right edge */}
+        {zoomed && (
+          <div
+            className="absolute right-0 top-0 h-full w-12 flex items-center justify-end pr-2 pointer-events-none rounded-r-xl"
+            style={{
+              background: 'linear-gradient(to right, transparent, rgba(10,22,40,0.80))',
+            }}
+          >
+            <span className="text-cyan-400/80 text-2xl font-bold" style={{ textShadow: '0 0 8px rgba(6,182,212,0.6)' }}>›</span>
+          </div>
+        )}
       </div>
 
       {/* Category pills */}
@@ -511,12 +562,12 @@ export default function ElevationChart({
       {/* Category legend */}
       {climbProfile.length > 0 && (
         <div className="bg-white/5 rounded-xl p-3 mb-4">
-          <p className="text-white/40 text-xs font-bold mb-2">Κατηγορίες ανηφόρων:</p>
+          <p className="text-white/50 text-xs font-bold mb-2">Κατηγορίες ανηφόρων:</p>
           <div className="flex flex-wrap gap-2">
             {[{ cat: 'HC', label: 'Hors Catégorie — Ακραία' },{ cat: 'C1', label: 'Cat. 1 — Πολύ δύσκολη' },{ cat: 'C2', label: 'Cat. 2 — Δύσκολη' },{ cat: 'C3', label: 'Cat. 3 — Μέτρια' },{ cat: 'C4', label: 'Cat. 4 — Μικρή' }].map(({ cat, label }) => (
               <div key={cat} className="flex items-center gap-2">
                 <span className="text-white text-xs font-bold px-2 py-0.5 rounded" style={{ backgroundColor: getCategoryColor(cat) }}>{cat}</span>
-                <span className="text-white/50 text-xs">{label}</span>
+                <span className="text-white/60 text-xs">{label}</span>
               </div>
             ))}
           </div>
@@ -526,7 +577,7 @@ export default function ElevationChart({
       {/* Climb cards */}
       {climbProfile.length > 0 && (
         <div className="mt-2">
-          <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider mb-3">Ανηφόρες — κλικ για ανάλυση</h3>
+          <h3 className="text-white/70 text-xs font-bold uppercase tracking-wider mb-3">Ανηφόρες — κλικ για ανάλυση</h3>
           <div className="flex flex-col gap-2">
             {climbProfile.map((climb, i) => (
               <button key={i} onClick={() => setSelectedClimb(climb)}
@@ -535,15 +586,15 @@ export default function ElevationChart({
                 <span className="text-xs font-bold px-2 py-1 rounded-lg shrink-0 min-w-8 text-center"
                   style={{ backgroundColor: getCategoryColor(climb.category) + '25', color: getCategoryColor(climb.category), border: `1px solid ${getCategoryColor(climb.category)}50` }}>{climb.category}</span>
                 <div className="flex-1 flex items-center gap-4 text-xs">
-                  <span className="text-white/60">km {climb.startKm} → {climb.endKm}</span>
-                  <span className="text-white/40">{(climb.endKm - climb.startKm).toFixed(1)}km</span>
-                  <span className="text-white/40">↑{climb.elevationGain.toFixed(0)}m</span>
+                  <span className="text-white/70">km {climb.startKm} → {climb.endKm}</span>
+                  <span className="text-white/50">{(climb.endKm - climb.startKm).toFixed(1)}km</span>
+                  <span className="text-white/50">↑{climb.elevationGain.toFixed(0)}m</span>
                 </div>
                 <div className="text-right shrink-0">
                   <div className="text-sm font-bold" style={{ color: getCategoryColor(climb.category) }}>{climb.avgGrade.toFixed(1)}%</div>
-                  <div className="text-white/30 text-xs">max {climb.maxGrade.toFixed(1)}%</div>
+                  <div className="text-white/40 text-xs">max {climb.maxGrade.toFixed(1)}%</div>
                 </div>
-                <span className="text-white/20 group-hover:text-white/50 transition-colors text-lg ml-1">›</span>
+                <span className="text-white/30 group-hover:text-white/60 transition-colors text-lg ml-1">›</span>
               </button>
             ))}
           </div>
