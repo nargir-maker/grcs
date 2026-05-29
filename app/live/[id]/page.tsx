@@ -10,6 +10,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db, rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
 
+
 const LiveMap = dynamic(() => import('../../components/LiveMap'), {
   ssr: false,
   loading: () => (

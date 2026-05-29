@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { db } from '@/app/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 
 const scrollStyle = `
   @keyframes brevScroll {
@@ -101,6 +102,14 @@ export default function BrevetsPage() {
   // ── ORGANIZER VIEW STATE ───────────────────────────
   const [isOrganizerView, setIsOrganizerView] = useState(false);
   const [myOrganizerClubId, setMyOrganizerClubId] = useState<string | null>(null);
+
+const enabled = usePageEnabled('brevets');
+if (enabled === null) return (
+  <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
+    <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
+if (enabled === false) return <ComingSoon label="Brevets" />;
 
   // ── DETECT ORGANIZER VIEW ON MOUNT ────────────────
   useEffect(() => {
