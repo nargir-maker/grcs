@@ -68,15 +68,15 @@ function MemberCard({ m }: { m: PublicMember }) {
   const avatarEmoji = m.gender === 'F' ? '👩' : '👨';
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden
-      hover:border-cyan-500/30 hover:bg-white/8 transition-all duration-200
-      flex flex-col">
+    <div className="bg-blue-900/30 border border-blue-500/20 rounded-2xl overflow-hidden
+  hover:border-cyan-500/50 hover:bg-blue-900/40 transition-all duration-200
+  flex flex-col">
 
       {/* Top gradient band */}
       <div className="h-16 relative"
         style={{
-          background: 'linear-gradient(135deg, #0D3B5E 0%, #1a1a4e 50%, #2d1b69 100%)',
-        }}>
+  background: 'linear-gradient(135deg, #1e3a5f 0%, #1a2d5e 50%, #1e3a8a 100%)',
+}}>
 
         {/* Club logos — top right */}
         <div className="absolute top-3 right-3 flex gap-1.5">
