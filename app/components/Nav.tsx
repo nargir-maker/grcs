@@ -16,14 +16,6 @@ export default function Nav() {
     logoutOrganizer,
   } = useAuth();
 
-// ── Admin Cog ─────────────────────────────────  
-{user?.email === 'your.actual@gmail.com' && (
-  <Link href="/admin"
-    className="text-white/30 hover:text-white text-xs transition-colors">
-    ⚙️
-  </Link>
-)}
-
   // ── ORGANIZER NAV ─────────────────────────────────
   if (isOrganizer && organizer) {
     return (
@@ -144,6 +136,15 @@ export default function Nav() {
             <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
           ) : user ? (
             <div className="flex items-center gap-3">
+
+              // ── Admin Cog ─────────────────────────────────     
+                {user?.email === 'your.actual@gmail.com' && (
+                <Link href="/admin"
+                  className="text-white/30 hover:text-white text-xs transition-colors">
+                ⚙️
+                </Link>
+              )}
+
               {/* Profile pill — click goes straight to profile */}
               <Link
                 href="/profile"
