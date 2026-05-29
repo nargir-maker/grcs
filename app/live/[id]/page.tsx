@@ -172,7 +172,7 @@ export default function LiveBrevetPage() {
           </div>
           {lastUpdate && (
             <span className="text-white/20 text-xs shrink-0">
-              Ενημέρωση: {lastUpdate.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              ΥΠΟ ΚΑΤΑΣΚΕΥΗ - Ενημέρωση: {lastUpdate.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
           )}
         </div>
