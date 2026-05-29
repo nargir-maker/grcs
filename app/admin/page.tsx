@@ -10,6 +10,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
+import Link from 'next/link';
 
 // ── Page config ────────────────────────────────────────────────────
 interface PageSetting {
@@ -234,6 +235,12 @@ export default function AdminPage() {
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
           <h2 className="text-white font-bold mb-4">Γρήγορες Ενέργειες</h2>
           <div className="flex flex-col gap-3">
+            <Link href="/admin/brevets"
+  className="flex items-center justify-between px-4 py-3
+    bg-white/5 hover:bg-white/10 rounded-xl transition-colors group">
+  <span className="text-white/70 text-sm group-hover:text-white">📅 Επεξεργασία Brevets</span>
+  <span className="text-white/30 text-xs">→</span>
+</Link>
             <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-between px-4 py-3
                 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group">
@@ -245,10 +252,10 @@ export default function AdminPage() {
                 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group">
               <span className="text-white/70 text-sm group-hover:text-white">Vercel Dashboard</span>
               <span className="text-white/30 text-xs">→</span>
-            </a>
+            </a>            
           </div>
         </div>
-
+        
         <p className="text-white/20 text-xs text-center mt-8">
           /admin · GRC Platform Admin
         </p>
