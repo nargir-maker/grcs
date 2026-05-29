@@ -588,7 +588,7 @@ export default function ProfilePage() {
       console.error('Privacy update failed:', e);
     }
   }}
-  className={`text-xs font-bold px-3 py-1.5 rounded-full border
+  className={`relative z-10 text-xs font-bold px-3 py-1.5 rounded-full border
     transition-all cursor-pointer ${
     member.profileType === 'public'
       ? 'bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20'
