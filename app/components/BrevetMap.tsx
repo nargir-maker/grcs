@@ -295,12 +295,16 @@ function FullscreenMap({
         </button>
 
         {/* MAP */}
-        {/* ── TOGGLE CHART BUTTON ── */}
+
+        <div ref={modalMapRef} style={{ position: 'absolute', inset: 0 }} />
+
+        {/* ── ELEVATION PANEL — shown/hidden by toggle ── */}
+        {/* ── TOGGLE CHART BUTTON — always visible bottom-right ── */}
         <button
           onClick={() => setShowChart(s => !s)}
           className="absolute z-[1001] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm transition-all"
           style={{
-            bottom: showChart ? 'calc(42% + 16px)' : 20,
+            bottom: 20,
             right: 12,
             backgroundColor: showChart ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.85)',
             borderColor: showChart ? 'rgba(6,182,212,0.6)' : 'rgba(6,182,212,0.4)',
@@ -309,9 +313,6 @@ function FullscreenMap({
         >
           ⛰️ {showChart ? 'Κλείσιμο διαγράμματος' : 'Διάγραμμα υψομέτρου'}
         </button>
-        <div ref={modalMapRef} style={{ position: 'absolute', inset: 0 }} />
-
-        {/* ── ELEVATION PANEL — shown/hidden by toggle ── */}
         {showChart && (
           <div
             className="absolute bottom-0 left-0 right-0 z-[1000]"
