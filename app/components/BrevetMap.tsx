@@ -316,7 +316,7 @@ function FullscreenMap({
               storedAscent={storedAscent}
               scrubberKm={modalScrubberKm}
               onScrub={setModalScrubberKm}
-              defaultZoomed={true}
+              defaultZoomed={false}
               zoomedPxPerKm={10}
             />
           </div>
