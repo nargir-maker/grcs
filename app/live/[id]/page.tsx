@@ -246,7 +246,7 @@ export default function LiveBrevetPage() {
                 className="absolute z-[1000] flex items-center gap-1.5 px-3 py-2
                   rounded-xl text-xs font-bold border transition-all"
                 style={{
-                  bottom: showElevation ? 'calc(35% + 8px)' : 12,
+                  bottom: showElevation ? 'calc(35% + 28px)' : 12,
                   right: 12,
                   background: showElevation
                     ? 'rgba(6,182,212,0.85)'
