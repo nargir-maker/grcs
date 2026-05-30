@@ -246,7 +246,7 @@ export default function LiveBrevetPage() {
                 className="absolute z-[1000] flex items-center gap-1.5 px-3 py-2
                   rounded-xl text-xs font-bold border transition-all"
                 style={{
-                  bottom: showElevation ? 'calc(45% + 8px)' : 12,
+                  bottom: showElevation ? 'calc(35% + 8px)' : 12,
                   right: 12,
                   background: showElevation
                     ? 'rgba(6,182,212,0.85)'
@@ -268,7 +268,7 @@ export default function LiveBrevetPage() {
               <div
                 className="absolute bottom-0 left-0 right-0 z-[999]"
                 style={{
-                  height: '45%',
+                  height: '35%',
                   background: 'linear-gradient(to top, rgba(10,22,40,0.82) 0%, rgba(10,22,40,0.60) 80%, rgba(10,22,40,0.10) 100%)',
                   backdropFilter: 'blur(8px)',
                   WebkitBackdropFilter: 'blur(8px)',
