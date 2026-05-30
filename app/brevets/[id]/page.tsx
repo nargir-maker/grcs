@@ -728,12 +728,22 @@ export default function BrevetDetailPage() {
           </div>
         )}
 
-        {/* ── ELEVATION & CLIMBS ── */}
+{/* ── ELEVATION & CLIMBS ── */}
         {brevet.gpxUrl && (
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
-            <h2 className="text-white font-bold text-lg mb-2">⛰️ Προφίλ Υψομέτρου & Ανηφόρες</h2>
-            <ElevationChart gpxUrl={brevet.gpxUrl} climbProfile={brevet.climbProfile}
-              storedAscent={brevet.ascent} scrubberKm={scrubberKm} onScrub={handleScrub} />
+            <details>
+              <summary className="flex items-center justify-between cursor-pointer list-none">
+                <h2 className="text-white font-bold text-lg">⛰️ Προφίλ Υψομέτρου & Ανηφόρες</h2>
+                <span className="text-cyan-400 text-xs border border-cyan-500/30
+                  bg-cyan-500/10 px-3 py-1.5 rounded-xl font-bold select-none">
+                  Εμφάνιση / Απόκρυψη
+                </span>
+              </summary>
+              <div className="mt-4">
+                <ElevationChart gpxUrl={brevet.gpxUrl} climbProfile={brevet.climbProfile}
+                  storedAscent={brevet.ascent} scrubberKm={scrubberKm} onScrub={handleScrub} />
+              </div>
+            </details>
           </div>
         )}
 
