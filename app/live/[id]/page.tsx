@@ -268,15 +268,12 @@ export default function LiveBrevetPage() {
               <div
                 className="absolute bottom-0 left-0 right-0 z-[999]"
                 style={{
-                  height: '35%',
-                  background: 'linear-gradient(to top, rgba(10,22,40,0.92) 0%, rgba(10,22,40,0.75) 80%, rgba(10,22,40,0.15) 100%)',
+                  height: '45%',
+                  background: 'linear-gradient(to top, rgba(10,22,40,0.82) 0%, rgba(10,22,40,0.60) 80%, rgba(10,22,40,0.10) 100%)',
                   backdropFilter: 'blur(8px)',
                   WebkitBackdropFilter: 'blur(8px)',
                   borderTop: '1px solid rgba(6,182,212,0.2)',
-                  padding: '10px 16px 6px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  overflow: 'hidden',
+                  padding: '12px 16px 8px',
                 }}
               >
                 {/* Close button */}
@@ -287,15 +284,12 @@ export default function LiveBrevetPage() {
                 >
                   ✕
                 </button>
-                <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
-                  <ElevationChart
-                    gpxUrl={brevet.gpxUrl}
-                    scrubberKm={scrubberKm}
-                    onScrub={setScrubberKm}
-                    defaultZoomed={false}
-                    compact={true}
-                  />
-                </div>
+                <ElevationChart
+                  gpxUrl={brevet.gpxUrl}
+                  scrubberKm={scrubberKm}
+                  onScrub={setScrubberKm}
+                  defaultZoomed={false}
+                />
               </div>
             )}
           </div>
