@@ -289,6 +289,7 @@ export default function LiveBrevetPage() {
                   scrubberKm={scrubberKm}
                   onScrub={setScrubberKm}
                   defaultZoomed={false}
+                  compact={true}
                 />
               </div>
             )}
