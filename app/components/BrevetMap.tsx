@@ -46,8 +46,6 @@ function interpolateLatLng(coords: ParsedCoord[], km: number): [number, number] 
   return [a.lat + t * (b.lat - a.lat), a.lng + t * (b.lng - a.lng)];
 }
 
-// ── SVG marker builders ────────────────────────────────────────────────────────
-
 function svgCpMarker(num: number, isManned: boolean): string {
   const fill = isManned ? '#FFF176' : '#80DEEA';
   return `
@@ -72,7 +70,6 @@ function svgKmMarker(km: number): string {
     </svg>`;
 }
 
-// ── Interval from zoom ─────────────────────────────────────────────────────────
 function kmInterval(zoom: number): number {
   if (zoom < 8)  return 50;
   if (zoom < 10) return 30;
@@ -81,40 +78,25 @@ function kmInterval(zoom: number): number {
   return 2;
 }
 
-// ── Build km markers on the map ────────────────────────────────────────────────
 function buildKmMarkers(
-  L: any,
-  map: any,
-  coords: ParsedCoord[],
-  zoom: number,
-  layerRef: { current: any[] }
+  L: any, map: any, coords: ParsedCoord[],
+  zoom: number, layerRef: { current: any[] }
 ) {
-  // Remove old km markers
   layerRef.current.forEach(m => map.removeLayer(m));
   layerRef.current = [];
-
   if (coords.length === 0) return;
-
   const interval = kmInterval(zoom);
   const totalKm = coords[coords.length - 1].distKm;
-
   for (let km = interval; km < totalKm; km += interval) {
     const pos = interpolateLatLng(coords, km);
     if (!pos) continue;
-
-    const icon = L.divIcon({
-      html: svgKmMarker(km),
-      className: '',
-      iconAnchor: [17, 17],
-    });
-
+    const icon = L.divIcon({ html: svgKmMarker(km), className: '', iconAnchor: [17, 17] });
     const marker = L.marker(pos, { icon, zIndexOffset: 100 }).addTo(map);
     marker.bindPopup(`km ${km}`);
     layerRef.current.push(marker);
   }
 }
 
-// ── Map initializer ────────────────────────────────────────────────────────────
 async function initLeafletMap(
   container: HTMLDivElement,
   gpxUrl: string,
@@ -139,15 +121,13 @@ async function initLeafletMap(
   });
 
   const map = L.map(container, { zoomControl: true, scrollWheelZoom });
-
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors', maxZoom: 18,
   }).addTo(map);
 
   const dotIcon = L.divIcon({
     html: `<div style="width:14px;height:14px;border-radius:50%;background:#06b6d4;border:2px solid white;box-shadow:0 0 8px rgba(6,182,212,0.8);"></div>`,
-    className: '',
-    iconAnchor: [7, 7],
+    className: '', iconAnchor: [7, 7],
   });
   const dotMarker = L.marker([0, 0], { icon: dotIcon, opacity: 0 }).addTo(map);
   const markerRef = { current: dotMarker };
@@ -158,7 +138,6 @@ async function initLeafletMap(
     const parser = new DOMParser();
     const gpxDoc = parser.parseFromString(gpxText, 'text/xml');
     const trackPoints = gpxDoc.querySelectorAll('trkpt');
-
     const coords: [number, number][] = [];
     const parsedCoords: ParsedCoord[] = [];
     let distKm = 0, prevLat = 0, prevLng = 0;
@@ -180,7 +159,6 @@ async function initLeafletMap(
       const polyline = L.polyline(coords, { color: '#ff3d02', weight: 3, opacity: 0.9 }).addTo(map);
       map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
 
-      // START
       L.marker(coords[0], {
         icon: L.divIcon({
           html: `<div style="background:#22c55e;color:white;font-size:11px;font-weight:bold;padding:3px 7px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);">🟢 START</div>`,
@@ -188,7 +166,6 @@ async function initLeafletMap(
         }),
       }).addTo(map).bindPopup('Αφετηρία');
 
-      // FINISH
       L.marker(coords[coords.length-1], {
         icon: L.divIcon({
           html: `<div style="background:#f59e0b;color:white;font-size:11px;font-weight:bold;padding:3px 7px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);">🏁 FINISH</div>`,
@@ -196,20 +173,14 @@ async function initLeafletMap(
         }),
       }).addTo(map).bindPopup('Τερματισμός');
 
-      // ── CP MARKERS — SVG triangles ─────────────────────────────────────────
       controls.forEach((cp, i) => {
         if (!cp.lat || !cp.lng) return;
         L.marker([cp.lat, cp.lng], {
-          icon: L.divIcon({
-            html: svgCpMarker(i + 1, true),
-            className: '',
-            iconAnchor: [22, 44],
-          }),
+          icon: L.divIcon({ html: svgCpMarker(i + 1, true), className: '', iconAnchor: [22, 44] }),
           zIndexOffset: 300,
         }).addTo(map).bindPopup(`<b>CP${i+1}: ${cp.name}</b><br/>km ${cp.km}`);
       });
 
-      // ── KM MARKERS — initial build ─────────────────────────────────────────
       if (kmLayerRef) {
         buildKmMarkers(L, map, parsedCoords, map.getZoom(), kmLayerRef);
         map.on('zoomend', () => {
@@ -244,11 +215,12 @@ function FullscreenMap({
   const kmLayerRef          = useRef<any[]>([]);
   const [modalCoords, setModalCoords]         = useState<ParsedCoord[]>([]);
   const [modalScrubberKm, setModalScrubberKm] = useState<number | null>(null);
+  const [showChart, setShowChart]             = useState(true);
+  const [showChart, setShowChart]             = useState(true); // ← NEW
 
   useEffect(() => {
     if (!modalMapRef.current) return;
     let destroyed = false;
-
     initLeafletMap(
       modalMapRef.current, gpxUrl, controls, true,
       coords => { if (!destroyed) setModalCoords(coords); },
@@ -258,7 +230,6 @@ function FullscreenMap({
       modalMapInstanceRef.current = map;
       modalDotMarkerRef.current   = markerRef.current;
     });
-
     return () => {
       destroyed = true;
       if (modalMapInstanceRef.current) {
@@ -293,6 +264,7 @@ function FullscreenMap({
         className="relative w-[96vw] h-[90vh] rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0A1628]"
         onClick={e => e.stopPropagation()}
       >
+        {/* ── CLOSE FULLSCREEN — top right ── */}
         <button
           onClick={onClose}
           title="Κλείσιμο (Esc)"
@@ -306,29 +278,64 @@ function FullscreenMap({
           </svg>
           Κλείσιμο
         </button>
-        <div ref={modalMapRef} style={{ position: 'absolute', inset: 0 }} />
-        <div
-          className="absolute bottom-0 left-0 right-0 z-[1000]"
+
+        {/* ── TOGGLE CHART — bottom right, above chart ── */}
+        <button
+          onClick={() => setShowChart(s => !s)}
+          className="absolute z-[1001] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm transition-all"
           style={{
-            background: 'linear-gradient(to top, rgba(10,22,40,0.65) 0%, rgba(10,22,40,0.40) 75%, rgba(10,22,40,0.10) 100%)',
-            backdropFilter: 'blur(3px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            borderTop: '1px solid rgba(6,182,212,0.15)',
-            padding: '16px 20px 12px',
-            maxHeight: '42%',
-            overflowY: 'auto',
+            bottom: showChart ? 'calc(42% + 8px)' : 12,
+            right: 12,
+            backgroundColor: showChart ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.85)',
+            borderColor: showChart ? 'rgba(6,182,212,0.6)' : 'rgba(6,182,212,0.4)',
+            color: showChart ? '#000' : '#06b6d4',
           }}
         >
-          <ElevationChart
-            gpxUrl={gpxUrl}
-            climbProfile={climbProfile}
-            storedAscent={storedAscent}
-            scrubberKm={modalScrubberKm}
-            onScrub={setModalScrubberKm}
-            defaultZoomed={true}
-            zoomedPxPerKm={10}
-          />
-        </div>
+          ⛰️ {showChart ? 'Κλείσιμο γραφήματος' : 'Υψομετρικό'}
+        </button>
+
+        {/* MAP */}
+        {/* ── TOGGLE CHART BUTTON ── */}
+        <button
+          onClick={() => setShowChart(s => !s)}
+          className="absolute z-[1001] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm transition-all"
+          style={{
+            bottom: showChart ? 'calc(42% + 16px)' : 20,
+            right: 12,
+            backgroundColor: showChart ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.85)',
+            borderColor: showChart ? 'rgba(6,182,212,0.6)' : 'rgba(6,182,212,0.4)',
+            color: showChart ? '#000' : '#06b6d4',
+          }}
+        >
+          ⛰️ {showChart ? 'Κλείσιμο διαγράμματος' : 'Διάγραμμα υψομέτρου'}
+        </button>
+        <div ref={modalMapRef} style={{ position: 'absolute', inset: 0 }} />
+
+        {/* ── ELEVATION PANEL — shown/hidden by toggle ── */}
+        {showChart && (
+          <div
+            className="absolute bottom-0 left-0 right-0 z-[1000]"
+            style={{
+              background: 'linear-gradient(to top, rgba(10,22,40,0.65) 0%, rgba(10,22,40,0.40) 75%, rgba(10,22,40,0.10) 100%)',
+              backdropFilter: 'blur(3px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              borderTop: '1px solid rgba(6,182,212,0.15)',
+              padding: '16px 20px 12px',
+              maxHeight: '42%',
+              overflowY: 'auto',
+            }}
+          >
+            <ElevationChart
+              gpxUrl={gpxUrl}
+              climbProfile={climbProfile}
+              storedAscent={storedAscent}
+              scrubberKm={modalScrubberKm}
+              onScrub={setModalScrubberKm}
+              defaultZoomed={true}
+              zoomedPxPerKm={10}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -351,7 +358,6 @@ export default function BrevetMap({
   useEffect(() => {
     if (!mapRef.current || initializedRef.current) return;
     initializedRef.current = true;
-
     initLeafletMap(
       mapRef.current, gpxUrl, controls, false,
       coords => setParsedCoords(coords),
@@ -360,7 +366,6 @@ export default function BrevetMap({
       mapInstanceRef.current = map;
       dotMarkerRef.current   = markerRef.current;
     });
-
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
