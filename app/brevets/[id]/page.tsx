@@ -22,6 +22,8 @@ const WeatherStrip = dynamic(() => import('../../components/WeatherStrip'), {
 });
 // weather strip component
 
+const [showElevation, setShowElevation] = useState(false);
+
 const ElevationChart = dynamic(() => import('../../components/ElevationChart'), {
   ssr: false,
   loading: () => (
@@ -729,13 +731,31 @@ export default function BrevetDetailPage() {
         )}
 
         {/* ── ELEVATION & CLIMBS ── */}
-        {brevet.gpxUrl && (
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
-            <h2 className="text-white font-bold text-lg mb-2">⛰️ Προφίλ Υψομέτρου & Ανηφόρες</h2>
-            <ElevationChart gpxUrl={brevet.gpxUrl} climbProfile={brevet.climbProfile}
-              storedAscent={brevet.ascent} scrubberKm={scrubberKm} onScrub={handleScrub} />
-          </div>
-        )}
+{/* ── ELEVATION & CLIMBS ── */}
+{brevet.gpxUrl && (
+  <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+    <button
+      onClick={() => setShowElevation(e => !e)}
+      className="w-full flex items-center justify-between mb-2"
+    >
+      <h2 className="text-white font-bold text-lg">⛰️ Προφίλ Υψομέτρου & Ανηφόρες</h2>
+      <span
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all"
+        style={{
+          background: showElevation ? 'rgba(6,182,212,0.85)' : 'rgba(255,255,255,0.05)',
+          borderColor: showElevation ? 'rgba(6,182,212,0.6)' : 'rgba(255,255,255,0.15)',
+          color: showElevation ? '#000' : '#06b6d4',
+        }}
+      >
+        {showElevation ? '▲ Κλείσιμο' : '⛰️ Εμφάνιση'}
+      </span>
+    </button>
+    {showElevation && (
+      <ElevationChart gpxUrl={brevet.gpxUrl} climbProfile={brevet.climbProfile}
+        storedAscent={brevet.ascent} scrubberKm={scrubberKm} onScrub={handleScrub} />
+    )}
+  </div>
+)}
 
         {/* ── REGISTRATION ── */}
         <div id="registration-section" className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">

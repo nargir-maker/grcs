@@ -259,7 +259,7 @@ export default function LiveBrevetPage() {
                   color: showElevation ? '#000' : '#06b6d4',
                 }}
               >
-                ⛰️ Υψόμετρο
+                ⛰️ Υψομετρικό
               </button>
             )}
 
