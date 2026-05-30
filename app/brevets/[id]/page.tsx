@@ -432,7 +432,8 @@ export default function BrevetDetailPage() {
   const [showForm, setShowForm] = useState(false);
   const [scrubberKm, setScrubberKm] = useState<number | null>(null);
   const handleScrub = useCallback((km: number | null) => setScrubberKm(km), []);
-
+  const [showElevation, setShowElevation] = useState(false);
+  
   useEffect(() => {
     async function fetchBrevet() {
       try {
