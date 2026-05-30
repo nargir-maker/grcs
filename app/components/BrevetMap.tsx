@@ -216,7 +216,6 @@ function FullscreenMap({
   const [modalCoords, setModalCoords]         = useState<ParsedCoord[]>([]);
   const [modalScrubberKm, setModalScrubberKm] = useState<number | null>(null);
   const [showChart, setShowChart]             = useState(true);
-  const [showChart, setShowChart]             = useState(true); // ← NEW
 
   useEffect(() => {
     if (!modalMapRef.current) return;
