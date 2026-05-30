@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic';
 const LiveMap = dynamic(() => import('../../components/LiveMap'), {
   ssr: false,
   loading: () => (
-    <div style={{ height: '70vh' }} className="bg-white/5 rounded-2xl border border-white/10
+    <div style={{ height: '82vh' }} className="bg-white/5 rounded-2xl border border-white/10
       flex items-center justify-center">
       <div className="text-center">
         <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent
@@ -199,7 +199,7 @@ export default function LiveBrevetPage() {
         {/* ── MAP CONTAINER — relative so overlays can be absolute ── */}
         {brevet && (
           <div className="relative rounded-2xl overflow-hidden border border-white/10 mb-6"
-            style={{ height: '70vh' }}>
+            style={{ height: '82vh' }}>
 
             {/* MAP — fills container */}
             <div className="absolute inset-0">
@@ -246,7 +246,7 @@ export default function LiveBrevetPage() {
                 className="absolute z-[1000] flex items-center gap-1.5 px-3 py-2
                   rounded-xl text-xs font-bold border transition-all"
                 style={{
-                  bottom: showElevation ? 'calc(38% + 8px)' : 12,
+                  bottom: showElevation ? 'calc(45% + 8px)' : 12,
                   right: 12,
                   background: showElevation
                     ? 'rgba(6,182,212,0.85)'
@@ -268,7 +268,7 @@ export default function LiveBrevetPage() {
               <div
                 className="absolute bottom-0 left-0 right-0 z-[999]"
                 style={{
-                  height: '38%',
+                  height: '45%',
                   background: 'linear-gradient(to top, rgba(10,22,40,0.82) 0%, rgba(10,22,40,0.60) 80%, rgba(10,22,40,0.10) 100%)',
                   backdropFilter: 'blur(8px)',
                   WebkitBackdropFilter: 'blur(8px)',
