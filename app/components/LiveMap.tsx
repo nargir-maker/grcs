@@ -23,6 +23,7 @@ interface LiveMapProps {
   riders: Rider[];
   selectedRiderId: string | null;
   onRiderSelect: (id: string | null) => void;
+  mapHeight?: string;
 }
 
 // ── SVG marker builders ────────────────────────────────────────────────────────
@@ -142,6 +143,7 @@ function buildKmMarkers(
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function LiveMap({
   gpxUrl, controls, riders, selectedRiderId, onRiderSelect,
+  mapHeight = '500px',
 }: LiveMapProps) {
   const mapRef       = useRef<HTMLDivElement>(null);
   const mapInstance  = useRef<any>(null);
@@ -331,7 +333,7 @@ export default function LiveMap({
         href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
       <div
         ref={mapRef}
-        style={{ height: '500px', width: '100%' }}
+        style={{ height: mapHeight, width: '100%' }}
         className="rounded-2xl overflow-hidden border border-white/10"
       />
       <p className="text-white/20 text-xs text-right mt-1">
