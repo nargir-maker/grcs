@@ -290,7 +290,7 @@ function FullscreenMap({
             color: showChart ? '#000' : '#06b6d4',
           }}
         >
-          ⛰️ {showChart ? 'Κλείσιμο γραφήματος NEW' : 'Υψομετρικό NEW'}
+          ⛰️ {showChart ? 'Κλείσιμο διαγράμματος' : 'Διάγραμμα υψομέτρου'}
         </button>
 
         {/* MAP */}
