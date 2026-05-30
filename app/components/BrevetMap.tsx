@@ -46,12 +46,83 @@ function interpolateLatLng(coords: ParsedCoord[], km: number): [number, number] 
   return [a.lat + t * (b.lat - a.lat), a.lng + t * (b.lng - a.lng)];
 }
 
+// ── SVG marker builders ────────────────────────────────────────────────────────
+
+function svgCpMarker(num: number, isManned: boolean): string {
+  const fill = isManned ? '#FFF176' : '#80DEEA';
+  return `
+    <svg width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="22,3 41,41 3,41"
+        fill="${fill}" stroke="#D32F2F" stroke-width="3.5"
+        stroke-linejoin="round"/>
+      <text x="22" y="38" text-anchor="middle"
+        font-family="Arial,sans-serif" font-size="11"
+        font-weight="bold" fill="#000">CP${num}</text>
+    </svg>`;
+}
+
+function svgKmMarker(km: number): string {
+  const fontSize = km >= 100 ? 11 : 13;
+  return `
+    <svg width="34" height="34" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="17" cy="17" r="15" fill="white" stroke="#D32F2F" stroke-width="3"/>
+      <text x="17" y="22" text-anchor="middle"
+        font-family="Arial,sans-serif" font-size="${fontSize}"
+        font-weight="bold" fill="#000">${km}</text>
+    </svg>`;
+}
+
+// ── Interval from zoom ─────────────────────────────────────────────────────────
+function kmInterval(zoom: number): number {
+  if (zoom < 8)  return 50;
+  if (zoom < 10) return 30;
+  if (zoom < 12) return 10;
+  if (zoom < 14) return 5;
+  return 2;
+}
+
+// ── Build km markers on the map ────────────────────────────────────────────────
+function buildKmMarkers(
+  L: any,
+  map: any,
+  coords: ParsedCoord[],
+  zoom: number,
+  layerRef: { current: any[] }
+) {
+  // Remove old km markers
+  layerRef.current.forEach(m => map.removeLayer(m));
+  layerRef.current = [];
+
+  if (coords.length === 0) return;
+
+  const interval = kmInterval(zoom);
+  const totalKm = coords[coords.length - 1].distKm;
+
+  for (let km = interval; km < totalKm; km += interval) {
+    const pos = interpolateLatLng(coords, km);
+    if (!pos) continue;
+
+    const icon = L.divIcon({
+      html: svgKmMarker(km),
+      className: '',
+      iconAnchor: [17, 17],
+    });
+
+    const marker = L.marker(pos, { icon, zIndexOffset: 100 }).addTo(map);
+    marker.bindPopup(`km ${km}`);
+    layerRef.current.push(marker);
+  }
+}
+
+// ── Map initializer ────────────────────────────────────────────────────────────
 async function initLeafletMap(
   container: HTMLDivElement,
   gpxUrl: string,
   controls: { km: number; name: string; lat: number; lng: number }[],
   scrollWheelZoom: boolean,
-  onCoordsReady?: (coords: ParsedCoord[]) => void
+  onCoordsReady?: (coords: ParsedCoord[]) => void,
+  kmLayerRef?: { current: any[] },
+  onMapReady?: (map: any, L: any) => void
 ): Promise<{ map: any; markerRef: { current: any } }> {
   const L = (await import('leaflet')).default;
 
@@ -109,6 +180,7 @@ async function initLeafletMap(
       const polyline = L.polyline(coords, { color: '#ff3d02', weight: 3, opacity: 0.9 }).addTo(map);
       map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
 
+      // START
       L.marker(coords[0], {
         icon: L.divIcon({
           html: `<div style="background:#22c55e;color:white;font-size:11px;font-weight:bold;padding:3px 7px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);">🟢 START</div>`,
@@ -116,6 +188,7 @@ async function initLeafletMap(
         }),
       }).addTo(map).bindPopup('Αφετηρία');
 
+      // FINISH
       L.marker(coords[coords.length-1], {
         icon: L.divIcon({
           html: `<div style="background:#f59e0b;color:white;font-size:11px;font-weight:bold;padding:3px 7px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);">🏁 FINISH</div>`,
@@ -123,17 +196,29 @@ async function initLeafletMap(
         }),
       }).addTo(map).bindPopup('Τερματισμός');
 
+      // ── CP MARKERS — SVG triangles ─────────────────────────────────────────
       controls.forEach((cp, i) => {
         if (!cp.lat || !cp.lng) return;
         L.marker([cp.lat, cp.lng], {
           icon: L.divIcon({
-            html: `<div style="background:#0A1628;color:#06b6d4;font-size:10px;font-weight:bold;padding:3px 7px;border-radius:12px;border:1px solid #06b6d4;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);">CP${i+1}</div>`,
-            className: '', iconAnchor: [15, 10],
+            html: svgCpMarker(i + 1, true),
+            className: '',
+            iconAnchor: [22, 44],
           }),
-        }).addTo(map).bindPopup(`CP${i+1}: ${cp.name}`);
+          zIndexOffset: 300,
+        }).addTo(map).bindPopup(`<b>CP${i+1}: ${cp.name}</b><br/>km ${cp.km}`);
       });
 
+      // ── KM MARKERS — initial build ─────────────────────────────────────────
+      if (kmLayerRef) {
+        buildKmMarkers(L, map, parsedCoords, map.getZoom(), kmLayerRef);
+        map.on('zoomend', () => {
+          buildKmMarkers(L, map, parsedCoords, map.getZoom(), kmLayerRef!);
+        });
+      }
+
       onCoordsReady?.(parsedCoords);
+      onMapReady?.(map, L);
     }
   } catch (e) {
     console.error('GPX load error:', e);
@@ -143,7 +228,7 @@ async function initLeafletMap(
   return { map, markerRef };
 }
 
-// ── Fullscreen modal ───────────────────────────────────────────────────────
+// ── Fullscreen modal ───────────────────────────────────────────────────────────
 function FullscreenMap({
   gpxUrl, controls, onClose, climbProfile, storedAscent,
 }: {
@@ -156,17 +241,19 @@ function FullscreenMap({
   const modalMapRef         = useRef<HTMLDivElement>(null);
   const modalMapInstanceRef = useRef<any>(null);
   const modalDotMarkerRef   = useRef<any>(null);
-  const [modalCoords, setModalCoords]           = useState<ParsedCoord[]>([]);
-  const [modalScrubberKm, setModalScrubberKm]   = useState<number | null>(null);
+  const kmLayerRef          = useRef<any[]>([]);
+  const [modalCoords, setModalCoords]         = useState<ParsedCoord[]>([]);
+  const [modalScrubberKm, setModalScrubberKm] = useState<number | null>(null);
 
-  // ── Init modal map ─────────────────────────────────────────────────
   useEffect(() => {
     if (!modalMapRef.current) return;
     let destroyed = false;
 
-    initLeafletMap(modalMapRef.current, gpxUrl, controls, true, coords => {
-      if (!destroyed) setModalCoords(coords);
-    }).then(({ map, markerRef }) => {
+    initLeafletMap(
+      modalMapRef.current, gpxUrl, controls, true,
+      coords => { if (!destroyed) setModalCoords(coords); },
+      kmLayerRef
+    ).then(({ map, markerRef }) => {
       if (destroyed) { map.remove(); return; }
       modalMapInstanceRef.current = map;
       modalDotMarkerRef.current   = markerRef.current;
@@ -181,29 +268,22 @@ function FullscreenMap({
     };
   }, [gpxUrl]);
 
-  // ── Move dot when scrubber changes ────────────────────────────────
   useEffect(() => {
     const marker = modalDotMarkerRef.current;
     if (!marker) return;
     if (modalScrubberKm === null || modalCoords.length === 0) {
-      marker.setOpacity(0);
-      return;
+      marker.setOpacity(0); return;
     }
     const pos = interpolateLatLng(modalCoords, modalScrubberKm);
-    if (pos) {
-      marker.setLatLng(pos);
-      marker.setOpacity(1);
-    }
+    if (pos) { marker.setLatLng(pos); marker.setOpacity(1); }
   }, [modalScrubberKm, modalCoords]);
 
-  // ── Escape key ────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // ── Render ────────────────────────────────────────────────────────
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
@@ -213,7 +293,6 @@ function FullscreenMap({
         className="relative w-[96vw] h-[90vh] rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0A1628]"
         onClick={e => e.stopPropagation()}
       >
-        {/* Close button */}
         <button
           onClick={onClose}
           title="Κλείσιμο (Esc)"
@@ -227,11 +306,7 @@ function FullscreenMap({
           </svg>
           Κλείσιμο
         </button>
-
-        {/* MAP — full height, full width */}
         <div ref={modalMapRef} style={{ position: 'absolute', inset: 0 }} />
-
-        {/* ELEVATION — glassmorphism panel floating over map at bottom */}
         <div
           className="absolute bottom-0 left-0 right-0 z-[1000]"
           style={{
@@ -259,27 +334,29 @@ function FullscreenMap({
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────
+// ── Main component ─────────────────────────────────────────────────────────────
 export default function BrevetMap({
   gpxUrl, startCoords, finishCoords, controls = [], scrubberKm,
 }: BrevetMapProps) {
-  const mapRef          = useRef<HTMLDivElement>(null);
-  const mapInstanceRef  = useRef<any>(null);
-  const dotMarkerRef    = useRef<any>(null);
-  const initializedRef  = useRef(false);
+  const mapRef         = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const dotMarkerRef   = useRef<any>(null);
+  const initializedRef = useRef(false);
+  const kmLayerRef     = useRef<any[]>([]);
   const [parsedCoords, setParsedCoords] = useState<ParsedCoord[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(f => !f), []);
 
-  // Init inline map once
   useEffect(() => {
     if (!mapRef.current || initializedRef.current) return;
     initializedRef.current = true;
 
-    initLeafletMap(mapRef.current, gpxUrl, controls, false, coords => {
-      setParsedCoords(coords);
-    }).then(({ map, markerRef }) => {
+    initLeafletMap(
+      mapRef.current, gpxUrl, controls, false,
+      coords => setParsedCoords(coords),
+      kmLayerRef
+    ).then(({ map, markerRef }) => {
       mapInstanceRef.current = map;
       dotMarkerRef.current   = markerRef.current;
     });
@@ -293,19 +370,14 @@ export default function BrevetMap({
     };
   }, [gpxUrl]);
 
-  // Move dot on inline map
   useEffect(() => {
     const marker = dotMarkerRef.current;
     if (!marker) return;
     if (scrubberKm === null || scrubberKm === undefined || parsedCoords.length === 0) {
-      marker.setOpacity(0);
-      return;
+      marker.setOpacity(0); return;
     }
     const pos = interpolateLatLng(parsedCoords, scrubberKm);
-    if (pos) {
-      marker.setLatLng(pos);
-      marker.setOpacity(1);
-    }
+    if (pos) { marker.setLatLng(pos); marker.setOpacity(1); }
   }, [scrubberKm, parsedCoords]);
 
   return (
@@ -313,7 +385,6 @@ export default function BrevetMap({
       <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 
-      {/* Fullscreen modal */}
       {isFullscreen && (
         <FullscreenMap
           gpxUrl={gpxUrl}
@@ -322,7 +393,6 @@ export default function BrevetMap({
         />
       )}
 
-      {/* Inline map */}
       <div className="relative" style={{ visibility: isFullscreen ? 'hidden' : 'visible' }}>
         <div
           ref={mapRef}
