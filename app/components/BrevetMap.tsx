@@ -105,8 +105,11 @@ async function initLeafletMap(
   onCoordsReady?: (coords: ParsedCoord[]) => void,
   kmLayerRef?: { current: any[] },
   onMapReady?: (map: any, L: any) => void
+,
+  onTileReady?: (tile: any) => void
 ): Promise<{ map: any; markerRef: { current: any } }> {
   const L = (await import('leaflet')).default;
+  LRef.current = L;
 
   if ((container as any)._leaflet_id) {
     try { (container as any)._leaflet_map?.remove(); } catch {}
@@ -121,9 +124,11 @@ async function initLeafletMap(
   });
 
   const map = L.map(container, { zoomControl: true, scrollWheelZoom });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors', maxZoom: 18,
-  }).addTo(map);
+  const tile = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    { attribution: '© OpenStreetMap © CARTO', maxZoom: 19 }
+  ).addTo(map);
+  if (onTileReady) onTileReady(tile);
 
   const dotIcon = L.divIcon({
     html: `<div style="width:14px;height:14px;border-radius:50%;background:#06b6d4;border:2px solid white;box-shadow:0 0 8px rgba(6,182,212,0.8);"></div>`,
@@ -290,7 +295,7 @@ function FullscreenMap({
             color: showChart ? '#000' : '#06b6d4',
           }}
         >
-          ⛰️ {showChart ? 'Κλείσιμο διαγράμματος' : 'Διάγραμμα υψομέτρου'}
+          ⛰️ {showChart ? 'Κλείσιμο γραφήματος' : 'Υψομετρικό'}
         </button>
 
         {/* MAP */}
@@ -338,8 +343,11 @@ export default function BrevetMap({
   const dotMarkerRef   = useRef<any>(null);
   const initializedRef = useRef(false);
   const kmLayerRef     = useRef<any[]>([]);
+  const tileLayerRef   = useRef<any>(null);
+  const LRef            = useRef<any>(null);
   const [parsedCoords, setParsedCoords] = useState<ParsedCoord[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activeStyle, setActiveStyle]   = useState<string>('dark');
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(f => !f), []);
 
@@ -349,7 +357,9 @@ export default function BrevetMap({
     initLeafletMap(
       mapRef.current, gpxUrl, controls, false,
       coords => setParsedCoords(coords),
-      kmLayerRef
+      kmLayerRef,
+      undefined,
+      (tile) => { tileLayerRef.current = tile; }
     ).then(({ map, markerRef }) => {
       mapInstanceRef.current = map;
       dotMarkerRef.current   = markerRef.current;
@@ -392,6 +402,47 @@ export default function BrevetMap({
           style={{ height: '400px', width: '100%' }}
           className="rounded-xl overflow-hidden border border-white/10"
         />
+
+        {/* ── Tile layer switcher ── */}
+        {[
+          { id: 'dark',    label: '🌑', title: 'Dark',    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',     attribution: '© OpenStreetMap © CARTO',                 maxZoom: 19 },
+          { id: 'street',  label: '🗺️', title: 'Street',  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                attribution: '© OpenStreetMap contributors',             maxZoom: 19 },
+          { id: 'cycling', label: '🚴', title: 'Cycling', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', attribution: '© OpenStreetMap · CyclOSM',                maxZoom: 20 },
+          { id: 'topo',    label: '⛰️', title: 'Topo',    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                  attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)', maxZoom: 17 },
+        ].length > 0 && (
+          <div className="absolute bottom-10 left-3 z-[1000] flex gap-1.5">
+            {[
+              { id: 'dark',    label: '🌑', title: 'Dark',    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',     attribution: '© OpenStreetMap © CARTO',                 maxZoom: 19 },
+              { id: 'street',  label: '🗺️', title: 'Street',  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                attribution: '© OpenStreetMap contributors',             maxZoom: 19 },
+              { id: 'cycling', label: '🚴', title: 'Cycling', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', attribution: '© OpenStreetMap · CyclOSM',                maxZoom: 20 },
+              { id: 'topo',    label: '⛰️', title: 'Topo',    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                  attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)', maxZoom: 17 },
+            ].map(style => (
+              <button
+                key={style.id}
+                title={style.title}
+                onClick={() => {
+                  if (!mapInstanceRef.current || !tileLayerRef.current) return;
+                  mapInstanceRef.current.removeLayer(tileLayerRef.current);
+                  if (!LRef.current) return;
+                  tileLayerRef.current = LRef.current.tileLayer(style.url, {
+                    attribution: style.attribution, maxZoom: style.maxZoom,
+                  }).addTo(mapInstanceRef.current);
+                  setActiveStyle(style.id);
+                }}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold
+                  transition-all backdrop-blur-md border"
+                style={{
+                  background:  activeStyle === style.id ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.80)',
+                  borderColor: activeStyle === style.id ? 'rgba(6,182,212,0.8)'  : 'rgba(255,255,255,0.15)',
+                  color:       activeStyle === style.id ? '#000'                  : 'rgba(255,255,255,0.7)',
+                }}
+              >
+                {style.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <button
           onClick={toggleFullscreen}
           title="Πλήρης οθόνη"
