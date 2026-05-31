@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { db } from '@/app/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
+import BrevetCard from '@/app/components/BrevetCard';
 
 const scrollStyle = `
   @keyframes brevScroll {
@@ -581,122 +582,7 @@ export default function BrevetsPage() {
 
               // ── put here <a ────────────────────────────────────────────────
               return (
-                <a
-                  key={b.id}
-                  href={`/brevets/${b.id}`}
-                  className="relative rounded-2xl overflow-hidden border-2 border-white/20
-                    hover:border-cyan-500/60 transition-all cursor-pointer block
-                    no-underline min-h-[280px] flex flex-col justify-end
-                    hover:shadow-lg hover:shadow-cyan-500/60"
-                  style={hasImage ? {
-                    backgroundImage: `url(${b.imageUrl})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  } : {
-                    backgroundColor: 'rgba(255,255,255,0.04)',
-                  }}
-                >
-                  {/* ── Dark gradient overlay — always present ── */}
-                  <div className={`absolute inset-0 ${
-                    hasImage
-                      ? 'bg-gradient-to-t from-[#0A1628] via-[#0A1628]/85 to-[#0A1628]/30'
-                      : 'bg-transparent'
-                  }`} />
-
-                  {/* ── Distance badge — top right ── */}
-                  <div className="absolute top-4 right-4 z-10">
-                    <span className="bg-cyan-500/20 backdrop-blur-sm text-cyan-400
-                      text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/40">
-                      {b.distance}km
-                    </span>
-                  </div>
-
-                  {/* ── Difficulty badge — top left ── */}
-                  <div className="absolute top-4 left-4 z-10">
-                    <span
-                      className="text-xs font-bold px-3 py-1 rounded-full backdrop-blur-sm"
-                      style={{
-                        backgroundColor: b.difficultyColor + '30',
-                        color: b.difficultyColor,
-                        border: `1px solid ${b.difficultyColor}60`,
-                      }}
-                    >
-                      {b.difficultyLabel}
-                    </span>
-                  </div>
-
-                  {/* ── Card content — layered on top of gradient ── */}
-                  <div className="relative z-10 p-6">
-
-                    {/* Organizer row */}
-                    <div className="flex items-center gap-2 mb-3">
-                      {isCoOrg ? (
-                        <>
-                          <img
-                            src="/logos/both.png"
-                            alt="Συνδιοργάνωση"
-                            className="w-24 h-24 object-contain rounded-full bg-white/10 backdrop-blur-sm"
-                            onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
-                          />
-                          <span className="text-cyan-600 text-xs font-bold">Συνδιοργάνωση</span>
-                        </>
-                      ) : (
-                        <>
-                          <img
-                            src={b.organizerLogo}
-                            alt={b.organizer}
-                            className="w-24 h-24 object-contain rounded-full bg-white/10 backdrop-blur-sm"
-                            onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
-                          />
-                          <span className="text-white/110 text-xs font-medium">{b.organizer}</span>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Title */}
-                    <h3 className="text-white font-bold text-base leading-tight mb-1 drop-shadow-md">
-                      {b.title}
-                    </h3>
-
-                    {/* Location */}
-                    <p className="text-white/50 text-xs mb-3">📍 {b.start}</p>
-
-                    {/* Date + stats row */}
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-white/50 text-xs">
-                        📅{' '}
-                        {b.date
-                          ? new Date(b.date).toLocaleDateString('el-GR', {
-                              day: 'numeric', month: 'long', year: 'numeric',
-                            })
-                          : '—'}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        {b.ascent > 0 && (
-                          <span className="text-white/40 text-xs">⛰️ {b.ascent.toLocaleString()}m+</span>
-                        )}
-                        {b.certification && (
-                          <span className="text-white/40 text-xs">{b.certification}</span>
-                        )}
-                        {b.gpxUrl && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              window.open(b.gpxUrl, '_blank');
-                            }}
-                            className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
-                          >
-                            GPX →
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                  </div>
-                  {/* ── end of card content ── */}
-
-                </a>
+<BrevetCard key={b.id} b={b} hasCoOrg={!!hasCoOrg(b)} />
                 // ── end <a ─────────────────────────────────────────────────
               );
             })}

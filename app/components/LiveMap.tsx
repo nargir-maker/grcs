@@ -82,8 +82,8 @@ function svgRiderMarker(
     ? `${registryId}-${firstInitial} ${lastName}`.trim()
     : firstName;
   // Estimate chip width: ~8px per char + 16px padding
-  const chipW    = Math.max(48, chipLabel.length * 7.5 + 16);
-  const chipH    = 20;
+  const chipW    = Math.max(56, chipLabel.length * 8.5 + 18);
+  const chipH    = 24;
   const gap      = 4;
   const totalW   = sqSize + gap + chipW;
   const totalH   = Math.max(sqSize, chipH);
@@ -114,7 +114,7 @@ function svgRiderMarker(
         stroke="white" stroke-opacity="0.5" stroke-width="1.2"/>
       <text x="${chipX + chipW / 2}" y="${chipY + chipH / 2 + 5}"
         text-anchor="middle" font-family="Arial,sans-serif"
-        font-size="11" font-weight="bold" fill="white">${chipLabel}</text>
+        font-size="13" font-weight="bold" fill="white">${chipLabel}</text>
     </svg>`;
 }
 
