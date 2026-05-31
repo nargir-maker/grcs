@@ -51,28 +51,60 @@ function svgKmMarker(km: number): string {
     </svg>`;
 }
 
-function svgRiderMarker(gender: string, isDNF: boolean, isFinished: boolean, isSelected: boolean): string {
+// ── Rider marker: square + name chip to the right ─────────────────────────────
+function svgRiderMarker(
+  gender: string,
+  isDNF: boolean,
+  isFinished: boolean,
+  isSelected: boolean,
+  fullName: string,
+): string {
   const bg = isDNF      ? '#616161'
            : isFinished ? '#388E3C'
            : isSelected ? '#F9A825'
            : gender === 'F' ? '#E91E8C'
            : '#1565C0';
-  const symbol = gender === 'F' ? '♀' : '♂';
-  const size = isSelected ? 40 : 32;
-  const glow = isSelected ? `filter="url(#glow)"` : '';
+
+  const symbol   = gender === 'F' ? '♀' : '♂';
+  const sqSize   = isSelected ? 40 : 32;
+  const fontSize = isSelected ? 22 : 17;
+
+  // First name only for the chip
+  const firstName = fullName.split(' ')[0] ?? fullName;
+  // Estimate chip width: ~8px per char + 16px padding
+  const chipW    = Math.max(48, firstName.length * 8 + 16);
+  const chipH    = 20;
+  const gap      = 4;
+  const totalW   = sqSize + gap + chipW;
+  const totalH   = Math.max(sqSize, chipH);
+  const chipY    = (totalH - chipH) / 2;
+  const chipX    = sqSize + gap;
+  const sqY      = (totalH - sqSize) / 2;
+
   return `
-    <svg width="${size}" height="${size}" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="2" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-      <rect x="2" y="2" width="36" height="36" rx="8" ry="8"
-        fill="${bg}" stroke="white" stroke-width="2.5" ${glow}/>
-      <text x="20" y="28" text-anchor="middle"
-        font-family="Arial,sans-serif" font-size="20"
-        font-weight="bold" fill="white">${symbol}</text>
+    <svg width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}"
+      xmlns="http://www.w3.org/2000/svg">
+      ${isSelected ? `
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>` : ''}
+      <!-- Square marker -->
+      <rect x="1" y="${sqY + 1}" width="${sqSize - 2}" height="${sqSize - 2}"
+        rx="7" ry="7" fill="${bg}" stroke="white" stroke-width="2.5"
+        ${isSelected ? 'filter="url(#glow)"' : ''}/>
+      <text x="${sqSize / 2}" y="${sqY + sqSize / 2 + fontSize * 0.35}"
+        text-anchor="middle" font-family="Arial,sans-serif"
+        font-size="${fontSize}" font-weight="bold" fill="white">${symbol}</text>
+      <!-- Name chip -->
+      <rect x="${chipX}" y="${chipY}" width="${chipW}" height="${chipH}"
+        rx="6" ry="6" fill="${bg}" fill-opacity="0.88"
+        stroke="white" stroke-opacity="0.5" stroke-width="1.2"/>
+      <text x="${chipX + chipW / 2}" y="${chipY + chipH / 2 + 5}"
+        text-anchor="middle" font-family="Arial,sans-serif"
+        font-size="11" font-weight="bold" fill="white">${firstName}</text>
     </svg>`;
 }
 
@@ -106,7 +138,6 @@ function interpolateLatLng(coords: ParsedCoord[], km: number): [number, number] 
   return [a.lat + t * (b.lat - a.lat), a.lng + t * (b.lng - a.lng)];
 }
 
-// ── Zoom to interval ───────────────────────────────────────────────────────────
 function kmInterval(zoom: number): number {
   if (zoom < 8)  return 50;
   if (zoom < 10) return 30;
@@ -226,7 +257,7 @@ export default function LiveMap({
               }),
             }).addTo(map);
 
-            // ── CP MARKERS — SVG triangles ───────────────────────────────────
+            // CP MARKERS
             controls.forEach((cp, i) => {
               if (!cp.lat || !cp.lng) return;
               leaflet.marker([cp.lat, cp.lng], {
@@ -239,7 +270,7 @@ export default function LiveMap({
               }).addTo(map).bindPopup(`<b>CP${i+1}: ${cp.name}</b><br/>km ${cp.km}`);
             });
 
-            // ── KM MARKERS ───────────────────────────────────────────────────
+            // KM MARKERS
             buildKmMarkers(leaflet, map, parsed, map.getZoom(), kmLayerRef);
             map.on('zoomend', () => {
               buildKmMarkers(leaflet, map, parsed, map.getZoom(), kmLayerRef);
@@ -276,12 +307,13 @@ export default function LiveMap({
       const isSelected = selectedRiderId === rider.id;
       const isDNF      = rider.status === 'DNF';
       const isFinished = rider.status === 'FINISHED';
-      const size       = isSelected ? 40 : 32;
+      const sqSize     = isSelected ? 40 : 32;
 
       const icon = L.divIcon({
-        html: svgRiderMarker(rider.gender, isDNF, isFinished, isSelected),
+        html: svgRiderMarker(rider.gender, isDNF, isFinished, isSelected, rider.fullName),
         className: '',
-        iconAnchor: [size / 2, size / 2],
+        // Anchor at center of the square (left part of the SVG)
+        iconAnchor: [sqSize / 2, sqSize / 2],
       });
 
       if (riderMarkers.current.has(rider.id)) {
