@@ -118,7 +118,7 @@ export default function BrevetCard({ b, hasCoOrg }: BrevetCardProps) {
               <img
                 src={hasCoOrg ? '/logos/both.png' : b.organizerLogo}
                 alt={b.organizer}
-                className="w-10 h-10 object-contain rounded-full"
+                className="w-14 h-14 object-contain rounded-full"
                 style={{
                   background: 'rgba(255,255,255,0.07)',
                   boxShadow: `0 0 0 1.5px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.4)`,
@@ -149,10 +149,10 @@ export default function BrevetCard({ b, hasCoOrg }: BrevetCardProps) {
           {/* Right: distance + difficulty */}
           <div className="flex flex-col items-end shrink-0 ml-3">
             <span
-              className="font-black text-xl leading-none"
+              className="font-black text-2xl leading-none"
               style={{
                 color: '#06b6d4',
-                textShadow: '0 0 20px rgba(6,182,212,0.6)',
+                textShadow: '0 0 20px rgba(6,182,212,0.9), 0 0 40px rgba(6,182,212,0.5), 0 2px 4px rgba(0,0,0,0.9)',
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
@@ -161,7 +161,10 @@ export default function BrevetCard({ b, hasCoOrg }: BrevetCardProps) {
             </span>
             <span
               className="text-[10px] font-bold mt-0.5 tracking-wide"
-              style={{ color: b.difficultyColor }}
+              style={{
+                color: b.difficultyColor,
+                textShadow: `0 0 12px ${b.difficultyColor}99, 0 1px 3px rgba(0,0,0,0.9)`,
+              }}
             >
               {emoji} {b.difficultyLabel}
             </span>
