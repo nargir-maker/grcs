@@ -375,8 +375,8 @@ export default function LiveMap({
 
   const TILE_STYLES = [
     { id: 'street',  label: '🗺️', title: 'Οδικός',  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                     attribution: '© OpenStreetMap contributors',                  maxZoom: 19 },
-    { id: 'cycling', label: '🚴', title: 'Ποδήλατο', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',      attribution: '© OpenStreetMap · CyclOSM',                     maxZoom: 20 },
-    { id: 'topo',    label: '⛰️', title: 'Τοπογρ.',  url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                       attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)',      maxZoom: 17 },
+    { id: 'cycling', label: '🚴', title: 'Ποδηλατικός', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',      attribution: '© OpenStreetMap · CyclOSM',                     maxZoom: 20 },
+    { id: 'topo',    label: '⛰️', title: 'Τοπογραφικός',   url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                       attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)',      maxZoom: 17 },
   ];
 
   function switchTileLayer(style: typeof TILE_STYLES[0]) {
@@ -393,10 +393,10 @@ export default function LiveMap({
     <>
       <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-      <div className="relative">
+      <div className="relative" style={{ height: mapHeight }}>
         <div
           ref={mapRef}
-          style={{ height: mapHeight, width: '100%' }}
+          style={{ height: '100%', width: '100%' }}
           className="rounded-2xl overflow-hidden border border-white/10"
         />
         {/* ── Tile layer switcher — bottom left ── */}
