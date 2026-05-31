@@ -109,7 +109,6 @@ async function initLeafletMap(
   onTileReady?: (tile: any) => void
 ): Promise<{ map: any; markerRef: { current: any } }> {
   const L = (await import('leaflet')).default;
-  LRef.current = L;
 
   if ((container as any)._leaflet_id) {
     try { (container as any)._leaflet_map?.remove(); } catch {}
@@ -360,9 +359,10 @@ export default function BrevetMap({
       kmLayerRef,
       undefined,
       (tile) => { tileLayerRef.current = tile; }
-    ).then(({ map, markerRef }) => {
+    ).then(async ({ map, markerRef }) => {
       mapInstanceRef.current = map;
       dotMarkerRef.current   = markerRef.current;
+      LRef.current = (await import('leaflet')).default;
     });
     return () => {
       if (mapInstanceRef.current) {
