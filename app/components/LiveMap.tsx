@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 interface Rider {
   id: string;
   fullName: string;
+  registryId?: string;
   status: string;
   lat: number;
   lng: number;
@@ -24,6 +25,7 @@ interface LiveMapProps {
   selectedRiderId: string | null;
   onRiderSelect: (id: string | null) => void;
   mapHeight?: string;
+  riderLabelMode?: 'brevet' | 'friendly';
 }
 
 // ── SVG marker builders ────────────────────────────────────────────────────────
@@ -58,6 +60,8 @@ function svgRiderMarker(
   isFinished: boolean,
   isSelected: boolean,
   fullName: string,
+  registryId: string,
+  labelMode: 'brevet' | 'friendly',
 ): string {
   const bg = isDNF      ? '#616161'
            : isFinished ? '#388E3C'
@@ -69,10 +73,16 @@ function svgRiderMarker(
   const sqSize   = isSelected ? 40 : 32;
   const fontSize = isSelected ? 22 : 17;
 
-  // First name only for the chip
-  const firstName = fullName.split(' ')[0] ?? fullName;
+  // Label: brevet = "1234-Ν. Επώνυμο", friendly = "Όνομα"
+  const parts     = fullName.trim().split(' ');
+  const firstName = parts[0] ?? fullName;
+  const lastName  = parts.slice(1).join(' ');
+  const firstInitial = firstName.length > 0 ? firstName[0] + '.' : '';
+  const chipLabel = labelMode === 'brevet' && registryId && registryId !== '-'
+    ? `${registryId}-${firstInitial} ${lastName}`.trim()
+    : firstName;
   // Estimate chip width: ~8px per char + 16px padding
-  const chipW    = Math.max(48, firstName.length * 8 + 16);
+  const chipW    = Math.max(48, chipLabel.length * 7.5 + 16);
   const chipH    = 20;
   const gap      = 4;
   const totalW   = sqSize + gap + chipW;
@@ -104,7 +114,7 @@ function svgRiderMarker(
         stroke="white" stroke-opacity="0.5" stroke-width="1.2"/>
       <text x="${chipX + chipW / 2}" y="${chipY + chipH / 2 + 5}"
         text-anchor="middle" font-family="Arial,sans-serif"
-        font-size="11" font-weight="bold" fill="white">${firstName}</text>
+        font-size="11" font-weight="bold" fill="white">${chipLabel}</text>
     </svg>`;
 }
 
@@ -175,6 +185,7 @@ function buildKmMarkers(
 export default function LiveMap({
   gpxUrl, controls, riders, selectedRiderId, onRiderSelect,
   mapHeight = '500px',
+  riderLabelMode = 'brevet',
 }: LiveMapProps) {
   const mapRef       = useRef<HTMLDivElement>(null);
   const mapInstance  = useRef<any>(null);
@@ -310,7 +321,7 @@ export default function LiveMap({
       const sqSize     = isSelected ? 40 : 32;
 
       const icon = L.divIcon({
-        html: svgRiderMarker(rider.gender, isDNF, isFinished, isSelected, rider.fullName),
+        html: svgRiderMarker(rider.gender, isDNF, isFinished, isSelected, rider.fullName, rider.registryId ?? '', riderLabelMode),
         className: '',
         // Anchor at center of the square (left part of the SVG)
         iconAnchor: [sqSize / 2, sqSize / 2],

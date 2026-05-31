@@ -10,7 +10,7 @@ import { ref, onValue, off } from 'firebase/database';
 import { rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
 
-const LiveMap = dynamic(() => import('../../components/LiveMap'), {
+const LiveMap = dynamic(() => import('../../../components/LiveMap'), {
   ssr: false,
   loading: () => (
     <div style={{ height: '82vh' }} className="bg-white/5 rounded-2xl
@@ -159,6 +159,7 @@ export default function FriendlyRidePage() {
               selectedRiderId={selectedRider}
               onRiderSelect={setSelectedRider}
               mapHeight="100%"
+              riderLabelMode="friendly"
             />
           </div>
 
