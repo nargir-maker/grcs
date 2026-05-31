@@ -205,7 +205,7 @@ async function initLeafletMap(
 
 // ── Fullscreen modal ───────────────────────────────────────────────────────────
 function FullscreenMap({
-  gpxUrl, controls, onClose, climbProfile, storedAscent,
+  gpxUrl, controls, onClose, climbProfile, storedAscent, initialStyle,
 }: {
   gpxUrl: string;
   controls: { km: number; name: string; lat: number; lng: number }[];
