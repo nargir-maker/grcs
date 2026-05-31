@@ -187,12 +187,14 @@ export default function LiveMap({
   mapHeight = '500px',
   riderLabelMode = 'brevet',
 }: LiveMapProps) {
-  const mapRef       = useRef<HTMLDivElement>(null);
-  const mapInstance  = useRef<any>(null);
-  const riderMarkers = useRef<Map<string, any>>(new Map());
-  const kmLayerRef   = useRef<any[]>([]);
-  const parsedCoords = useRef<ParsedCoord[]>([]);
-  const [L, setL]    = useState<any>(null);
+  const mapRef          = useRef<HTMLDivElement>(null);
+  const mapInstance     = useRef<any>(null);
+  const riderMarkers    = useRef<Map<string, any>>(new Map());
+  const kmLayerRef      = useRef<any[]>([]);
+  const parsedCoords    = useRef<ParsedCoord[]>([]);
+  const tileLayerRef    = useRef<any>(null);
+  const [L, setL]       = useState<any>(null);
+  const [activeStyle, setActiveStyle] = useState<string>('cycling');
 
   // Init map once
   useEffect(() => {
@@ -215,10 +217,11 @@ export default function LiveMap({
         scrollWheelZoom: true,
       });
 
-      leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 18,
-      }).addTo(map);
+      const tile = leaflet.tileLayer(
+        'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+        { attribution: '© OpenStreetMap · CyclOSM', maxZoom: 20 }
+      ).addTo(map);
+      tileLayerRef.current = tile;
 
       mapInstance.current = map;
 
@@ -370,15 +373,54 @@ export default function LiveMap({
 
   }, [riders, selectedRiderId, L]);
 
+  const TILE_STYLES = [
+    { id: 'street',  label: '🗺️', title: 'Οδικός',  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                     attribution: '© OpenStreetMap contributors',                  maxZoom: 19 },
+    { id: 'cycling', label: '🚴', title: 'Ποδήλατο', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',      attribution: '© OpenStreetMap · CyclOSM',                     maxZoom: 20 },
+    { id: 'topo',    label: '⛰️', title: 'Τοπογρ.',  url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                       attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)',      maxZoom: 17 },
+  ];
+
+  function switchTileLayer(style: typeof TILE_STYLES[0]) {
+    if (!mapInstance.current || !L || !tileLayerRef.current) return;
+    mapInstance.current.removeLayer(tileLayerRef.current);
+    tileLayerRef.current = L.tileLayer(style.url, {
+      attribution: style.attribution,
+      maxZoom: style.maxZoom,
+    }).addTo(mapInstance.current);
+    setActiveStyle(style.id);
+  }
+
   return (
     <>
       <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-      <div
-        ref={mapRef}
-        style={{ height: mapHeight, width: '100%' }}
-        className="rounded-2xl overflow-hidden border border-white/10"
-      />
+      <div className="relative">
+        <div
+          ref={mapRef}
+          style={{ height: mapHeight, width: '100%' }}
+          className="rounded-2xl overflow-hidden border border-white/10"
+        />
+        {/* ── Tile layer switcher — bottom left ── */}
+        <div className="absolute bottom-4 left-4 z-[1000] flex gap-1.5">
+          {TILE_STYLES.map(style => (
+            <button
+              key={style.id}
+              onClick={() => switchTileLayer(style)}
+              title={style.title}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg
+                text-xs font-bold transition-all backdrop-blur-md border"
+              style={{
+                background:   activeStyle === style.id ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.80)',
+                borderColor:  activeStyle === style.id ? 'rgba(6,182,212,0.8)'  : 'rgba(255,255,255,0.15)',
+                color:        activeStyle === style.id ? '#000'                  : 'rgba(255,255,255,0.7)',
+                boxShadow:    activeStyle === style.id ? '0 0 12px rgba(6,182,212,0.4)' : 'none',
+              }}
+            >
+              <span>{style.label}</span>
+              <span className="hidden sm:inline ml-0.5">{style.title}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       <p className="text-white/20 text-xs text-right mt-1">
         © OpenStreetMap · Ανανέωση σε πραγματικό χρόνο
       </p>

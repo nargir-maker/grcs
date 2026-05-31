@@ -124,8 +124,8 @@ async function initLeafletMap(
 
   const map = L.map(container, { zoomControl: true, scrollWheelZoom });
   const tile = L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    { attribution: '© OpenStreetMap © CARTO', maxZoom: 19 }
+    'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+    { attribution: '© OpenStreetMap · CyclOSM', maxZoom: 20 }
   ).addTo(map);
   if (onTileReady) onTileReady(tile);
 
@@ -212,6 +212,7 @@ function FullscreenMap({
   onClose: () => void;
   climbProfile?: any[];
   storedAscent?: number;
+  initialStyle?: string;
 }) {
   const modalMapRef         = useRef<HTMLDivElement>(null);
   const modalMapInstanceRef = useRef<any>(null);
@@ -220,6 +221,15 @@ function FullscreenMap({
   const [modalCoords, setModalCoords]         = useState<ParsedCoord[]>([]);
   const [modalScrubberKm, setModalScrubberKm] = useState<number | null>(null);
   const [showChart, setShowChart]             = useState(true);
+  const [fsActiveStyle, setFsActiveStyle]     = useState(initialStyle ?? 'cycling');
+  const fsTileLayerRef                        = useRef<any>(null);
+  const fsLRef                                = useRef<any>(null);
+
+  const FS_TILE_STYLES = [
+    { id: 'street',  label: '🗺️', title: 'Οδικός',   url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                     attribution: '© OpenStreetMap contributors',                  maxZoom: 19 },
+    { id: 'cycling', label: '🚴', title: 'Ποδήλατο', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',      attribution: '© OpenStreetMap · CyclOSM',                     maxZoom: 20 },
+    { id: 'topo',    label: '⛰️', title: 'Τοπογρ.',   url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                       attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)',      maxZoom: 17 },
+  ];
 
   useEffect(() => {
     if (!modalMapRef.current) return;
@@ -227,11 +237,14 @@ function FullscreenMap({
     initLeafletMap(
       modalMapRef.current, gpxUrl, controls, true,
       coords => { if (!destroyed) setModalCoords(coords); },
-      kmLayerRef
-    ).then(({ map, markerRef }) => {
+      kmLayerRef,
+      undefined,
+      (tile) => { fsTileLayerRef.current = tile; }
+    ).then(async ({ map, markerRef }) => {
       if (destroyed) { map.remove(); return; }
       modalMapInstanceRef.current = map;
       modalDotMarkerRef.current   = markerRef.current;
+      fsLRef.current = (await import('leaflet')).default;
     });
     return () => {
       destroyed = true;
@@ -298,8 +311,36 @@ function FullscreenMap({
         </button>
 
         {/* MAP */}
-
         <div ref={modalMapRef} style={{ position: 'absolute', inset: 0 }} />
+
+        {/* ── Tile layer switcher — fullscreen ── */}
+        <div className="absolute bottom-4 left-4 z-[1001] flex gap-1.5">
+          {FS_TILE_STYLES.map(style => (
+            <button
+              key={style.id}
+              title={style.title}
+              onClick={() => {
+                if (!modalMapInstanceRef.current || !fsTileLayerRef.current || !fsLRef.current) return;
+                modalMapInstanceRef.current.removeLayer(fsTileLayerRef.current);
+                fsTileLayerRef.current = fsLRef.current.tileLayer(style.url, {
+                  attribution: style.attribution, maxZoom: style.maxZoom,
+                }).addTo(modalMapInstanceRef.current);
+                setFsActiveStyle(style.id);
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold
+                transition-all backdrop-blur-md border"
+              style={{
+                background:  fsActiveStyle === style.id ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.80)',
+                borderColor: fsActiveStyle === style.id ? 'rgba(6,182,212,0.8)'  : 'rgba(255,255,255,0.15)',
+                color:       fsActiveStyle === style.id ? '#000'                  : 'rgba(255,255,255,0.7)',
+                boxShadow:   fsActiveStyle === style.id ? '0 0 12px rgba(6,182,212,0.4)' : 'none',
+              }}
+            >
+              <span>{style.label}</span>
+              <span>{style.title}</span>
+            </button>
+          ))}
+        </div>
 
         {/* ── ELEVATION PANEL — shown/hidden by toggle ── */}
         {/* ── TOGGLE CHART BUTTON — always visible bottom-right ── */}
@@ -346,9 +387,15 @@ export default function BrevetMap({
   const LRef            = useRef<any>(null);
   const [parsedCoords, setParsedCoords] = useState<ParsedCoord[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [activeStyle, setActiveStyle]   = useState<string>('dark');
+  const [activeStyle, setActiveStyle]   = useState<string>('cycling');
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(f => !f), []);
+
+  const TILE_STYLES = [
+    { id: 'street',  label: '🗺️', title: 'Οδικός',   url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                     attribution: '© OpenStreetMap contributors',                  maxZoom: 19 },
+    { id: 'cycling', label: '🚴', title: 'Ποδήλατο', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',      attribution: '© OpenStreetMap · CyclOSM',                     maxZoom: 20 },
+    { id: 'topo',    label: '⛰️', title: 'Τοπογρ.',   url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                       attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)',      maxZoom: 17 },
+  ];
 
   useEffect(() => {
     if (!mapRef.current || initializedRef.current) return;
@@ -393,6 +440,7 @@ export default function BrevetMap({
           gpxUrl={gpxUrl}
           controls={controls}
           onClose={toggleFullscreen}
+          initialStyle={activeStyle}
         />
       )}
 
@@ -404,44 +452,33 @@ export default function BrevetMap({
         />
 
         {/* ── Tile layer switcher ── */}
-        {[
-          { id: 'dark',    label: '🌑', title: 'Dark',    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',     attribution: '© OpenStreetMap © CARTO',                 maxZoom: 19 },
-          { id: 'street',  label: '🗺️', title: 'Street',  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                attribution: '© OpenStreetMap contributors',             maxZoom: 19 },
-          { id: 'cycling', label: '🚴', title: 'Cycling', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', attribution: '© OpenStreetMap · CyclOSM',                maxZoom: 20 },
-          { id: 'topo',    label: '⛰️', title: 'Topo',    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                  attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)', maxZoom: 17 },
-        ].length > 0 && (
-          <div className="absolute bottom-10 left-3 z-[1000] flex gap-1.5">
-            {[
-              { id: 'dark',    label: '🌑', title: 'Dark',    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',     attribution: '© OpenStreetMap © CARTO',                 maxZoom: 19 },
-              { id: 'street',  label: '🗺️', title: 'Street',  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                attribution: '© OpenStreetMap contributors',             maxZoom: 19 },
-              { id: 'cycling', label: '🚴', title: 'Cycling', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', attribution: '© OpenStreetMap · CyclOSM',                maxZoom: 20 },
-              { id: 'topo',    label: '⛰️', title: 'Topo',    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                  attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)', maxZoom: 17 },
-            ].map(style => (
-              <button
-                key={style.id}
-                title={style.title}
-                onClick={() => {
-                  if (!mapInstanceRef.current || !tileLayerRef.current) return;
-                  mapInstanceRef.current.removeLayer(tileLayerRef.current);
-                  if (!LRef.current) return;
-                  tileLayerRef.current = LRef.current.tileLayer(style.url, {
-                    attribution: style.attribution, maxZoom: style.maxZoom,
-                  }).addTo(mapInstanceRef.current);
-                  setActiveStyle(style.id);
-                }}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold
-                  transition-all backdrop-blur-md border"
-                style={{
-                  background:  activeStyle === style.id ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.80)',
-                  borderColor: activeStyle === style.id ? 'rgba(6,182,212,0.8)'  : 'rgba(255,255,255,0.15)',
-                  color:       activeStyle === style.id ? '#000'                  : 'rgba(255,255,255,0.7)',
-                }}
-              >
-                {style.label}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="absolute bottom-10 left-3 z-[1000] flex gap-1.5">
+          {TILE_STYLES.map(style => (
+            <button
+              key={style.id}
+              title={style.title}
+              onClick={() => {
+                if (!mapInstanceRef.current || !tileLayerRef.current || !LRef.current) return;
+                mapInstanceRef.current.removeLayer(tileLayerRef.current);
+                tileLayerRef.current = LRef.current.tileLayer(style.url, {
+                  attribution: style.attribution, maxZoom: style.maxZoom,
+                }).addTo(mapInstanceRef.current);
+                setActiveStyle(style.id);
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold
+                transition-all backdrop-blur-md border"
+              style={{
+                background:  activeStyle === style.id ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.80)',
+                borderColor: activeStyle === style.id ? 'rgba(6,182,212,0.8)'  : 'rgba(255,255,255,0.15)',
+                color:       activeStyle === style.id ? '#000'                  : 'rgba(255,255,255,0.7)',
+                boxShadow:   activeStyle === style.id ? '0 0 12px rgba(6,182,212,0.4)' : 'none',
+              }}
+            >
+              <span>{style.label}</span>
+              <span>{style.title}</span>
+            </button>
+          ))}
+        </div>
 
         <button
           onClick={toggleFullscreen}
