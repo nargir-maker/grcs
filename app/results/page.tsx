@@ -263,18 +263,20 @@ export default function ResultsPage() {
         const lastName  = raw.surname_el ?? '';
         if (!firstName) return;
 
-        // Parse stats JSON
-        let stats: any = null;
+        // Parse stats.history_raw (JSON string)
+        let history: Record<string, any> = {};
         try {
-          const statsRaw = raw.stats;
-          if (typeof statsRaw === 'string') stats = JSON.parse(statsRaw);
-          else if (typeof statsRaw === 'object') stats = statsRaw;
+          const statsObj = raw.stats ?? {};
+          if (statsObj.history_raw) {
+            const decoded = JSON.parse(statsObj.history_raw);
+            history = decoded.history ?? decoded;
+          }
         } catch { return; }
 
-        if (!stats?.history) return;
+        if (!Object.keys(history).length) return;
 
         // Iterate years → events
-        Object.entries(stats.history).forEach(([year, yearData]: [string, any]) => {
+        Object.entries(history).forEach(([year, yearData]: [string, any]) => {
           const events: RawEvent[] = yearData.events ?? [];
           events.forEach(evt => {
             const eid = evt.eid || `${year}_${evt.n}_${evt.d}`;

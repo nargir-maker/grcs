@@ -64,6 +64,30 @@ interface MemberProfile {
   history: Record<string, YearData>;
 }
 
+// ── Date sort helper ───────────────────────────────────────────────────────────
+function getFullDate(dt: string): number {
+  const yearMatch = dt.match(/\d{4}/);
+  const year = yearMatch ? parseInt(yearMatch[0]) : 0;
+
+  const months: Record<string, number> = {
+    'Ιαν': 1, 'Φεβ': 2, 'Μαρ': 3, 'Απρ': 4,
+    'Μαΐ': 5, 'Μαϊ': 5, 'Μάϊ': 5, 'Μάι': 5, 'Μαι': 5,
+    'Ιουν': 6, 'Ιουλ': 7, 'Αυγ': 8,
+    'Σεπ': 9, 'Οκτ': 10, 'Νοε': 11, 'Δεκ': 12,
+  };
+  let month = 0;
+  for (const [key, val] of Object.entries(months)) {
+    if (dt.includes(key)) { month = val; break; }
+  }
+
+  const dayMatches = [...dt.matchAll(/(?<!\d)(\d{1,2})(?!\d)/g)];
+  const day = dayMatches
+    .map(m => parseInt(m[0]))
+    .find(v => v >= 1 && v <= 31) ?? 0;
+
+  return year * 10000 + month * 100 + day;
+}
+
 // ── Parse Firestore member document ───────────────────────────────────────────
 function parseMember(id: string, data: any): MemberProfile {
   const regLepote = data.reg_lepote ?? {};
@@ -77,22 +101,24 @@ function parseMember(id: string, data: any): MemberProfile {
       const decoded = JSON.parse(stats.history_raw);
       const raw = decoded.history ?? decoded;
       Object.entries(raw).forEach(([year, val]: [string, any]) => {
-        history[year] = {
-          km:      parseFloat(val.km ?? '0') || 0,
-          brevets: (val.events ?? []).length,
-          events:  (val.events ?? []).map((e: any) => ({
-            n:   e.n  ?? '',
-            d:   parseFloat(e.d  ?? '0') || 0,
-            t:   e.t  ?? '',
-            as:  parseFloat(e.as ?? '0') || 0,
-            dt:  e.dt ?? '',
-            og:  e.og ?? '',
-            acp: e.acp ?? '',
-            har: e.har ?? '',
-            mt:  e.mt ?? '',
-            rt:  e.rt ?? '',
-          })),
-        };
+const events = (val.events ?? []).map((e: any) => ({
+  n:   e.n  ?? '',
+  d:   parseFloat(e.d  ?? '0') || 0,
+  t:   e.t  ?? '',
+  as:  parseFloat(e.as ?? '0') || 0,
+  dt:  e.dt ?? '',
+  og:  e.og ?? '',
+  acp: e.acp ?? '',
+  har: e.har ?? '',
+  mt:  e.mt ?? '',
+  rt:  e.rt ?? '',
+}));
+
+history[year] = {
+  km:      parseFloat(val.km ?? '0') || 0,
+  brevets: events.length,
+  events,
+};
       });
     }
   } catch { history = {}; }
