@@ -293,21 +293,26 @@ export default function BrevetsPage() {
                         key={i}
                         href={`/brevets/${b.id}`}
                         className="brevet-halo flex-shrink-0 w-52 h-32 rounded-2xl
-                          overflow-hidden relative transition-all no-underline block"
-                        style={hasImage ? {
-                          backgroundImage: `url(${b.imageUrl})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                        } : {
-                          backgroundColor: 'rgba(255,255,255,0.04)',
-                        }}
+                          relative transition-all no-underline block"
                       >
-                        {/* Gradient overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t
-                          from-[#0A1628] via-[#0A1628]/60 to-transparent" />
+                        {/* Inner div clips the background image to rounded corners */}
+                        <div
+                          className="absolute inset-0 rounded-2xl overflow-hidden"
+                          style={hasImage ? {
+                            backgroundImage: `url(${b.imageUrl})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                          } : {
+                            backgroundColor: 'rgba(255,255,255,0.04)',
+                          }}
+                        >
+                          {/* Gradient overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t
+                            from-[#0A1628] via-[#0A1628]/60 to-transparent" />
+                        </div>
 
                         {/* Distance badge */}
-                        <div className="absolute top-2 right-2">
+                        <div className="absolute top-2 right-2 z-10">
                           <span className="bg-cyan-500/80 text-black text-xs
                             font-black px-2 py-0.5 rounded-full">
                             {b.distance}km
@@ -315,7 +320,7 @@ export default function BrevetsPage() {
                         </div>
 
                         {/* Organizer logo */}
-                        <div className="absolute top-2 left-2">
+                        <div className="absolute top-2 left-2 z-10">
                           <img
                             src={b.organizerLogo}
                             alt={b.organizer}
@@ -328,7 +333,7 @@ export default function BrevetsPage() {
                         </div>
 
                         {/* Content */}
-                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
                           <div className="text-white font-bold text-sm
                             leading-tight truncate drop-shadow-md">
                             {b.title}
