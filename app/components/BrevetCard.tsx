@@ -49,24 +49,7 @@ export default function BrevetCard({ b, hasCoOrg }: BrevetCardProps) {
       className="group block no-underline"
       style={{ position: 'relative' }}
     >
-      {/* ── Animated gradient border ───────────────────────────────────────── */}
-      <div
-        className="absolute inset-0 rounded-2xl z-0 transition-opacity duration-500
-          opacity-0 group-hover:opacity-100"
-        style={{
-          padding: 1.5,
-          background: `conic-gradient(
-            from var(--angle, 0deg),
-            ${b.difficultyColor}00 0deg,
-            ${b.difficultyColor}ff 90deg,
-            #06b6d4ff 180deg,
-            ${b.difficultyColor}ff 270deg,
-            ${b.difficultyColor}00 360deg
-          )`,
-          borderRadius: 16,
-          animation: 'spin 4s linear infinite',
-        }}
-      />
+
 
       {/* ── Static border (always visible) ────────────────────────────────── */}
       <div
@@ -242,16 +225,7 @@ export default function BrevetCard({ b, hasCoOrg }: BrevetCardProps) {
         />
       </div>
 
-      <style>{`
-        @property --angle {
-          syntax: '<angle>';
-          initial-value: 0deg;
-          inherits: false;
-        }
-        @keyframes spin {
-          to { --angle: 360deg; }
-        }
-      `}</style>
+
     </a>
   );
 }

@@ -17,23 +17,16 @@ const scrollStyle = `
   .brevet-scroll:hover {
     animation-play-state: paused;
   }
-  @keyframes haloGlow {
-    0%, 100% {
-      box-shadow: 0 0 8px 2px rgba(6,182,212,0.4),
-                  0 0 24px 4px rgba(6,182,212,0.15),
-                  inset 0 0 8px rgba(6,182,212,0.04);
-      border-color: rgba(6,182,212,0.5);
-    }
-    50% {
-      box-shadow: 0 0 18px 5px rgba(6,182,212,0.7),
-                  0 0 48px 10px rgba(6,182,212,0.28),
-                  inset 0 0 14px rgba(6,182,212,0.08);
-      border-color: rgba(6,182,212,0.95);
-    }
+  @keyframes haloFade {
+    0%, 100% { opacity: 0.4; }
+    50%       { opacity: 1; }
   }
   .brevet-halo {
-    border: 1.5px solid rgba(6,182,212,0.5);
-    animation: haloGlow 2.8s ease-in-out infinite;
+    border: 1.5px solid rgba(6,182,212,0.6);
+  }
+  .brevet-halo-glow {
+    animation: haloFade 2.8s ease-in-out infinite;
+    will-change: opacity;
   }
 `;
 
@@ -265,7 +258,7 @@ export default function BrevetsPage() {
           const doubled   = [...monthBrevets, ...monthBrevets];
 
           return (
-            <div className="mb-10 -mx-6 overflow-hidden py-12">
+            <div className="mb-10 -mx-6 overflow-hidden py-14">
               <style>{scrollStyle}</style>
 
               {/* Title */}
@@ -279,7 +272,7 @@ export default function BrevetsPage() {
 
               {/* Scrolling cards */}
               <div className="w-full overflow-hidden">
-                <div className="flex brevet-scroll gap-4 w-max px-6 py-9">
+                <div className="flex brevet-scroll gap-4 w-max px-6 py-11">
                   {doubled.map((b, i) => {
                     const hasImage = b.imageUrl && b.imageUrl.length > 0;
                     const dateStr  = b.date
@@ -295,6 +288,13 @@ export default function BrevetsPage() {
                         className="brevet-halo flex-shrink-0 w-52 h-32 rounded-2xl
                           relative transition-all no-underline block"
                       >
+                        {/* GPU-composited glow layer — animates opacity only */}
+                        <div
+                          className="brevet-halo-glow absolute -inset-[3px] rounded-2xl pointer-events-none"
+                          style={{
+                            boxShadow: '0 0 18px 5px rgba(6,182,212,0.6), 0 0 48px 10px rgba(6,182,212,0.2)',
+                          }}
+                        />
                         {/* Inner div clips the background image to rounded corners */}
                         <div
                           className="absolute inset-0 rounded-2xl overflow-hidden"
