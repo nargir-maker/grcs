@@ -190,24 +190,22 @@ export default function BrevetCard({ b, hasCoOrg }: BrevetCardProps) {
                   <span>{b.ascent.toLocaleString()}m+</span>
                 </span>
               )}
-              {b.gpxUrl && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    window.open(b.gpxUrl, '_blank');
-                  }}
-                  className="text-xs font-bold px-2.5 py-1 rounded-lg transition-all
-                    hover:bg-cyan-500/20"
-                  style={{
-                    color: '#06b6d4',
-                    border: '1px solid rgba(6,182,212,0.3)',
-                    background: 'rgba(6,182,212,0.08)',
-                  }}
-                >
-                  GPX ↓
-                </button>
-              )}
+{b.gpxUrl && (
+  <a
+    href={b.gpxUrl}
+    download
+    onClick={(e) => e.stopPropagation()}
+    className="text-xs font-bold px-2.5 py-1 rounded-lg transition-all
+      hover:bg-cyan-500/20 no-underline"
+    style={{
+      color: '#06b6d4',
+      border: '1px solid rgba(6,182,212,0.3)',
+      background: 'rgba(6,182,212,0.08)',
+    }}
+  >
+    GPX ↓
+  </a>
+)}
             </div>
           </div>
         </div>
