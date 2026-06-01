@@ -392,9 +392,9 @@ export default function BrevetMap({
   const toggleFullscreen = useCallback(() => setIsFullscreen(f => !f), []);
 
   const TILE_STYLES = [
-    { id: 'street',  label: '🗺️', title: 'Οδικός',   url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                     attribution: '© OpenStreetMap contributors',                  maxZoom: 19 },
-    { id: 'cycling', label: '🚴', title: 'Ποδήλατο', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',      attribution: '© OpenStreetMap · CyclOSM',                     maxZoom: 20 },
-    { id: 'topo',    label: '⛰️', title: 'Τοπογρ.',   url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                       attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)',      maxZoom: 17 },
+    { id: 'street',  label: '🗺️', title: 'Τυπικός',   url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                     attribution: '© OpenStreetMap contributors',                  maxZoom: 19 },
+    { id: 'cycling', label: '🚴', title: 'Ποδηλατικός', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',      attribution: '© OpenStreetMap · CyclOSM',                     maxZoom: 20 },
+    { id: 'topo',    label: '⛰️', title: 'Τοπογραφικός',   url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                       attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)',      maxZoom: 17 },
   ];
 
   useEffect(() => {

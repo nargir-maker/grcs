@@ -459,11 +459,11 @@ export default function ElevationChart({
               <span className="text-white/70 text-xs font-semibold">Μεγέθυνση</span>
               <span className="text-white/50 text-xs">5×</span>
               <input
-                type="range" min={5} max={10} step={1} value={pxPerKm}
+                type="range" min={5} max={20} step={1} value={pxPerKm}
                 onChange={e => { setPxPerKm(Number(e.target.value)); onScrub(null); }}
                 className="w-24 accent-cyan-500"
               />
-              <span className="text-white/50 text-xs">10×</span>
+              <span className="text-white/50 text-xs">20×</span>
               <span className="text-cyan-400 text-xs font-bold">{pxPerKm}px/km</span>
             </div>
           )}
