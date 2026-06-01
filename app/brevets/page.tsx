@@ -17,6 +17,24 @@ const scrollStyle = `
   .brevet-scroll:hover {
     animation-play-state: paused;
   }
+  @keyframes haloGlow {
+    0%, 100% {
+      box-shadow: 0 0 8px 2px rgba(6,182,212,0.4),
+                  0 0 24px 4px rgba(6,182,212,0.15),
+                  inset 0 0 8px rgba(6,182,212,0.04);
+      border-color: rgba(6,182,212,0.5);
+    }
+    50% {
+      box-shadow: 0 0 18px 5px rgba(6,182,212,0.7),
+                  0 0 48px 10px rgba(6,182,212,0.28),
+                  inset 0 0 14px rgba(6,182,212,0.08);
+      border-color: rgba(6,182,212,0.95);
+    }
+  }
+  .brevet-halo {
+    border: 1.5px solid rgba(6,182,212,0.5);
+    animation: haloGlow 2.8s ease-in-out infinite;
+  }
 `;
 
 // ── Module-level cache ─────────────────────────────────────────────
@@ -40,7 +58,7 @@ interface Brevet {
   certification: string;
   type: string;
   gpxUrl: string;
-  imageUrl: string;          // ← photo for card background
+  imageUrl: string;
   difficultyLabel: string;
   difficultyColor: string;
 }
@@ -86,7 +104,6 @@ function deriveOrganizers(data: Brevet[]): OrganizerOption[] {
 }
 
 export default function BrevetsPage() {
-  // ── ALL STATE AT THE TOP ───────────────────────────
   const [brevets, setBrevets] = useState<Brevet[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<number | null>(null);
@@ -99,12 +116,9 @@ export default function BrevetsPage() {
     return new URLSearchParams(window.location.search).get('organizer');
   });
   const [organizers, setOrganizers] = useState<OrganizerOption[]>([]);
-
-  // ── ORGANIZER VIEW STATE ───────────────────────────
   const [isOrganizerView, setIsOrganizerView] = useState(false);
   const [myOrganizerClubId, setMyOrganizerClubId] = useState<string | null>(null);
 
-  // ── DETECT ORGANIZER VIEW ON MOUNT ────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -115,7 +129,6 @@ export default function BrevetsPage() {
     }
   }, []);
 
-  // ── FETCH BREVETS ──────────────────────────────────
   useEffect(() => {
     async function fetchAll() {
       try {
@@ -130,20 +143,16 @@ export default function BrevetsPage() {
           const clubsSnapshot = await getDocs(collection(db, 'clubs'));
           clubsSnapshot.forEach((doc) => {
             const d = doc.data();
-            cachedClubs[doc.id] =
-              d.CLUB_NAME_SHORT_EN || d.CLUB_NAME_SHORT_GR || doc.id;
+            cachedClubs[doc.id] = d.CLUB_NAME_SHORT_EN || d.CLUB_NAME_SHORT_GR || doc.id;
             cachedLogos[doc.id] = `/logos/${doc.id}.png`;
           });
         }
 
         const currentYear = new Date().getFullYear();
-        const startDate = `${currentYear}-01-01`;
-        const endDate   = `${currentYear}-12-31`;
-
         const q = query(
           collection(db, 'all_brevets'),
-          where('info.date', '>=', startDate),
-          where('info.date', '<=', endDate)
+          where('info.date', '>=', `${currentYear}-01-01`),
+          where('info.date', '<=', `${currentYear}-12-31`)
         );
 
         const snapshot = await getDocs(q);
@@ -153,7 +162,7 @@ export default function BrevetsPage() {
           const d = doc.data();
           const info  = d.info  || {};
           const route = d.route || {};
-          const extra = d.extra || {};   // ← fetch extra for imageUrl
+          const extra = d.extra || {};
 
           const km     = parseInt(info.distance?.toString()  ?? '0') || 0;
           const ascent = parseInt(route.ascent?.toString()   ?? '0') || 0;
@@ -185,7 +194,7 @@ export default function BrevetsPage() {
             certification:   info.certification?.toString() ?? '',
             type:            info.type?.toString() ?? 'BRM',
             gpxUrl:          route.gpxUrl?.toString() ?? '',
-            imageUrl:        extra.imageUrl?.toString() ?? '',   // ← photo
+            imageUrl:        extra.imageUrl?.toString() ?? '',
             difficultyLabel: label,
             difficultyColor: color,
           });
@@ -208,33 +217,25 @@ export default function BrevetsPage() {
         setLoading(false);
       }
     }
-
     fetchAll();
   }, []);
 
-  // ── FILTER LOGIC ───────────────────────────────────
   const filtered = brevets.filter((b) => {
     const matchDist      = filter === null || b.distance === filter;
-    const matchYear      = yearFilter === null ||
-      new Date(b.date).getFullYear() === yearFilter;
-    const matchMonth     = monthFilter === null ||
-      new Date(b.date).getMonth() + 1 === monthFilter;
-    const matchDiff      = difficultyFilter === null ||
-      b.difficultyLabel === difficultyFilter;
-    const matchOrganizer = organizerFilter === null ||
-      b.organizerId === organizerFilter;
+    const matchYear      = yearFilter === null || new Date(b.date).getFullYear() === yearFilter;
+    const matchMonth     = monthFilter === null || new Date(b.date).getMonth() + 1 === monthFilter;
+    const matchDiff      = difficultyFilter === null || b.difficultyLabel === difficultyFilter;
+    const matchOrganizer = organizerFilter === null || b.organizerId === organizerFilter;
     const matchSearch    = search === '' ||
       b.title.toLowerCase().includes(search.toLowerCase()) ||
       b.start.toLowerCase().includes(search.toLowerCase()) ||
       b.organizer.toLowerCase().includes(search.toLowerCase());
-    return matchDist && matchYear && matchMonth && matchDiff &&
-      matchOrganizer && matchSearch;
+    return matchDist && matchYear && matchMonth && matchDiff && matchOrganizer && matchSearch;
   });
 
   const hasCoOrg = (b: Brevet) =>
     b.coOrganizerId && b.coOrganizerId !== '' && b.coOrganizerId !== '0';
 
-  // ✅ PAGE GUARD — after ALL hooks
   const enabled = usePageEnabled('brevets');
   if (enabled === null) return (
     <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
@@ -246,7 +247,8 @@ export default function BrevetsPage() {
   return (
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
       <div className="max-w-5xl mx-auto">
-{/* ── BREVETS ΤΟΥ ΜΗΝΑ SCROLLER ── */}
+
+        {/* ── BREVETS ΤΟΥ ΜΗΝΑ SCROLLER ── */}
         {(() => {
           const now = new Date();
           const thisMonth = now.getMonth();
@@ -290,9 +292,8 @@ export default function BrevetsPage() {
                       <a
                         key={i}
                         href={`/brevets/${b.id}`}
-                        className="flex-shrink-0 w-52 h-32 rounded-2xl overflow-hidden
-                          relative border border-white/10 hover:border-cyan-500/50
-                          transition-all no-underline block"
+                        className="brevet-halo flex-shrink-0 w-52 h-32 rounded-2xl
+                          overflow-hidden relative transition-all no-underline block"
                         style={hasImage ? {
                           backgroundImage: `url(${b.imageUrl})`,
                           backgroundSize: 'cover',
@@ -347,7 +348,6 @@ export default function BrevetsPage() {
         })()}
 
         {/* ── HEADER ── */}
-        {/* ── HEADER ─────────────────────────────────── */}
         <div className="mb-10">
           <h1 className="text-3xl font-bold text-white mb-2">
             📅 Ημερολόγιο Brevet
@@ -357,10 +357,9 @@ export default function BrevetsPage() {
           </p>
         </div>
 
-        {/* ── FILTERS ────────────────────────────────── */}
+        {/* ── FILTERS ── */}
         <div className="flex flex-col gap-4 mb-8">
 
-          {/* Row 1 — Search + Year */}
           <div className="flex flex-col sm:flex-row gap-4">
             <input
               type="text"
@@ -385,7 +384,6 @@ export default function BrevetsPage() {
             </select>
           </div>
 
-          {/* Row 2 — Distance */}
           <div className="flex gap-2 flex-wrap items-center">
             <span className="text-white/30 text-xs w-16">Απόσταση:</span>
             {[null, 200, 300, 400, 600, 1000].map((d) => (
@@ -403,7 +401,6 @@ export default function BrevetsPage() {
             ))}
           </div>
 
-          {/* Row 3 — Difficulty */}
           <div className="flex gap-2 flex-wrap items-center">
             <span className="text-white/30 text-xs w-16">Δυσκολία:</span>
             {[
@@ -422,18 +419,13 @@ export default function BrevetsPage() {
                     ? 'border-transparent text-white'
                     : 'bg-white/5 text-white/60 hover:text-white border-white/10'
                 }`}
-                style={
-                  difficultyFilter === d.label
-                    ? { backgroundColor: d.color ?? '#06b6d4' }
-                    : {}
-                }
+                style={difficultyFilter === d.label ? { backgroundColor: d.color ?? '#06b6d4' } : {}}
               >
                 {d.display}
               </button>
             ))}
           </div>
 
-          {/* Row 4 — Month */}
           <div className="flex gap-2 flex-wrap items-center">
             <span className="text-white/30 text-xs w-16">Μήνας:</span>
             {[
@@ -459,7 +451,6 @@ export default function BrevetsPage() {
             ))}
           </div>
 
-          {/* Row 5 — Organizer / Organizer view toggle */}
           {isOrganizerView ? (
             <div className="flex items-center justify-between
               bg-purple-500/10 border border-purple-400/30 rounded-xl px-4 py-3">
@@ -482,86 +473,61 @@ export default function BrevetsPage() {
                 Δες όλα →
               </button>
             </div>
-) : organizers.length > 1 ? (
-  <div className="flex items-center gap-3">
-    <span className="text-white/30 text-xs w-16 flex-shrink-0">Διοργ.:</span>
-    
-    {/* Scrollable logo strip */}
-    <div className="flex gap-2 overflow-x-auto pb-1"
-  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', cursor: 'grab' }}
-  ref={(el) => {
-    if (!el) return;
-    // Mouse wheel → horizontal scroll
-    el.onwheel = (e) => {
-      if (e.deltaY !== 0) {
-        e.preventDefault();
-        el.scrollLeft += e.deltaY;
-      }
-    };
-    // Click drag → horizontal scroll
-    let isDown = false, startX = 0, scrollLeft = 0;
-    el.onmousedown = (e) => {
-      isDown = true;
-      el.style.cursor = 'grabbing';
-      startX = e.pageX - el.offsetLeft;
-      scrollLeft = el.scrollLeft;
-    };
-    el.onmouseleave = () => { isDown = false; el.style.cursor = 'grab'; };
-    el.onmouseup   = () => { isDown = false; el.style.cursor = 'grab'; };
-    el.onmousemove = (e) => {
-      if (!isDown) return;
-      e.preventDefault();
-      el.scrollLeft = scrollLeft - (e.pageX - el.offsetLeft - startX);
-    };
-  }}
-    >
-      
-      {/* All button */}
-      <button
-        onClick={() => setOrganizerFilter(null)}
-        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold
-          transition-colors border ${
-          organizerFilter === null
-            ? 'bg-cyan-500 text-black border-transparent'
-            : 'bg-white/5 text-white/60 hover:text-white border-white/10'
-        }`}
-      >
-        Όλοι
-      </button>
-
-      {/* Organizer logo buttons — logos only, name on hover */}
-      {organizers.map((org) => {
-        const isSelected = organizerFilter === org.id;
-        return (
-          <button
-            key={org.id}
-            onClick={() => setOrganizerFilter(isSelected ? null : org.id)}
-            title={org.name}
-            className={`flex-shrink-0 w-14 h-14 rounded-full
-              transition-all border-2 overflow-hidden
-              ${isSelected
-                ? 'border-cyan-500 scale-110 shadow-lg shadow-cyan-500/30'
-                : 'border-white/10 hover:border-white/40 hover:scale-105'
-              }`}
-          >
-            <img
-              src={org.logo}
-              alt={org.name}
-              className="w-full h-full object-contain bg-white/5"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/logos/000000.png';
-              }}
-            />
-          </button>
-        );
-      })}
-    </div>
-  </div>
-) : null}
+          ) : organizers.length > 1 ? (
+            <div className="flex items-center gap-3">
+              <span className="text-white/30 text-xs w-16 flex-shrink-0">Διοργ.:</span>
+              <div className="flex gap-2 overflow-x-auto pb-1"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', cursor: 'grab' }}
+                ref={(el) => {
+                  if (!el) return;
+                  el.onwheel = (e) => { if (e.deltaY !== 0) { e.preventDefault(); el.scrollLeft += e.deltaY; } };
+                  let isDown = false, startX = 0, scrollLeft = 0;
+                  el.onmousedown = (e) => { isDown = true; el.style.cursor = 'grabbing'; startX = e.pageX - el.offsetLeft; scrollLeft = el.scrollLeft; };
+                  el.onmouseleave = () => { isDown = false; el.style.cursor = 'grab'; };
+                  el.onmouseup   = () => { isDown = false; el.style.cursor = 'grab'; };
+                  el.onmousemove = (e) => { if (!isDown) return; e.preventDefault(); el.scrollLeft = scrollLeft - (e.pageX - el.offsetLeft - startX); };
+                }}
+              >
+                <button
+                  onClick={() => setOrganizerFilter(null)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold
+                    transition-colors border ${
+                    organizerFilter === null
+                      ? 'bg-cyan-500 text-black border-transparent'
+                      : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                  }`}
+                >
+                  Όλοι
+                </button>
+                {organizers.map((org) => {
+                  const isSelected = organizerFilter === org.id;
+                  return (
+                    <button
+                      key={org.id}
+                      onClick={() => setOrganizerFilter(isSelected ? null : org.id)}
+                      title={org.name}
+                      className={`flex-shrink-0 w-14 h-14 rounded-full transition-all border-2 overflow-hidden ${
+                        isSelected
+                          ? 'border-cyan-500 scale-110 shadow-lg shadow-cyan-500/30'
+                          : 'border-white/10 hover:border-white/40 hover:scale-105'
+                      }`}
+                    >
+                      <img
+                        src={org.logo}
+                        alt={org.name}
+                        className="w-full h-full object-contain bg-white/5"
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
 
         </div>
 
-        {/* ── CONTENT ────────────────────────────────── */}
+        {/* ── CONTENT ── */}
         {loading ? (
           <div className="flex items-center justify-center py-24">
             <div className="text-center">
@@ -576,20 +542,12 @@ export default function BrevetsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {filtered.map((b) => {
-              const isCoOrg = hasCoOrg(b);
-              const hasImage = b.imageUrl && b.imageUrl.length > 0;
-
-              // ── put here <a ────────────────────────────────────────────────
-              return (
-<BrevetCard key={b.id} b={b} hasCoOrg={!!hasCoOrg(b)} />
-                // ── end <a ─────────────────────────────────────────────────
-              );
-            })}
+            {filtered.map((b) => (
+              <BrevetCard key={b.id} b={b} hasCoOrg={!!hasCoOrg(b)} />
+            ))}
           </div>
         )}
 
-        {/* Count */}
         {!loading && (
           <p className="text-white/30 text-xs text-center mt-8">
             {filtered.length} brevets
