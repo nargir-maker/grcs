@@ -265,7 +265,7 @@ export default function BrevetsPage() {
           const doubled   = [...monthBrevets, ...monthBrevets];
 
           return (
-            <div className="mb-10 -mx-6 overflow-hidden">
+            <div className="mb-10 -mx-6 overflow-hidden py-4">
               <style>{scrollStyle}</style>
 
               {/* Title */}
@@ -279,7 +279,7 @@ export default function BrevetsPage() {
 
               {/* Scrolling cards */}
               <div className="w-full overflow-hidden">
-                <div className="flex brevet-scroll gap-4 w-max px-6">
+                <div className="flex brevet-scroll gap-4 w-max px-6 py-3">
                   {doubled.map((b, i) => {
                     const hasImage = b.imageUrl && b.imageUrl.length > 0;
                     const dateStr  = b.date
