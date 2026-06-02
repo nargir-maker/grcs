@@ -11,17 +11,34 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
 
+// Module-level cache — one Firestore read serves all pages in the same browser session
+let cachedPagesEnabled: Record<string, boolean> | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
 export function usePageEnabled(pageKey: string): boolean | null {
   const [enabled, setEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
+    if (cachedPagesEnabled !== null && Date.now() - cacheTimestamp < CACHE_TTL) {
+      setEnabled(cachedPagesEnabled[pageKey] !== false);
+      return;
+    }
+
     getDoc(doc(db, 'app_content', 'settings'))
       .then(snap => {
-        if (!snap.exists()) { setEnabled(true); return; }
-        const val = snap.data().pagesEnabled?.[pageKey];
-        setEnabled(val !== false); // default true if not set
+        const pagesEnabled: Record<string, boolean> = snap.exists()
+          ? (snap.data().pagesEnabled ?? {})
+          : {};
+        cachedPagesEnabled = pagesEnabled;
+        cacheTimestamp = Date.now();
+        setEnabled(pagesEnabled[pageKey] !== false);
       })
-      .catch(() => setEnabled(true)); // fail open
+      .catch(() => {
+        cachedPagesEnabled = {};
+        cacheTimestamp = Date.now();
+        setEnabled(true); // fail open
+      });
   }, [pageKey]);
 
   return enabled;

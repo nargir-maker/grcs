@@ -8,8 +8,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/app/lib/firebase';
+import { getPublicMembers } from '@/app/lib/publicMembersCache';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -248,17 +247,13 @@ export default function ResultsPage() {
   async function fetchResults() {
     setLoading(true);
     try {
-      // Fetch all public members
-      const snap = await getDocs(
-        query(collection(db, 'members'), where('profile_type', '==', 'public'))
-      );
+      const docs = await getPublicMembers();
 
       // Map: eid → BrevetResult
       const brevetMap = new Map<string, BrevetResult>();
 
-      snap.docs.forEach(d => {
-        const raw      = d.data();
-        const memberId = d.id;
+      docs.forEach((raw: any) => {
+        const memberId = raw.id;
         const firstName = raw.name_el    ?? '';
         const lastName  = raw.surname_el ?? '';
         if (!firstName) return;

@@ -8,8 +8,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/app/lib/firebase';
+import { getPublicMembers } from '@/app/lib/publicMembersCache';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -203,25 +202,20 @@ export default function MembersPage() {
   async function fetchMembers() {
     setLoading(true);
     try {
-      const snap = await getDocs(
-        query(collection(db, 'members'),
-          where('profile_type', '==', 'public'))
-      );
+      const docs = await getPublicMembers();
 
-      const data: PublicMember[] = snap.docs.map(d => {
-        const raw     = d.data();
+      const data: PublicMember[] = docs.map((raw: any) => {
         const stats   = raw.stats ?? {};
         const lepote  = raw.reg_lepote ?? {};
         const har     = raw.reg_har    ?? {};
 
-        // Parse history for first year + SR count
         let historyRaw = null;
         try {
           if (stats.history_raw) historyRaw = JSON.parse(stats.history_raw);
         } catch {}
 
         return {
-          id:           d.id,
+          id:           raw.id,
           firstName:    raw.name_el    ?? '',
           lastName:     raw.surname_el ?? '',
           gender:       raw.gender     ?? 'M',
@@ -233,7 +227,7 @@ export default function MembersPage() {
           firstYear:    getFirstYear(historyRaw),
           srCount:      srCountFromHistory(historyRaw),
         };
-      }).filter(m => m.firstName); // skip empty docs
+      }).filter((m: any) => m.firstName);
 
       setMembers(data);
     } catch (e) {
