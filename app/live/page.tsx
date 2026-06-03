@@ -4,7 +4,8 @@
 // Lists all currently active brevets with rider counts
 
 import { useEffect, useState } from 'react';
-import { ref, onValue, off } from 'firebase/database';
+import { useRouter } from 'next/navigation';
+import { ref, onValue, off, get } from 'firebase/database';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db, rtdb } from '@/app/lib/firebase';
 
@@ -20,9 +21,20 @@ interface LiveBrevet {
   dnfRiders: number;
 }
 
+interface FriendlyRide {
+  code: string;
+  participantCount: number;
+  createdAt: string;
+}
+
 export default function LivePage() {
+  const router = useRouter();
   const [brevets, setBrevets] = useState<LiveBrevet[]>([]);
   const [loading, setLoading] = useState(true);
+  const [friendlyRides, setFriendlyRides] = useState<FriendlyRide[]>([]);
+  const [codeInput, setCodeInput] = useState('');
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [codeError, setCodeError] = useState('');
 
   useEffect(() => {
     async function fetchActiveBrevets() {
@@ -94,6 +106,20 @@ export default function LivePage() {
     }
 
     fetchActiveBrevets();
+
+    // Friendly rides — one-time read from RTDB
+    get(ref(rtdb, 'friendly_rides')).then(snap => {
+      if (!snap.exists()) return;
+      const data = snap.val() as Record<string, any>;
+      const active = Object.entries(data)
+        .filter(([, ride]) => ride.status === 'active')
+        .map(([code, ride]) => ({
+          code,
+          participantCount: ride.participants ? Object.keys(ride.participants).length : 0,
+          createdAt: ride.created_at ?? '',
+        }));
+      setFriendlyRides(active);
+    });
   }, []);
 
   const activeBrevets  = brevets.filter(b => b.riderCount > 0);
@@ -181,6 +207,93 @@ export default function LivePage() {
                 <p className="text-white/20 text-sm mt-2">Έλεγξε ξανά την ημέρα ενός brevet</p>
               </div>
             )}
+
+            {/* ── FRIENDLY RIDES ── */}
+            <div className="mb-8">
+              <h2 className="text-white/40 text-sm font-bold uppercase tracking-wider mb-3">
+                Φιλικές Βόλτες {friendlyRides.length > 0 && (
+                  <span className="text-purple-400 normal-case font-normal ml-1">
+                    · {friendlyRides.length} σε εξέλιξη
+                  </span>
+                )}
+              </h2>
+
+              {friendlyRides.length > 0 && (
+                <div className="flex flex-col gap-3 mb-3">
+                  {friendlyRides.map(ride => (
+                    <button
+                      key={ride.code}
+                      onClick={() => router.push(`/friendly/${ride.code}`)}
+                      className="bg-purple-500/10 border border-purple-500/30 rounded-xl px-5 py-4
+                        flex items-center justify-between hover:bg-purple-500/20 transition-all text-left w-full"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                          <span className="text-purple-400 text-xs font-bold tracking-wider">LIVE</span>
+                        </div>
+                        <p className="text-white font-medium">Φιλική Βόλτα #{ride.code}</p>
+                        <p className="text-white/40 text-xs mt-0.5">
+                          👥 {ride.participantCount} συμμετέχοντες
+                        </p>
+                      </div>
+                      <span className="text-purple-400 text-sm font-bold">Δες χάρτη →</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Code input */}
+              {!showCodeInput ? (
+                <button
+                  onClick={() => setShowCodeInput(true)}
+                  className="w-full border border-dashed border-white/20 rounded-xl px-5 py-4
+                    text-white/40 hover:text-white/60 hover:border-white/30 transition-all text-sm"
+                >
+                  + Εισαγωγή κωδικού φιλικής βόλτας
+                </button>
+              ) : (
+                <div className="bg-white/5 border border-white/10 rounded-xl px-5 py-4">
+                  <p className="text-white/60 text-sm mb-3">Εισήγαγε τον 5ψήφιο κωδικό:</p>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={codeInput}
+                      onChange={e => { setCodeInput(e.target.value.toUpperCase()); setCodeError(''); }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          if (codeInput.trim().length < 4) { setCodeError('Ο κωδικός είναι πολύ μικρός.'); return; }
+                          router.push(`/friendly/${codeInput.trim()}`);
+                        }
+                      }}
+                      placeholder="π.χ. 8YSM36"
+                      maxLength={8}
+                      autoFocus
+                      className="flex-1 bg-white/5 border border-white/20 rounded-lg px-4 py-2.5
+                        text-white placeholder-white/30 text-sm font-mono tracking-widest
+                        focus:outline-none focus:border-purple-500/50"
+                    />
+                    <button
+                      onClick={() => {
+                        if (codeInput.trim().length < 4) { setCodeError('Ο κωδικός είναι πολύ μικρός.'); return; }
+                        router.push(`/friendly/${codeInput.trim()}`);
+                      }}
+                      className="bg-purple-500/20 border border-purple-500/30 text-purple-400
+                        px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-purple-500/30 transition-all"
+                    >
+                      Πήγαινε →
+                    </button>
+                    <button
+                      onClick={() => { setShowCodeInput(false); setCodeInput(''); setCodeError(''); }}
+                      className="text-white/30 hover:text-white/60 px-2 transition-colors text-sm"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {codeError && <p className="text-red-400 text-xs mt-2">{codeError}</p>}
+                </div>
+              )}
+            </div>
 
             {/* ── UPCOMING BREVETS (no riders yet) ── */}
             {emptyBrevets.length > 0 && (
