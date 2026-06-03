@@ -233,8 +233,84 @@ function StatCard({ emoji, value, label, unit, color }: {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// B) ACTIVITY CARDIOGRAPH
-// Matches Flutter _buildActivityCardiograph exactly
+// KPI ROW — full-width stacked card (matches Flutter _buildKpiRow)
+// ══════════════════════════════════════════════════════════════════════════════
+function KpiRow({ emoji, title, badge, color, value, sub, progress }: {
+  emoji?: string; title: string; badge: string;
+  color: string; value: string; sub: string; progress: number;
+}) {
+  const pct = `${Math.max(0, Math.min(1, progress)) * 100}%`;
+  return (
+    <div style={{
+      width: '100%', padding: '12px 14px 13px', borderRadius: 12,
+      border: `1px solid ${color}70`, background: `${color}14`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
+        {emoji && <span style={{ fontSize: 15 }}>{emoji}</span>}
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
+        <span style={{ padding: '3px 10px', borderRadius: 20, border: `1px solid ${color}aa`, background: `${color}30`, fontSize: 11, fontWeight: 700, color, whiteSpace: 'nowrap' }}>{badge}</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 23, fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
+        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', paddingBottom: 3, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</span>
+      </div>
+      <div style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
+        <div style={{ width: pct, height: '100%', borderRadius: 4, background: color }} />
+      </div>
+    </div>
+  );
+}
+
+// ── Distance Profile Card ─────────────────────────────────────────────────────
+function DistanceProfileCard({ b200, b34, b6, b10, total }: {
+  b200: number; b34: number; b6: number; b10: number; total: number;
+}) {
+  if (total === 0) return null;
+  const shell = 'rgba(176,190,197,0.9)';
+  const buckets = [
+    { n: b200, color: '#1565c0', label: '200' },
+    { n: b34,  color: '#2e7d32', label: '300–400' },
+    { n: b6,   color: '#e65100', label: '600' },
+    { n: b10,  color: '#6a1b9a', label: '1000+' },
+  ];
+  const top = buckets.reduce((t, b) => b.n > t.n ? b : t, buckets[0]);
+  const typeMap: Record<string, string> = { '200': 'Sprinter', '300–400': 'Cruiser', '600': 'Hardcore', '1000+': 'Legendary' };
+  const active = buckets.filter(b => b.n > 0);
+
+  return (
+    <div style={{
+      width: '100%', padding: '12px 14px 13px', borderRadius: 12,
+      border: '1px solid rgba(144,164,174,0.4)', background: 'rgba(120,144,156,0.1)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 11 }}>
+        <span style={{ fontSize: 15 }}>🛣️</span>
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: shell }}>Προφίλ απόστασης</span>
+        <span style={{ padding: '3px 10px', borderRadius: 20, border: '1px solid rgba(144,164,174,0.6)', background: 'rgba(144,164,174,0.1)', fontSize: 11, fontWeight: 700, color: shell }}>{typeMap[top.label]}</span>
+      </div>
+      {/* Proportional band bar */}
+      <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', height: 12, marginBottom: 11, gap: 2 }}>
+        {active.map((b, i) => (
+          <div key={i} style={{ flex: b.n, background: b.color }} />
+        ))}
+      </div>
+      {/* Legend */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 18px' }}>
+        {active.map((b, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ width: 10, height: 10, borderRadius: 3, background: b.color }} />
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+              {b.label} · {Math.round(b.n / total * 100)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// B) RIDER IDENTITY (formerly Activity Cardiograph)
+// Matches Flutter _buildActivityCardiograph with new KPI layout
 // ══════════════════════════════════════════════════════════════════════════════
 function ActivityCardiograph({ history }: { history: Record<string, YearData> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -269,16 +345,42 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
     if (counts[i] > 0) { lastActiveYear = years[i]; lastActiveCount = counts[i]; break; }
   }
 
-  // BDI
-  const bdi = yearsInSport > 0 ? totalBrevs / yearsInSport : 0;
-  const bdiLabel  = bdi>=10?'Κορυφαίος':bdi>=5?'Αφοσιωμένος':bdi>=2?'Τακτικός':'Περιστασιακός';
-  const bdiEmoji  = bdi>=10?'🔥':bdi>=5?'💪':bdi>=2?'🚴':'🌱';
-  const bdiColor  = bdi>=10?'#FF6B35':bdi>=5?'#9C27B0':bdi>=2?'#1976D2':'#4CAF50';
+  // Rhythm (brevets / active year)
+  const rhythm = activeYrs > 0 ? totalBrevs / activeYrs : 0;
+  const rhythmLabel = rhythm>=10?'Κορυφαίος':rhythm>=5?'Αφοσιωμένος':rhythm>=2?'Τακτικός':'Περιστασιακός';
+  const rhythmEmoji = rhythm>=10?'🔥':rhythm>=5?'💪':rhythm>=2?'🚴':'🌱';
+  const rhythmColor = rhythm>=10?'#FF6B35':rhythm>=5?'#9C27B0':rhythm>=2?'#1976D2':'#4CAF50';
 
   // Consistency
   const consistency = yearsInSport > 0 ? (activeYrs / yearsInSport) * 100 : 0;
   const conLabel = consistency>=80?'Σταθερός':consistency>=50?'Τακτικός':consistency>=25?'Χαλαρός':'Σποραδικός';
   const conColor = consistency>=80?'#4CAF50':consistency>=50?'#1976D2':consistency>=25?'#FF9800':'#9E9E9E';
+
+  // Streak — consecutive recent active years
+  const recentActive = [...years].reverse().filter(y => (history[String(y)]?.brevets ?? 0) > 0);
+  let streak = 0;
+  if (recentActive.length > 0) {
+    streak = 1;
+    for (let i = 1; i < recentActive.length; i++) {
+      if (recentActive[i] === recentActive[i-1] - 1) streak++;
+      else break;
+    }
+  }
+
+  // SR years
+  const srYears = Object.values(history).filter(y => {
+    const ds = y.events.map(e => parseFloat(String(e.d)));
+    return ds.some(d=>d>=200&&d<300) && ds.some(d=>d>=300&&d<400) &&
+           ds.some(d=>d>=400&&d<600) && ds.some(d=>d>=600);
+  }).length;
+
+  // Distance profile buckets
+  let b200 = 0, b34 = 0, b6 = 0, b10 = 0;
+  Object.values(history).forEach(y => y.events.forEach(e => {
+    const d = parseFloat(String(e.d));
+    if (d >= 1000) b10++; else if (d >= 600) b6++; else if (d >= 300) b34++; else if (d >= 200) b200++;
+  }));
+  const distTotal = b200 + b34 + b6 + b10;
 
   const CHART_H  = 160;
   const PAD_L    = 32;
@@ -409,7 +511,7 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 20 }}>📈</span>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>Ενεργή Δραστηριότητα</span>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>Ταυτότητα αναβάτη</span>
         </div>
         <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>Brevets ανά έτος</span>
       </div>
@@ -431,61 +533,36 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
         ))}
       </div>
 
-      {/* BDI + Consistency cards */}
-      <div style={{ display: 'flex', gap: 10, padding: '12px 12px' }}>
-        {/* BDI */}
-        <div style={{
-          flex: 1, border: `1px solid ${bdiColor}66`, borderRadius: 12,
-          padding: 14, background: `${bdiColor}18`,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: 20 }}>{bdiEmoji}</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: bdiColor }}>Δείκτης Δραστηριότητας</span>
-          </div>
-          <div style={{
-            fontSize: 11, fontWeight: 700, color: bdiColor,
-            background: `${bdiColor}25`, border: `1px solid ${bdiColor}60`,
-            borderRadius: 5, padding: '2px 8px', display: 'inline-block', marginBottom: 6,
-          }}>{bdiLabel}</div>
-          <div style={{ fontSize: 32, fontWeight: 900, color: bdiColor, lineHeight: 1 }}>
-            {bdi.toFixed(1)}
-          </div>
-          <div style={{ fontSize: 12, color: '#444', marginBottom: 8, fontWeight: 500 }}>brevets / έτος</div>
-          <div style={{ height: 5, background: 'rgba(0,0,0,0.1)', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{ width: `${Math.min(100, bdi/15*100)}%`, height: '100%', background: bdiColor, borderRadius: 3 }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#555', marginTop: 5, fontWeight: 600 }}>
-            <span>🌱 Χαλαρός</span><span>🔥 Κορυφαίος</span>
-          </div>
-        </div>
-
-        {/* Consistency */}
-        <div style={{
-          flex: 1, border: `1px solid ${conColor}66`, borderRadius: 12,
-          padding: 14, background: `${conColor}18`,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: 20 }}>📊</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: conColor }}>Δείκτης Σταθερότητας</span>
-          </div>
-          <div style={{
-            fontSize: 11, fontWeight: 700, color: conColor,
-            background: `${conColor}25`, border: `1px solid ${conColor}60`,
-            borderRadius: 5, padding: '2px 8px', display: 'inline-block', marginBottom: 6,
-          }}>{conLabel}</div>
-          <div style={{ fontSize: 32, fontWeight: 900, color: conColor, lineHeight: 1 }}>
-            {consistency.toFixed(0)}%
-          </div>
-          <div style={{ fontSize: 12, color: '#444', marginBottom: 8, fontWeight: 500 }}>
-            {activeYrs} από {yearsInSport} έτη
-          </div>
-          <div style={{ height: 5, background: 'rgba(0,0,0,0.1)', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{ width: `${consistency}%`, height: '100%', background: conColor, borderRadius: 3 }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#555', marginTop: 5, fontWeight: 600 }}>
-            <span>Σποραδικός</span><span>Σταθερός</span>
-          </div>
-        </div>
+      {/* 4 stacked KPI rows */}
+      <div style={{ padding: '12px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <KpiRow
+          emoji={rhythmEmoji}
+          title="Ρυθμός σεζόν"
+          badge={rhythmLabel}
+          color={rhythmColor}
+          value={rhythm.toFixed(1)}
+          sub="brevets / ενεργό έτος"
+          progress={Math.min(1, rhythm / 10)}
+        />
+        <KpiRow
+          emoji="📊"
+          title="Συνέπεια"
+          badge={conLabel}
+          color={conColor}
+          value={`${consistency.toFixed(0)}%`}
+          sub={`${activeYrs} / ${yearsInSport} έτη · σερί ${streak} 🔥`}
+          progress={consistency / 100}
+        />
+        <DistanceProfileCard b200={b200} b34={b34} b6={b6} b10={b10} total={distTotal} />
+        <KpiRow
+          emoji="🏆"
+          title="Super Randonneur"
+          badge={srYears > 0 ? `×${srYears}` : '—'}
+          color="#f59e0b"
+          value={`${srYears} / ${activeYrs}`}
+          sub="έτη με πλήρη σειρά SR"
+          progress={activeYrs > 0 ? srYears / activeYrs : 0}
+        />
       </div>
 
       {/* Chart label */}
