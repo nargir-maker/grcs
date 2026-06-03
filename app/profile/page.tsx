@@ -606,9 +606,12 @@ export default function ProfilePage() {
   onClick={async () => {
     const newType = member.profileType === 'public' ? 'private' : 'public';
     try {
-      await updateDoc(doc(db, 'members', member.id), {
-        profile_type: newType,
+      const res = await fetch('/api/member/set-privacy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: member.id, profileType: newType }),
       });
+      if (!res.ok) throw new Error(await res.text());
       setMember(prev => prev ? { ...prev, profileType: newType } : prev);
     } catch (e) {
       console.error('Privacy update failed:', e);
