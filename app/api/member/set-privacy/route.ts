@@ -15,6 +15,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 
+  if (!adminDb) {
+    return NextResponse.json({ error: 'Server not configured' }, { status: 503 });
+  }
+
   // 2. Verify the requesting user actually owns this member document
   //    by checking the users collection for their linkedLegacyMemberId
   const usersSnap = await adminDb

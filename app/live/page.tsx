@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ref, onValue, off, get } from 'firebase/database';
-import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db, rtdb } from '@/app/lib/firebase';
 
 interface LiveBrevet {
@@ -37,26 +37,7 @@ export default function LivePage() {
   const [codeInput, setCodeInput] = useState('');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [codeError, setCodeError] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  // ── Admin check ────────────────────────────────────────────────
-  useEffect(() => {
-    if (!session?.user?.email) return;
-    (async () => {
-      try {
-        const usersSnap = await getDocs(
-          query(collection(db, 'users'), where('email', '==', session.user!.email))
-        );
-        if (usersSnap.empty) return;
-        const linkedId = usersSnap.docs[0].data().linkedLegacyMemberId?.toString() ?? '';
-        if (!linkedId) return;
-        const memberSnap = await getDoc(doc(db, 'members', linkedId));
-        if (memberSnap.exists() && memberSnap.data().account_type === 'admin') {
-          setIsAdmin(true);
-        }
-      } catch { /* not admin */ }
-    })();
-  }, [session]);
+  const isAdmin = (session?.user as any)?.isAdmin === true;
 
   useEffect(() => {
     async function fetchActiveBrevets() {
