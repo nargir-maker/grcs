@@ -15,6 +15,9 @@ import { db } from '@/app/lib/firebase';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 
 const PAGE_SIZE = 12;
+// Unicode sentinel for Firestore prefix range queries
+const RANGE_END = '';
+
 type SearchMode = 'name' | 'lepote' | 'har';
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -36,8 +39,8 @@ interface PublicMember {
 function getFirstYear(history: any): number {
   if (!history) return 0;
   try {
-    const raw = typeof history === 'string' ? JSON.parse(history) : history;
-    const h   = raw.history ?? raw;
+    const raw   = typeof history === 'string' ? JSON.parse(history) : history;
+    const h     = raw.history ?? raw;
     const years = Object.keys(h).map(Number).filter(y => y > 1990).sort();
     return years[0] ?? 0;
   } catch { return 0; }
@@ -62,11 +65,11 @@ function srCountFromHistory(history: any): number {
 
 function parseMemberDoc(d: QueryDocumentSnapshot<DocumentData>): PublicMember | null {
   const raw    = d.data();
-  const stats  = raw.stats    ?? {};
+  const stats  = raw.stats      ?? {};
   const lepote = raw.reg_lepote ?? {};
   const har    = raw.reg_har    ?? {};
 
-  const firstName = raw.name_el    ?? '';
+  const firstName = raw.name_el ?? '';
   if (!firstName) return null;
 
   let historyRaw = null;
@@ -89,8 +92,8 @@ function parseMemberDoc(d: QueryDocumentSnapshot<DocumentData>): PublicMember | 
 
 // ── Member Card ──────────────────────────────────────────────────────
 function MemberCard({ m }: { m: PublicMember }) {
-  const hasLepote  = m.lepoteId && m.lepoteId !== '0';
-  const hasHar     = m.harId    && m.harId    !== '0';
+  const hasLepote   = m.lepoteId && m.lepoteId !== '0';
+  const hasHar      = m.harId    && m.harId    !== '0';
   const yearsActive = m.firstYear > 0 ? new Date().getFullYear() - m.firstYear + 1 : 0;
 
   return (
@@ -130,6 +133,21 @@ function MemberCard({ m }: { m: PublicMember }) {
               Από το {m.firstYear} · {yearsActive} χρόνια
             </div>
           )}
+          {/* Registry ID chips */}
+          <div className="flex gap-1.5 flex-wrap justify-center mt-1.5">
+            {hasLepote && (
+              <span className="text-[10px] text-white/50 font-mono
+                bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+                ΛΕ #{m.lepoteId}
+              </span>
+            )}
+            {hasHar && (
+              <span className="text-[10px] text-white/50 font-mono
+                bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+                HAR #{m.harId}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-3 w-full justify-center">
@@ -208,7 +226,7 @@ export default function MembersPage() {
     fetchPage(false);
   }, [session]);
 
-  // ── Debounced search ─────────────────────────────────────────────
+  // ── Debounced re-fetch on search change ──────────────────────────
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -217,68 +235,65 @@ export default function MembersPage() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [search, searchMode]);
 
-  // ── Query builder ────────────────────────────────────────────────
-  function buildQuery(after: QueryDocumentSnapshot<DocumentData> | null) {
-    const term = search.trim();
-    const base = collection(db, 'members');
-
-    if (term && searchMode === 'lepote') {
-      const idVal = parseInt(term);
-      return query(base,
-        where('profile_type', '==', 'public'),
-        where('reg_lepote.id', '==', isNaN(idVal) ? term : idVal),
-        limit(PAGE_SIZE),
-        ...(after ? [startAfter(after)] : []),
-      );
-    }
-
-    if (term && searchMode === 'har') {
-      const idVal = parseInt(term);
-      return query(base,
-        where('profile_type', '==', 'public'),
-        where('reg_har.id', '==', isNaN(idVal) ? term : idVal),
-        limit(PAGE_SIZE),
-        ...(after ? [startAfter(after)] : []),
-      );
-    }
-
-    if (term && searchMode === 'name') {
-      const capitalized = term.charAt(0).toUpperCase() + term.slice(1);
-      return query(base,
-        where('profile_type', '==', 'public'),
-        where('surname_el', '>=', capitalized),
-        where('surname_el', '<=', capitalized + ''),
-        orderBy('surname_el'),
-        limit(PAGE_SIZE),
-        ...(after ? [startAfter(after)] : []),
-      );
-    }
-
-    // Default: alphabetical by surname
-    return query(base,
-      where('profile_type', '==', 'public'),
-      orderBy('surname_el'),
-      limit(PAGE_SIZE),
-      ...(after ? [startAfter(after)] : []),
-    );
-  }
-
   // ── Fetch ────────────────────────────────────────────────────────
   async function fetchPage(append: boolean) {
     if (append) setLoadingMore(true);
     else        setLoading(true);
 
     try {
-      const q    = buildQuery(append ? lastDoc : null);
-      const snap = await getDocs(q);
+      const term  = search.trim();
+      const after = append ? lastDoc : null;
+      let   docs: QueryDocumentSnapshot<DocumentData>[] = [];
+      let   more  = false;
 
-      const parsed = snap.docs
-        .map(parseMemberDoc)
-        .filter((m): m is PublicMember => m !== null);
+      const base = collection(db, 'members');
+      const pf   = where('profile_type', '==', 'public');
 
+      if (term && (searchMode === 'lepote' || searchMode === 'har')) {
+        // Registry ID: stored type is uncertain — try number first, fall back to string
+        const field  = searchMode === 'lepote' ? 'reg_lepote.id' : 'reg_har.id';
+        const idNum  = parseInt(term);
+
+        const runQ = (val: number | string) => getDocs(
+          after
+            ? query(base, pf, where(field, '==', val), limit(PAGE_SIZE), startAfter(after))
+            : query(base, pf, where(field, '==', val), limit(PAGE_SIZE))
+        );
+
+        if (!isNaN(idNum)) {
+          const snap = await runQ(idNum);
+          if (snap.docs.length > 0) { docs = snap.docs; more = snap.docs.length === PAGE_SIZE; }
+        }
+        // Fallback: try as string
+        if (docs.length === 0) {
+          const snap = await runQ(term);
+          docs = snap.docs; more = snap.docs.length === PAGE_SIZE;
+        }
+
+      } else if (term && searchMode === 'name') {
+        // Prefix search on surname_el
+        const cap = term.charAt(0).toUpperCase() + term.slice(1);
+        const snap = await getDocs(
+          after
+            ? query(base, pf, where('surname_el', '>=', cap), where('surname_el', '<=', cap + RANGE_END), orderBy('surname_el'), limit(PAGE_SIZE), startAfter(after))
+            : query(base, pf, where('surname_el', '>=', cap), where('surname_el', '<=', cap + RANGE_END), orderBy('surname_el'), limit(PAGE_SIZE))
+        );
+        docs = snap.docs; more = snap.docs.length === PAGE_SIZE;
+
+      } else {
+        // Default: alphabetical
+        const snap = await getDocs(
+          after
+            ? query(base, pf, orderBy('surname_el'), limit(PAGE_SIZE), startAfter(after))
+            : query(base, pf, orderBy('surname_el'), limit(PAGE_SIZE))
+        );
+        docs = snap.docs; more = snap.docs.length === PAGE_SIZE;
+      }
+
+      const parsed = docs.map(parseMemberDoc).filter((m): m is PublicMember => m !== null);
       setMembers(prev => append ? [...prev, ...parsed] : parsed);
-      setHasMore(snap.docs.length === PAGE_SIZE);
-      setLastDoc(snap.docs[snap.docs.length - 1] ?? null);
+      setHasMore(more);
+      setLastDoc(docs[docs.length - 1] ?? null);
     } catch (e: any) {
       console.error('Members fetch error:', e);
     } finally {
@@ -393,7 +408,6 @@ export default function MembersPage() {
               {members.map(m => <MemberCard key={m.id} m={m} />)}
             </div>
 
-            {/* Load more */}
             {hasMore && (
               <div className="flex justify-center mt-8">
                 <button
@@ -403,9 +417,9 @@ export default function MembersPage() {
                     hover:bg-white/10 px-8 py-3 rounded-xl text-sm font-bold
                     transition-all disabled:opacity-50 flex items-center gap-2"
                 >
-                  {loadingMore ? (
-                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  ) : null}
+                  {loadingMore
+                    ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    : null}
                   {loadingMore ? 'Φόρτωση...' : `Επόμενοι ${PAGE_SIZE}`}
                 </button>
               </div>
