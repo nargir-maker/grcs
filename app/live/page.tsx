@@ -5,8 +5,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { ref, onValue, off, get } from 'firebase/database';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db, rtdb } from '@/app/lib/firebase';
 
 interface LiveBrevet {
@@ -29,12 +30,33 @@ interface FriendlyRide {
 
 export default function LivePage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [brevets, setBrevets] = useState<LiveBrevet[]>([]);
   const [loading, setLoading] = useState(true);
   const [friendlyRides, setFriendlyRides] = useState<FriendlyRide[]>([]);
   const [codeInput, setCodeInput] = useState('');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [codeError, setCodeError] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // ── Admin check ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    (async () => {
+      try {
+        const usersSnap = await getDocs(
+          query(collection(db, 'users'), where('email', '==', session.user!.email))
+        );
+        if (usersSnap.empty) return;
+        const linkedId = usersSnap.docs[0].data().linkedLegacyMemberId?.toString() ?? '';
+        if (!linkedId) return;
+        const memberSnap = await getDoc(doc(db, 'members', linkedId));
+        if (memberSnap.exists() && memberSnap.data().account_type === 'admin') {
+          setIsAdmin(true);
+        }
+      } catch { /* not admin */ }
+    })();
+  }, [session]);
 
   useEffect(() => {
     async function fetchActiveBrevets() {
@@ -218,7 +240,7 @@ export default function LivePage() {
                 )}
               </h2>
 
-              {friendlyRides.length > 0 && (
+              {isAdmin && friendlyRides.length > 0 && (
                 <div className="flex flex-col gap-3 mb-3">
                   {friendlyRides.map(ride => (
                     <button
