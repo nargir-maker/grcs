@@ -214,6 +214,7 @@ export default function FriendlyRidePage() {
                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>
                   Έναρξη: </span>
                 <span style={{ color: '#4ade80', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace' }}>
+                  {rideStartTime.toLocaleDateString('el-GR', { day: 'numeric', month: 'short' })}{' '}
                   {rideStartTime.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
