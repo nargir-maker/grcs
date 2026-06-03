@@ -245,14 +245,14 @@ function KpiRow({ emoji, title, badge, color, value, sub, progress }: {
       width: '100%', padding: '12px 14px 13px', borderRadius: 12,
       border: `1px solid ${color}70`, background: `${color}14`,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
-        {emoji && <span style={{ fontSize: 15 }}>{emoji}</span>}
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
-        <span style={{ padding: '3px 10px', borderRadius: 20, border: `1px solid ${color}aa`, background: `${color}30`, fontSize: 11, fontWeight: 700, color, whiteSpace: 'nowrap' }}>{badge}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+        {emoji && <span style={{ fontSize: 17 }}>{emoji}</span>}
+        <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
+        <span style={{ padding: '3px 12px', borderRadius: 20, border: `1px solid ${color}aa`, background: `${color}30`, fontSize: 12, fontWeight: 700, color, whiteSpace: 'nowrap' }}>{badge}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 23, fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
-        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', paddingBottom: 3, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</span>
+        <span style={{ fontSize: 26, fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
+        <span style={{ fontSize: 13, color: 'rgba(0,0,0,0.6)', fontWeight: 600, paddingBottom: 3, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</span>
       </div>
       <div style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
         <div style={{ width: pct, height: '100%', borderRadius: 4, background: color }} />
@@ -266,7 +266,7 @@ function DistanceProfileCard({ b200, b34, b6, b10, total }: {
   b200: number; b34: number; b6: number; b10: number; total: number;
 }) {
   if (total === 0) return null;
-  const shell = 'rgba(176,190,197,0.9)';
+  const shell = '#37474f';
   const buckets = [
     { n: b200, color: '#1565c0', label: '200' },
     { n: b34,  color: '#2e7d32', label: '300–400' },
@@ -283,9 +283,9 @@ function DistanceProfileCard({ b200, b34, b6, b10, total }: {
       border: '1px solid rgba(144,164,174,0.4)', background: 'rgba(120,144,156,0.1)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 11 }}>
-        <span style={{ fontSize: 15 }}>🛣️</span>
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: shell }}>Προφίλ απόστασης</span>
-        <span style={{ padding: '3px 10px', borderRadius: 20, border: '1px solid rgba(144,164,174,0.6)', background: 'rgba(144,164,174,0.1)', fontSize: 11, fontWeight: 700, color: shell }}>{typeMap[top.label]}</span>
+        <span style={{ fontSize: 17 }}>🛣️</span>
+        <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: shell }}>Προφίλ απόστασης</span>
+        <span style={{ padding: '3px 12px', borderRadius: 20, border: `1px solid ${shell}99`, background: `${shell}18`, fontSize: 12, fontWeight: 700, color: shell }}>{typeMap[top.label]}</span>
       </div>
       {/* Proportional band bar */}
       <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', height: 12, marginBottom: 11, gap: 2 }}>
@@ -298,7 +298,7 @@ function DistanceProfileCard({ b200, b34, b6, b10, total }: {
         {active.map((b, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <div style={{ width: 10, height: 10, borderRadius: 3, background: b.color }} />
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+            <span style={{ fontSize: 13, color: 'rgba(0,0,0,0.65)', fontWeight: 600 }}>
               {b.label} · {Math.round(b.n / total * 100)}%
             </span>
           </div>
