@@ -312,9 +312,17 @@ function DistanceProfileCard({ b200, b34, b6, b10, total }: {
 // B) RIDER IDENTITY (formerly Activity Cardiograph)
 // Matches Flutter _buildActivityCardiograph with new KPI layout
 // ══════════════════════════════════════════════════════════════════════════════
+const KPI_INFO = [
+  { emoji: '⚡', color: '#9C27B0', title: 'Ρυθμός σεζόν',       text: 'Πόσο γεμάτη είναι μια τυπική σου σεζόν: σύνολο brevets ÷ ενεργές χρονιές. Μετράει τον όγκο, όχι κάθε πότε εμφανίζεσαι.' },
+  { emoji: '📅', color: '#4CAF50', title: 'Συνέπεια',            text: 'Πόσο συνεχής είσαι στον χρόνο: ενεργές χρονιές ÷ συνολικές χρονιές (ενεργή = ≥1 brevet). Το σερί δείχνει τις τρέχουσες συνεχόμενες. Μετράει την παρουσία, όχι τον όγκο.' },
+  { emoji: '🏆', color: '#f59e0b', title: 'Super Randonneur',    text: 'Σε πόσες χρονιές έκλεισες την κανονική σειρά 200+300+400+600. Επίτευγμα, ανεξάρτητο από όγκο και συνέχεια.' },
+  { emoji: '🛣️', color: '#1976D2', title: 'Προφίλ απόστασης',   text: 'Η κατανομή των brevets σου ανά απόσταση: Sprinter (200), Cruiser (300–400), Hardcore (600), Legendary (1000+ — μαζί 1000/1200/1400, PBP, LRM).' },
+];
+
 function ActivityCardiograph({ history }: { history: Record<string, YearData> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [tooltip, setTooltip] = useState<{x:number;y:number;year:number;count:number}|null>(null);
+  const [showInfo, setShowInfo] = useState(false);
 
   // Build data — all years from first to last, filling gaps with 0
   const years = useMemo(() => {
@@ -513,8 +521,47 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
           <span style={{ fontSize: 20 }}>📈</span>
           <span style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>Ταυτότητα αναβάτη</span>
         </div>
-        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>Brevets ανά έτος</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>Brevets ανά έτος</span>
+          <button
+            onClick={() => setShowInfo(v => !v)}
+            title="Τι σημαίνουν οι δείκτες"
+            style={{
+              background: showInfo ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: '50%', width: 28, height: 28,
+              cursor: 'pointer', color: '#fff', fontSize: 14, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.2s',
+            }}
+          >ℹ</button>
+        </div>
       </div>
+
+      {/* Info panel */}
+      {showInfo && (
+        <div style={{
+          background: 'rgba(13,59,94,0.06)', borderBottom: '1px solid rgba(0,0,0,0.1)',
+          padding: '16px 16px 8px',
+        }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#0D3B5E', margin: '0 0 12px' }}>
+            Τι σημαίνουν οι δείκτες
+          </p>
+          {KPI_INFO.map((item, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+              <span style={{
+                fontSize: 18, flexShrink: 0, width: 28, height: 28,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '50%', background: `${item.color}18`,
+              }}>{item.emoji}</span>
+              <div>
+                <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 700, color: item.color }}>{item.title}</p>
+                <p style={{ margin: 0, fontSize: 12, color: 'rgba(0,0,0,0.6)', lineHeight: 1.5 }}>{item.text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Top stats row */}
       <div style={{
