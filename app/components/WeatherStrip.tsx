@@ -301,7 +301,7 @@ export default function WeatherStrip({
                     return (
                       <div
                         key={i}
-                        className="flex flex-col items-center rounded-xl border p-5 min-w-[120px]"
+                        className="flex flex-col items-center rounded-xl border p-6 min-w-[140px]"
                         style={{
                           backgroundColor: isStart
                             ? 'rgba(34,197,94,0.08)'
@@ -320,7 +320,7 @@ export default function WeatherStrip({
                         }}
                       >
                         <span
-                          className="text-sm font-bold mb-1 text-center leading-tight"
+                          className="text-base font-bold mb-1 text-center leading-tight"
                           style={{
                             color: isStart
                               ? '#22C55E'
@@ -334,7 +334,7 @@ export default function WeatherStrip({
                           {pt.label}
                         </span>
 
-                        <span className="text-sm text-white/40 mb-2">
+                        <span className="text-base text-white/50 mb-2">
                           {Math.round(pt.distKm)}km
                         </span>
 
@@ -344,33 +344,33 @@ export default function WeatherStrip({
                           <span className="text-white/20 text-lg">—</span>
                         ) : (
                           <>
-                            <span className="text-4xl mb-1">{emoji}</span>
+                            <span className="text-5xl mb-2">{emoji}</span>
 
-                            <span className="text-white font-bold text-lg">
+                            <span className="text-white font-bold text-xl">
                               {pt.temp}°C
                             </span>
 
                             <span
-                              className="text-sm mt-1 font-semibold"
+                              className="text-base mt-1 font-semibold"
                               style={{ color: windColor(pt.windSpeed) }}
                             >
                               💨 {windLabel(pt.windSpeed)}
                             </span>
 
                             <span
-                              className="text-xs"
+                              className="text-sm"
                               style={{ color: windColor(pt.windSpeed) }}
                             >
                               {pt.windSpeed}km/h
                             </span>
 
                             {pt.precipitation > 0 && (
-                              <span className="text-sm text-blue-300 mt-0.5">
+                              <span className="text-base text-blue-300 mt-0.5">
                                 🌧️ {pt.precipitation}mm
                               </span>
                             )}
 
-                            <span className="text-sm text-white/50 mt-2">
+                            <span className="text-base text-white/70 mt-2 font-medium">
                               {pt.etaTime.toLocaleTimeString('el-GR', {
                                 hour: '2-digit',
                                 minute: '2-digit',
@@ -384,21 +384,21 @@ export default function WeatherStrip({
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-4 text-xs text-white/30">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-4 text-sm text-white/60">
                 <span>🟢 Αφετηρία</span>
                 <span>🔵 Σημεία Ελέγχου</span>
                 <span>🟡 Τερματισμός</span>
                 <span>· Ώρα ETA με ~15km/h μέσο όρο</span>
               </div>
 
-              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs">
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-sm">
                 <span style={{ color: '#6EE7B7' }}>💨 &lt;20 Αύρα</span>
                 <span style={{ color: '#FCD34D' }}>💨 20-35 Μέτριος</span>
                 <span style={{ color: '#FB923C' }}>💨 35-50 Δυνατός</span>
                 <span style={{ color: '#F87171' }}>💨 &gt;50 Θυελλώδης</span>
               </div>
 
-              <p className="text-white/15 text-xs mt-3">
+              <p className="text-white/40 text-sm mt-3">
                 Πηγή: Open-Meteo · Πρόγνωση με βάση τον εκτιμώμενο χρόνο άφιξης
               </p>
             </>
