@@ -301,7 +301,7 @@ export default function WeatherStrip({
                     return (
                       <div
                         key={i}
-                        className="flex flex-col items-center rounded-xl border p-4 min-w-[100px]"
+                        className="flex flex-col items-center rounded-xl border p-5 min-w-[120px]"
                         style={{
                           backgroundColor: isStart
                             ? 'rgba(34,197,94,0.08)'
@@ -320,7 +320,7 @@ export default function WeatherStrip({
                         }}
                       >
                         <span
-                          className="text-xs font-bold mb-1 text-center leading-tight"
+                          className="text-sm font-bold mb-1 text-center leading-tight"
                           style={{
                             color: isStart
                               ? '#22C55E'
@@ -334,7 +334,7 @@ export default function WeatherStrip({
                           {pt.label}
                         </span>
 
-                        <span className="text-xs text-white/30 mb-2">
+                        <span className="text-sm text-white/40 mb-2">
                           {Math.round(pt.distKm)}km
                         </span>
 
@@ -344,33 +344,33 @@ export default function WeatherStrip({
                           <span className="text-white/20 text-lg">—</span>
                         ) : (
                           <>
-                            <span className="text-3xl mb-1">{emoji}</span>
+                            <span className="text-4xl mb-1">{emoji}</span>
 
-                            <span className="text-white font-bold text-base">
+                            <span className="text-white font-bold text-lg">
                               {pt.temp}°C
                             </span>
 
                             <span
-                              className="text-xs mt-1 font-semibold"
+                              className="text-sm mt-1 font-semibold"
                               style={{ color: windColor(pt.windSpeed) }}
                             >
                               💨 {windLabel(pt.windSpeed)}
                             </span>
 
                             <span
-                              className="text-[11px]"
+                              className="text-xs"
                               style={{ color: windColor(pt.windSpeed) }}
                             >
                               {pt.windSpeed}km/h
                             </span>
 
                             {pt.precipitation > 0 && (
-                              <span className="text-xs text-blue-300 mt-0.5">
+                              <span className="text-sm text-blue-300 mt-0.5">
                                 🌧️ {pt.precipitation}mm
                               </span>
                             )}
 
-                            <span className="text-[11px] text-white/25 mt-2">
+                            <span className="text-sm text-white/50 mt-2">
                               {pt.etaTime.toLocaleTimeString('el-GR', {
                                 hour: '2-digit',
                                 minute: '2-digit',
