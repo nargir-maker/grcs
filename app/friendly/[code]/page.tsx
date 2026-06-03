@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ref, onValue, off } from 'firebase/database';
+import { ref, onValue, off, get } from 'firebase/database';
 import { rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
 
@@ -72,6 +72,22 @@ export default function FriendlyRidePage() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [selectedRider, setSelectedRider] = useState<string | null>(null);
   const [notFound, setNotFound]     = useState(false);
+  const [rideStartTime, setRideStartTime] = useState<Date | null>(null);
+  const [currentTime, setCurrentTime]     = useState(new Date());
+
+  // ── Live clock ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const t = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // ── Ride start time (one-time read) ─────────────────────────────────────────
+  useEffect(() => {
+    if (!code) return;
+    get(ref(rtdb, `friendly_rides/${code}/created_at`)).then(snap => {
+      if (snap.exists()) setRideStartTime(new Date(snap.val()));
+    });
+  }, [code]);
 
   // ── RTDB listener ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -169,23 +185,58 @@ export default function FriendlyRidePage() {
             <Chip value={riders.length}       label="👥 Σύνολο"   color="white"   />
           </div>
 
-          {/* ── LAST UPDATE — top right ── */}
-          {lastUpdate && (
-            <div className="absolute top-3 right-3 z-[1000]" style={{
+          {/* ── TIME INFO — top right ── */}
+          <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-1.5 items-end">
+            {/* Current time */}
+            <div style={{
               background: 'rgba(10,22,40,0.72)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
               border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: 10,
-              padding: '5px 10px',
+              padding: '5px 12px',
             }}>
-              <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>
-                Ενημέρωση: {lastUpdate.toLocaleTimeString('el-GR', {
-                  hour: '2-digit', minute: '2-digit', second: '2-digit'
-                })}
+              <span style={{ color: 'white', fontSize: 15, fontWeight: 'bold', fontFamily: 'monospace' }}>
+                🕐 {currentTime.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
             </div>
-          )}
+
+            {/* Ride start time */}
+            {rideStartTime && (
+              <div style={{
+                background: 'rgba(10,22,40,0.72)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 10,
+                padding: '5px 12px',
+              }}>
+                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>
+                  Έναρξη: </span>
+                <span style={{ color: '#4ade80', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace' }}>
+                  {rideStartTime.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            )}
+
+            {/* Last update */}
+            {lastUpdate && (
+              <div style={{
+                background: 'rgba(10,22,40,0.72)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 10,
+                padding: '5px 12px',
+              }}>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>
+                  Ενημέρωση: {lastUpdate.toLocaleTimeString('el-GR', {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                  })}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── RIDERS LIST ── */}
