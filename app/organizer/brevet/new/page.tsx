@@ -217,6 +217,7 @@ export default function NewBrevetPage() {
   const [saving, setSaving]         = useState(false);
   const [saveError, setSaveError]   = useState('');
   const [gpxParsed, setGpxParsed]   = useState(false);
+  const [geocoding, setGeocoding]   = useState(false);
   const [prevBrevets, setPrevBrevets] = useState<{ id: string; title: string; date: string }[]>([]);
   const [showCopy, setShowCopy]     = useState(false);
   const gpxRef = useRef<HTMLInputElement>(null);
@@ -282,8 +283,9 @@ export default function NewBrevetPage() {
     return new Date(start.getTime() + hrs * 3_600_000);
   };
 
-  // ── GPX local parse (no upload — organiser pastes URL separately) ────────
+  // ── GPX local parse + reverse geocoding ──────────────────────────────────
   async function handleGpxFile(file: File) {
+    setSaveError('');
     try {
       const text   = await file.text();
       const parsed = parseGpx(text);
@@ -293,6 +295,7 @@ export default function NewBrevetPage() {
         km: 0, name: w.name, isManned: false, lat: w.lat, lng: w.lng,
       }));
 
+      // Fill metrics immediately
       setForm(f => ({
         ...f,
         realKm:       String(parsed.realKm),
@@ -303,9 +306,42 @@ export default function NewBrevetPage() {
         finishCoords: parsed.finishCoords,
         controls:     ctrlsFromWpts.length > 0 ? ctrlsFromWpts : f.controls,
       }));
+
+      // Reverse geocoding for start & finish city names
+      const [startLat, startLng]   = parsed.startCoords.split(',').map(parseFloat);
+      const [finishLat, finishLng] = parsed.finishCoords.split(',').map(parseFloat);
+
+      if (startLat && startLng) {
+        setGeocoding(true);
+        try {
+          const res  = await fetch(`/api/geocode/reverse?lat=${startLat}&lng=${startLng}`);
+          const data = await res.json();
+          if (data.name) set('start', data.name);
+        } catch { /* silently skip */ }
+      }
+
+      // 1-second gap to respect Nominatim rate limit
+      await new Promise(r => setTimeout(r, 1100));
+
+      if (finishLat && finishLng) {
+        try {
+          const isSamePoint = Math.abs(startLat - finishLat) < 0.001 &&
+                              Math.abs(startLng - finishLng) < 0.001;
+          if (isSamePoint) {
+            // Loop route — copy start city to finish
+            setForm(f => ({ ...f, finish: f.start }));
+          } else {
+            const res  = await fetch(`/api/geocode/reverse?lat=${finishLat}&lng=${finishLng}`);
+            const data = await res.json();
+            if (data.name) set('finish', data.name);
+          }
+        } catch { /* silently skip */ }
+      }
     } catch (e) {
       console.error('GPX parse error:', e);
       setSaveError('Σφάλμα ανάλυσης GPX αρχείου.');
+    } finally {
+      setGeocoding(false);
     }
   }
 
@@ -663,13 +699,17 @@ export default function NewBrevetPage() {
           </Field>
 
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Πόλη εκκίνησης">
+            <Field label="Πόλη εκκίνησης"
+              hint={geocoding ? '🔍 Αναζήτηση...' : 'από GPX ή χειροκίνητα'}>
               <input className={inp} value={form.start}
-                onChange={e => set('start', e.target.value)} placeholder="π.χ. ΚΑΛΠΑΚΙ" />
+                onChange={e => set('start', e.target.value)}
+                placeholder={geocoding ? 'Αναζήτηση τοποθεσίας...' : 'π.χ. ΚΑΛΠΑΚΙ'} />
             </Field>
-            <Field label="Πόλη τερματισμού">
+            <Field label="Πόλη τερματισμού"
+              hint={geocoding ? '🔍 Αναζήτηση...' : 'από GPX ή χειροκίνητα'}>
               <input className={inp} value={form.finish}
-                onChange={e => set('finish', e.target.value)} placeholder="π.χ. ΚΑΛΠΑΚΙ" />
+                onChange={e => set('finish', e.target.value)}
+                placeholder={geocoding ? 'Αναζήτηση τοποθεσίας...' : 'π.χ. ΚΑΛΠΑΚΙ'} />
             </Field>
           </div>
 
