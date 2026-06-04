@@ -144,6 +144,12 @@ export default function OrganizerDashboard() {
               rounded-full font-semibold">
               🏁 Διοργανωτής
             </span>
+            <a href="/organizer/profile"
+              className="text-slate-400 hover:text-white text-sm transition-colors
+                flex items-center gap-1.5">
+              <span>👤</span>
+              <span className="hidden sm:inline">Προφίλ</span>
+            </a>
             <button
               onClick={logoutOrganizer}
               className="text-slate-400 hover:text-white text-sm transition-colors
