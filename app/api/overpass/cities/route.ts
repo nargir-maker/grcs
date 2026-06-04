@@ -15,8 +15,24 @@ export async function POST(req: NextRequest) {
 
     // Downsample — 1 σημείο ανά ~2km αρκεί για Overpass
     // Κρατάμε max 300 σημεία για να μην φουσκώσει το query
-    const step = Math.max(1, Math.floor(trackPoints.length / 300));
-    const sampled = trackPoints.filter((_, i) => i % step === 0);
+const sampled: { lat: number; lng: number }[] = [trackPoints[0]];
+let lastSampledIdx = 0;
+let distSinceLastSample = 0;
+for (let i = 1; i < trackPoints.length; i++) {
+  distSinceLastSample += haversineKm(
+    trackPoints[i-1].lat, trackPoints[i-1].lng,
+    trackPoints[i].lat,   trackPoints[i].lng,
+  );
+  if (distSinceLastSample >= 5) {   // 1 σημείο ανά 5km
+    sampled.push(trackPoints[i]);
+    distSinceLastSample = 0;
+    lastSampledIdx = i;
+  }
+}
+// Πρόσθεσε το τελευταίο σημείο
+if (lastSampledIdx < trackPoints.length - 1) {
+  sampled.push(trackPoints[trackPoints.length - 1]);
+}
 
     // Φτιάχνουμε το around polyline: "lat1,lng1,lat2,lng2,..."
     const polyline = sampled.map(p => `${p.lat},${p.lng}`).join(',');
