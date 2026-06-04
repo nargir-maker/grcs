@@ -159,13 +159,20 @@ export default function OrganizerDashboard() {
       <main className="max-w-5xl mx-auto px-4 py-8">
 
         {/* ── WELCOME ──────────────────────────────── */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white mb-1">
-            Καλωσόρισες 👋
-          </h1>
-          <p className="text-slate-400 text-sm">
-            {organizer.clubFullNameGr}
-          </p>
+        <div className="flex items-start justify-between mb-8 gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-1">
+              Καλωσόρισες 👋
+            </h1>
+            <p className="text-slate-400 text-sm">
+              {organizer.clubFullNameGr}
+            </p>
+          </div>
+          <a href="/organizer/brevet/new"
+            className="shrink-0 bg-cyan-500 hover:bg-cyan-400 text-black font-bold
+              px-5 py-2.5 rounded-xl text-sm transition-all flex items-center gap-2">
+            + Νέο Brevet
+          </a>
         </div>
 
         {/* ── STATS ROW ────────────────────────────── */}
