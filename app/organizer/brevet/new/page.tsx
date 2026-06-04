@@ -99,27 +99,27 @@ function parseGpx(text: string): GpxParsed {
   const flng = parseFloat(finishPt?.getAttribute('lon') ?? '0');
 
   // Waypoints — με namespace-safe query για το <name>
-  const wpts = Array.from(xml.querySelectorAll('wpt')).map(w => {
-    const wlat = parseFloat(w.getAttribute('lat') ?? '0');
-    const wlng = parseFloat(w.getAttribute('lon') ?? '0');
+const wpts = Array.from(xml.querySelectorAll('wpt')).map(w => {
+  const wlat = parseFloat(w.getAttribute('lat') ?? '0');
+  const wlng = parseFloat(w.getAttribute('lon') ?? '0');
 
-    // Fix: querySelector('name') αποτυγχάνει με GPX namespace
-    const nameEl = w.getElementsByTagNameNS('*', 'name')[0];
-    const name   = nameEl?.textContent?.trim() ?? '';
+  // Χρησιμοποιούμε querySelector — αποδείχθηκε ότι δουλεύει
+  const name = w.querySelector('name')?.textContent?.trim() ?? '';
 
-    // Βρες το κοντινότερο track point και πάρε το cumulative km του
-    let minDist = Infinity;
-    let nearestKm = 0;
-    pts.forEach((pt, i) => {
-      const la = parseFloat(pt.getAttribute('lat') ?? '0');
-      const lo = parseFloat(pt.getAttribute('lon') ?? '0');
-      if (!la || !lo) return;
-      const d = haversineKm(wlat, wlng, la, lo);
-      if (d < minDist) { minDist = d; nearestKm = cumKm[i]; }
-    });
-
-    return { lat: wlat, lng: wlng, name, km: Math.round(nearestKm * 10) / 10 };
+  // Βρες κοντινότερο track point για km
+  let minDist = Infinity;
+  let nearestKm = 0;
+  pts.forEach((pt, i) => {
+    const la = parseFloat(pt.getAttribute('lat') ?? '0');
+    const lo = parseFloat(pt.getAttribute('lon') ?? '0');
+    if (!la || !lo) return;
+    const d = haversineKm(wlat, wlng, la, lo);
+    if (d < minDist) { minDist = d; nearestKm = cumKm[i]; }
   });
+
+  return { lat: wlat, lng: wlng, name, km: Math.round(nearestKm * 10) / 10 };
+});
+console.log('parsed wpts:', wpts);
 
   // Downsample track points για map preview
   const step = Math.max(1, Math.floor(pts.length / MAX_PREVIEW_PTS));
@@ -334,14 +334,6 @@ export default function NewBrevetPage() {
     setSaveError('');
     try {
       const text   = await file.text();
-      // DEBUG — αφαίρεσε μετά
-const debugXml = new DOMParser().parseFromString(text, 'text/xml');
-const debugWpts = debugXml.querySelectorAll('wpt');
-debugWpts.forEach((w, i) => {
-  const byNS = (w as Element).getElementsByTagNameNS('*', 'name')[0];
-  const byTag = (w as Element).querySelector('name');
-  console.log(`wpt[${i}] byNS: "${byNS?.textContent}" | byTag: "${byTag?.textContent}"`);
-});
       const parsed = parseGpx(text);
       setGpxParsed(true);
 
