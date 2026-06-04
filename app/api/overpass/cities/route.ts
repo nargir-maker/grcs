@@ -43,6 +43,9 @@ if (lastSampledIdx < trackPoints.length - 1) {
       node["place"~"^(city|town)$"](around:400,${polyline});
       out body;
     `;
+   // Στο app/api/overpass/cities/route.ts, πριν το fetch:
+console.log('Overpass query — sampled points:', sampled.length);
+console.log('Query length chars:', query.length);
 
     const res = await fetch('https://overpass-api.de/api/interpreter', {
       method:  'POST',
@@ -50,11 +53,15 @@ if (lastSampledIdx < trackPoints.length - 1) {
       body:    `data=${encodeURIComponent(query)}`,
     });
 
+
     if (!res.ok) {
       return NextResponse.json({ cities: [] }, { status: 502 });
     }
 
     const data = await res.json();
+// Και μετά το fetch:
+console.log('Overpass status:', res.status);
+console.log('Overpass elements:', data.elements?.length);
 
     // Κάθε node έχει lat/lon και tags.name
     const nodes = (data.elements ?? []) as {
