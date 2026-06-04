@@ -252,7 +252,7 @@ function KpiRow({ emoji, title, badge, color, value, sub, progress }: {
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 10 }}>
         <span style={{ fontSize: 26, fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
-        <span style={{ fontSize: 13, color: 'rgba(0,0,0,0.6)', fontWeight: 600, paddingBottom: 3, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</span>
+        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', fontWeight: 500, paddingBottom: 3, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</span>
       </div>
       <div style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
         <div style={{ width: pct, height: '100%', borderRadius: 4, background: color }} />
@@ -266,7 +266,7 @@ function DistanceProfileCard({ b200, b34, b6, b10, total }: {
   b200: number; b34: number; b6: number; b10: number; total: number;
 }) {
   if (total === 0) return null;
-  const shell = '#37474f';
+  const shell = '#90a4ae';
   const buckets = [
     { n: b200, color: '#1565c0', label: '200' },
     { n: b34,  color: '#2e7d32', label: '300–400' },
@@ -298,7 +298,7 @@ function DistanceProfileCard({ b200, b34, b6, b10, total }: {
         {active.map((b, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <div style={{ width: 10, height: 10, borderRadius: 3, background: b.color }} />
-            <span style={{ fontSize: 13, color: 'rgba(0,0,0,0.65)', fontWeight: 600 }}>
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>
               {b.label} · {Math.round(b.n / total * 100)}%
             </span>
           </div>
@@ -509,7 +509,7 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
 
   return (
     <div style={{
-      background: '#f5f6d8', border: '1px solid rgba(255,255,255,0.1)',
+      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
       borderRadius: 16, overflow: 'hidden', marginBottom: 24,
     }}>
       {/* Header */}
@@ -541,10 +541,10 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
       {/* Info panel */}
       {showInfo && (
         <div style={{
-          background: 'rgba(13,59,94,0.06)', borderBottom: '1px solid rgba(0,0,0,0.1)',
+          background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.1)',
           padding: '16px 16px 8px',
         }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#0D3B5E', margin: '0 0 12px' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.9)', margin: '0 0 12px' }}>
             Τι σημαίνουν οι δείκτες
           </p>
           {KPI_INFO.map((item, i) => (
@@ -552,11 +552,11 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
               <span style={{
                 fontSize: 18, flexShrink: 0, width: 28, height: 28,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '50%', background: `${item.color}18`,
+                borderRadius: '50%', background: `${item.color}25`,
               }}>{item.emoji}</span>
               <div>
                 <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 700, color: item.color }}>{item.title}</p>
-                <p style={{ margin: 0, fontSize: 12, color: 'rgba(0,0,0,0.6)', lineHeight: 1.5 }}>{item.text}</p>
+                <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{item.text}</p>
               </div>
             </div>
           ))}
@@ -566,16 +566,16 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
       {/* Top stats row */}
       <div style={{
         display: 'flex', justifyContent: 'space-around', padding: '12px 16px',
-        borderBottom: '1px solid rgba(0,0,0,0.08)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}>
         {[
-          { v: String(totalBrevs), l: 'Σύνολο brevets',          c: '#0D3B5E' },
-          { v: `${peakYear}`,      l: `Ρεκόρ · ${counts[peakIdx]} brevets`, c: '#f00' },
-          { v: String(activeYrs),  l: 'Ενεργά έτη',              c: '#4CAF50' },
+          { v: String(totalBrevs), l: 'Σύνολο brevets',          c: '#06b6d4' },
+          { v: `${peakYear}`,      l: `Ρεκόρ · ${counts[peakIdx]} brevets`, c: '#f87171' },
+          { v: String(activeYrs),  l: 'Ενεργά έτη',              c: '#4ade80' },
         ].map((s, i) => (
           <div key={i} style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: s.c }}>{s.v}</div>
-            <div style={{ fontSize: 12, color: '#555', marginTop: 3 }}>{s.l}</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>{s.l}</div>
           </div>
         ))}
       </div>
@@ -613,13 +613,13 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
       </div>
 
       {/* Chart label */}
-      <div style={{ padding: '2px 40px 6px', fontSize: 13, fontWeight: 600, color: '#444' }}>
+      <div style={{ padding: '2px 40px 6px', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>
         Ιστορικό Δραστηριότητας · {firstYear} – {lastYear}
       </div>
 
       {/* Chart canvas */}
       <div style={{
-        margin: '0 12px 8px', borderRadius: 12, background: '#597A4F',
+        margin: '0 12px 8px', borderRadius: 12, background: 'rgba(10,22,40,0.9)',
         overflowX: 'auto', position: 'relative',
       }}>
         <canvas
@@ -644,16 +644,16 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
 
       {/* Last activity status */}
       <div style={{
-        margin: '0 12px 14px', border: `1px solid #0D3B5E44`,
-        borderRadius: 8, padding: '8px 12px', background: 'rgba(13,59,94,0.08)',
+        margin: '0 12px 14px', border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 8, padding: '8px 12px', background: 'rgba(255,255,255,0.04)',
         display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <div style={{
           width: 8, height: 8, borderRadius: '50%',
-          background: lastActiveYear >= nowYear - 1 ? '#4CAF50' : '#FF9800',
+          background: lastActiveYear >= nowYear - 1 ? '#4ade80' : '#fb923c',
           flexShrink: 0,
         }} />
-        <span style={{ fontSize: 11, fontWeight: 500, color: '#0D3B5E' }}>
+        <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.65)' }}>
           {lastActiveYear >= nowYear - 1
             ? `Ενεργός — τελευταία δραστηριότητα ${lastActiveYear} (${lastActiveCount} brevets)`
             : `Τελευταία δραστηριότητα: ${lastActiveYear} — ${nowYear - lastActiveYear} χρόνια αδράνειας`}
