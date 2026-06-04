@@ -822,18 +822,24 @@ const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
               <div className="space-y-2 mb-4">
 {form.controls.map((c, i) => (
   <div key={i} className="bg-white/3 rounded-xl p-3 mb-2">
-    {/* Row 1: αριθμός + km + × */}
-    <div className="flex items-center gap-2 mb-2">
-      <span className="text-white/40 text-xs font-mono w-5 shrink-0">{i+1}</span>
-      <input type="number" placeholder="km"
-        className={`${inp} w-28 shrink-0`}
-        value={c.km || ''}
-        onChange={e => updateCtrl(i, 'km', parseFloat(e.target.value)||0)} />
-      <button type="button" onClick={() => removeCtrl(i)}
-        className="ml-auto text-white/25 hover:text-red-400 transition-colors text-xl shrink-0 leading-none">
-        ×
-      </button>
-    </div>
+{/* Row 1: αριθμός + km + × */}
+<div className="flex items-center gap-2 mb-2">
+  <span className="text-white/40 text-xs font-mono w-5 shrink-0">{i+1}</span>
+  <div className="relative shrink-0">
+    <input type="number" placeholder="0"
+      className="bg-white/5 border border-white/15 text-white rounded-xl pl-4 pr-10 py-2.5
+        text-sm focus:outline-none focus:border-cyan-500/60 w-28"
+      value={c.km || ''}
+      onChange={e => updateCtrl(i, 'km', parseFloat(e.target.value)||0)} />
+    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 text-xs font-medium pointer-events-none">
+      km
+    </span>
+  </div>
+  <button type="button" onClick={() => removeCtrl(i)}
+    className="ml-auto text-white/25 hover:text-red-400 transition-colors text-xl shrink-0 leading-none">
+    ×
+  </button>
+</div>
     {/* Row 2: description full width */}
     <div className="pl-7">
       <input placeholder="Περιγραφή σημείου ελέγχου"
