@@ -56,14 +56,14 @@ function haversineKm(la1: number, lo1: number, la2: number, lo2: number) {
 }
 
 interface GpxParsed {
-  realKm:      number;
-  ascent:      number;
-  descent:     number;
-  wcs:         number;
-  startCoords: string;   // "lat,lng"
+  realKm:       number;
+  ascent:       number;
+  descent:      number;
+  wcs:          number;
+  startCoords:  string;
   finishCoords: string;
-  waypoints:   { lat: number; lng: number; name: string }[];
-  trackPoints: { lat: number; lng: number }[];  // downsampled for map preview
+  waypoints:    { lat: number; lng: number; name: string; km: number }[];
+  trackPoints:  { lat: number; lng: number }[];
 }
 
 const MAX_PREVIEW_PTS = 400;
@@ -337,9 +337,13 @@ export default function NewBrevetPage() {
       const parsed = parseGpx(text);
       setGpxParsed(true);
 
-      const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
-        km: 0, name: w.name, isManned: false, lat: w.lat, lng: w.lng,
-      }));
+const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
+  km:       w.km,       // ← τώρα έχει τιμή
+  name:     w.name,     // ← τώρα έχει όνομα
+  isManned: false,
+  lat:      w.lat,
+  lng:      w.lng,
+}));
 
       // Fill metrics immediately
       setGpxTrackPoints(parsed.trackPoints);
