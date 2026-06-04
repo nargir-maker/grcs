@@ -180,6 +180,7 @@ interface FormState {
   startCoords:    string;   // "lat,lng"
   finish:         string;
   finishCoords:   string;
+  viaCities: string;   // "ΛΑΡΙΣΑ - ΤΡΙΚΑΛΑ - ΙΩΑΝΝΙΝΑ"
   ascent:         string;
   descent:        string;
   realKm:         string;
@@ -203,7 +204,7 @@ const EMPTY: FormState = {
   allowPreride:false, prerideDate:'', prerideTime:'07:00',
   allowPostride:false, postrideDate:'', postrideTime:'07:00',
   active:true, registrationOpen:false,
-  start:'', startCoords:'', finish:'', finishCoords:'',
+  start:'', startCoords:'', finish:'', finishCoords:'', viaCities: '',
   ascent:'', descent:'', realKm:'', wcs:'',
   gpxUrl:'', mapUrl:'',
   description:'', hasMedal:false, medalCost:'', entryCost:'', flecheData:'',
@@ -346,6 +347,27 @@ const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
 
       // Fill metrics immediately
       setGpxTrackPoints(parsed.trackPoints);
+      // Overpass — πόλεις κατά μήκος διαδρομής (async, δεν μπλοκάρει)
+fetch('/api/overpass/cities', {
+  method:  'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body:    JSON.stringify({ trackPoints: parsed.trackPoints }),
+})
+  .then(r => r.json())
+  .then(({ cities }) => {
+    if (cities && cities.length > 0) {
+      // Αφαίρεσε την αφετηρία αν είναι ίδια με την πρώτη πόλη
+      const startName = ''; // θα συμπληρωθεί από geocoding
+      const viaStr = cities
+        .map((c: { name: string }) =>
+          c.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+        )
+        .join(' - ');
+      set('viaCities', viaStr);
+    }
+  })
+  .catch(() => { /* silently skip */ });
+
       setForm(f => ({
         ...f,
         realKm:       String(parsed.realKm),
@@ -504,6 +526,7 @@ const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
           startCoords:  form.startCoords,
           finish:       form.finish,
           finishCoords: form.finishCoords,
+          viaCities:    form.viaCities,   // ← νέο  πεδίο για ενδιάμεσες πόλεις, προς το παρόν απλά string
           ascent:       parseInt(form.ascent)  || 0,
           descent:      parseInt(form.descent) || 0,
           wcs:          parseFloat(form.wcs)   || 0,
@@ -783,6 +806,20 @@ const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
                 placeholder={geocoding ? 'Αναζήτηση τοποθεσίας...' : 'π.χ. ΚΑΛΠΑΚΙ'} />
             </Field>
           </div>
+          
+<Field label="Διαδρομή μέσω" hint="αυτόματα από GPX — μπορείς να επεξεργαστείς">
+            <div className="relative">
+              <input className={inp} value={form.viaCities}
+                onChange={e => set('viaCities', e.target.value)}
+                placeholder="π.χ. ΛΑΡΙΣΑ - ΤΡΙΚΑΛΑ - ΙΩΑΝΝΙΝΑ" />
+              {!form.viaCities && gpxParsed && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2
+                  text-white/20 text-xs pointer-events-none animate-pulse">
+                  ⏳ αναζήτηση...
+                </span>
+              )}
+            </div>
+          </Field>
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Συντεταγμένες εκκίνησης" hint="lat,lng — από GPX">
