@@ -47,7 +47,8 @@ if (lastSampledIdx < trackPoints.length - 1) {
 console.log('Overpass query — sampled points:', sampled.length);
 console.log('Query length chars:', query.length);
 
-    const res = await fetch('https://overpass-api.de/api/interpreter', {
+    //const res = await fetch('https://overpass-api.de/api/interpreter', {
+    const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
       method:  'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body:    `data=${encodeURIComponent(query)}`,
