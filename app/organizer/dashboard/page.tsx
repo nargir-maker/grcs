@@ -148,7 +148,7 @@ export default function OrganizerDashboard() {
               className="text-slate-400 hover:text-white text-sm transition-colors
                 flex items-center gap-1.5">
               <span>👤</span>
-              <span className="hidden sm:inline">Προφίλ</span>
+              <span className="hidden sm:inline">Επεξεργασία Προφίλ</span>
             </a>
             <button
               onClick={logoutOrganizer}
