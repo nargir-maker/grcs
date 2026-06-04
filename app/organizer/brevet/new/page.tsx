@@ -13,7 +13,17 @@ import {
   query, where, setDoc, serverTimestamp,
 } from 'firebase/firestore';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { BrevetCalendarPicker } from '@/app/components/BrevetCalendarPicker';
+
+const GpxPreviewMap = dynamic(() => import('@/app/components/GpxPreviewMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[320px] bg-white/5 rounded-xl flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"/>
+    </div>
+  ),
+});
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const STD_DISTANCES = [200, 300, 400, 600, 1000, 1200, 1400] as const;
@@ -46,14 +56,17 @@ function haversineKm(la1: number, lo1: number, la2: number, lo2: number) {
 }
 
 interface GpxParsed {
-  realKm: number;
-  ascent: number;
-  descent: number;
-  wcs: number;          // weighted climbing score = ascent / realKm
-  startCoords: string;  // "lat,lng"
+  realKm:      number;
+  ascent:      number;
+  descent:     number;
+  wcs:         number;
+  startCoords: string;   // "lat,lng"
   finishCoords: string;
-  waypoints: { lat: number; lng: number; name: string }[];
+  waypoints:   { lat: number; lng: number; name: string }[];
+  trackPoints: { lat: number; lng: number }[];  // downsampled for map preview
 }
+
+const MAX_PREVIEW_PTS = 400;
 
 function parseGpx(text: string): GpxParsed {
   const xml  = new DOMParser().parseFromString(text, 'text/xml');
@@ -87,6 +100,16 @@ function parseGpx(text: string): GpxParsed {
     name: w.querySelector('name')?.textContent?.trim() ?? '',
   }));
 
+  // Downsample track points for map preview
+  const step = Math.max(1, Math.floor(pts.length / MAX_PREVIEW_PTS));
+  const trackPoints = pts
+    .filter((_, i) => i % step === 0 || i === pts.length - 1)
+    .map(pt => ({
+      lat: parseFloat(pt.getAttribute('lat') ?? '0'),
+      lng: parseFloat(pt.getAttribute('lon') ?? '0'),
+    }))
+    .filter(p => p.lat && p.lng);
+
   const km = Math.round(distKm * 10) / 10;
   return {
     realKm:       km,
@@ -96,6 +119,7 @@ function parseGpx(text: string): GpxParsed {
     startCoords:  `${slat},${slng}`,
     finishCoords: `${flat},${flng}`,
     waypoints:    wpts,
+    trackPoints,
   };
 }
 
@@ -216,8 +240,9 @@ export default function NewBrevetPage() {
   const [clubs, setClubs]           = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving]         = useState(false);
   const [saveError, setSaveError]   = useState('');
-  const [gpxParsed, setGpxParsed]   = useState(false);
-  const [geocoding, setGeocoding]   = useState(false);
+  const [gpxParsed, setGpxParsed]     = useState(false);
+  const [geocoding, setGeocoding]     = useState(false);
+  const [gpxTrackPoints, setGpxTrackPoints] = useState<{lat:number;lng:number}[]>([]);
   const [prevBrevets, setPrevBrevets] = useState<{ id: string; title: string; date: string }[]>([]);
   const [showCopy, setShowCopy]     = useState(false);
   const gpxRef = useRef<HTMLInputElement>(null);
@@ -296,6 +321,7 @@ export default function NewBrevetPage() {
       }));
 
       // Fill metrics immediately
+      setGpxTrackPoints(parsed.trackPoints);
       setForm(f => ({
         ...f,
         realKm:       String(parsed.realKm),
@@ -685,6 +711,24 @@ export default function NewBrevetPage() {
             <input ref={gpxRef} type="file" accept=".gpx" className="hidden"
               onChange={e => { if (e.target.files?.[0]) handleGpxFile(e.target.files[0]); }} />
           </Field>
+
+          {/* Route preview map */}
+          {gpxTrackPoints.length > 0 && (
+            <div className="mb-4">
+              <p className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-2">
+                Προεπισκόπηση διαδρομής
+                <span className="ml-2 text-white/20 normal-case font-normal">
+                  {gpxTrackPoints.length} σημεία
+                </span>
+              </p>
+              <GpxPreviewMap
+                trackPoints={gpxTrackPoints}
+                startCoords={form.startCoords}
+                finishCoords={form.finishCoords}
+                height="320px"
+              />
+            </div>
+          )}
 
           <Field label="GPX URL" hint="GitHub raw link — βάλε χειροκίνητα μετά το ανέβασμα">
             <input className={inp} value={form.gpxUrl}

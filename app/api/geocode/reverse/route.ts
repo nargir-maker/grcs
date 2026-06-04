@@ -13,8 +13,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing lat/lng' }, { status: 400 });
   }
 
+  // zoom=14 → village/suburb level (not municipality/county level)
   const url = `https://nominatim.openstreetmap.org/reverse` +
-    `?lat=${lat}&lon=${lng}&format=json&accept-language=el,en`;
+    `?lat=${lat}&lon=${lng}&format=json&zoom=14&accept-language=el,en`;
 
   const res = await fetch(url, {
     headers: {
@@ -29,20 +30,25 @@ export async function GET(req: NextRequest) {
 
   const data = await res.json();
 
-  // Extract most specific available place name (Greek convention: uppercase)
+  // Priority: most specific settlement name, skip administrative divisions
   const addr = data.address ?? {};
   const name =
-    addr.village  ??
-    addr.hamlet   ??
-    addr.town     ??
-    addr.city     ??
-    addr.suburb   ??
-    addr.county   ??
-    addr.state    ??
+    addr.tourism        ??
+    addr.leisure        ??
+    addr.hamlet         ??
+    addr.village        ??
+    addr.neighbourhood  ??
+    addr.suburb         ??
+    addr.city_district  ??
+    addr.town           ??
+    addr.city           ??
     '';
 
+  // Remove Greek accent marks before uppercasing (standard typography)
+  const nameClean = name.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+
   return NextResponse.json({
-    name:         name.toUpperCase(),
+    name:         nameClean,
     display_name: data.display_name ?? '',
     address:      addr,
   });
