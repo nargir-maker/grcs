@@ -74,16 +74,20 @@ function parseGpx(text: string): GpxParsed {
   let distKm = 0, ascent = 0, descent = 0;
   let prevLa = 0, prevLo = 0, prevEl = 0, first = true;
 
+  // Cumulative km per track point index
+  const cumKm: number[] = [];
+
   pts.forEach(pt => {
     const la  = parseFloat(pt.getAttribute('lat') ?? '0');
     const lo  = parseFloat(pt.getAttribute('lon') ?? '0');
     const ele = parseFloat(pt.querySelector('ele')?.textContent ?? '0');
-    if (!la || !lo) return;
+    if (!la || !lo) { cumKm.push(distKm); return; }
     if (!first) {
       distKm += haversineKm(prevLa, prevLo, la, lo);
       const d = ele - prevEl;
       if (d > 0) ascent += d; else descent += Math.abs(d);
     }
+    cumKm.push(distKm);
     prevLa = la; prevLo = lo; prevEl = ele; first = false;
   });
 
@@ -94,13 +98,30 @@ function parseGpx(text: string): GpxParsed {
   const flat = parseFloat(finishPt?.getAttribute('lat') ?? '0');
   const flng = parseFloat(finishPt?.getAttribute('lon') ?? '0');
 
-  const wpts = Array.from(xml.querySelectorAll('wpt')).map(w => ({
-    lat:  parseFloat(w.getAttribute('lat') ?? '0'),
-    lng:  parseFloat(w.getAttribute('lon') ?? '0'),
-    name: w.querySelector('name')?.textContent?.trim() ?? '',
-  }));
+  // Waypoints — με namespace-safe query για το <name>
+  const wpts = Array.from(xml.querySelectorAll('wpt')).map(w => {
+    const wlat = parseFloat(w.getAttribute('lat') ?? '0');
+    const wlng = parseFloat(w.getAttribute('lon') ?? '0');
 
-  // Downsample track points for map preview
+    // Fix: querySelector('name') αποτυγχάνει με GPX namespace
+    const nameEl = w.getElementsByTagNameNS('*', 'name')[0];
+    const name   = nameEl?.textContent?.trim() ?? '';
+
+    // Βρες το κοντινότερο track point και πάρε το cumulative km του
+    let minDist = Infinity;
+    let nearestKm = 0;
+    pts.forEach((pt, i) => {
+      const la = parseFloat(pt.getAttribute('lat') ?? '0');
+      const lo = parseFloat(pt.getAttribute('lon') ?? '0');
+      if (!la || !lo) return;
+      const d = haversineKm(wlat, wlng, la, lo);
+      if (d < minDist) { minDist = d; nearestKm = cumKm[i]; }
+    });
+
+    return { lat: wlat, lng: wlng, name, km: Math.round(nearestKm * 10) / 10 };
+  });
+
+  // Downsample track points για map preview
   const step = Math.max(1, Math.floor(pts.length / MAX_PREVIEW_PTS));
   const trackPoints = pts
     .filter((_, i) => i % step === 0 || i === pts.length - 1)
