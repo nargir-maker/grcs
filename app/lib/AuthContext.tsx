@@ -19,6 +19,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   organizer: OrganizerSession | null;
   isOrganizer: boolean;
+  organizerLoaded: boolean;   // true once localStorage has been checked
   logoutOrganizer: () => void;
 }
 
@@ -29,12 +30,14 @@ const AuthContext = createContext<AuthContextType>({
   logout: async () => {},
   organizer: null,
   isOrganizer: false,
+  organizerLoaded: false,
   logoutOrganizer: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
-  const [organizer, setOrganizer] = useState<OrganizerSession | null>(null);
+  const [organizer, setOrganizer]           = useState<OrganizerSession | null>(null);
+  const [organizerLoaded, setOrganizerLoaded] = useState(false);
 
   const signInWithGoogle = async () => {
      await signIn('google', { callbackUrl: '/profile' }, { prompt: 'select_account' });
@@ -55,6 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {
       localStorage.removeItem('organizer_session');
+    } finally {
+      setOrganizerLoaded(true);
     }
   }, []);
 
@@ -72,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       organizer,
       isOrganizer: organizer !== null,
+      organizerLoaded,
       logoutOrganizer,
     }}>
       {children}

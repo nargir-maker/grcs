@@ -208,7 +208,7 @@ function Toggle({ value, onChange, label }: {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function NewBrevetPage() {
-  const { organizer, isOrganizer } = useAuth();
+  const { organizer, isOrganizer, organizerLoaded } = useAuth();
   const router = useRouter();
 
   const [form, setForm]             = useState<FormState>({ ...EMPTY });
@@ -220,15 +220,16 @@ export default function NewBrevetPage() {
   const [showCopy, setShowCopy]     = useState(false);
   const gpxRef = useRef<HTMLInputElement>(null);
 
-  // Guard + pre-fill from organiser session
+  // Guard — wait for localStorage to be read before deciding to redirect
   useEffect(() => {
+    if (!organizerLoaded) return;
     if (!isOrganizer) { router.replace('/login'); return; }
     setForm(f => ({
       ...f,
       certification: organizer!.clubId.startsWith('65') ? 'H.A.R.' : 'A.C.P.',
       organizerId:   organizer!.clubId,
     }));
-  }, [isOrganizer, organizer]);
+  }, [organizerLoaded, isOrganizer, organizer]);
 
   // Load clubs
   useEffect(() => {
@@ -448,6 +449,11 @@ export default function NewBrevetPage() {
     }
   }
 
+  if (!organizerLoaded) return (
+    <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
   if (!isOrganizer) return null;
   const endDt = endDatetime();
 
