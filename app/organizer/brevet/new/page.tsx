@@ -365,7 +365,7 @@ const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
     const polyline = sampled.map(p => `${p.lat},${p.lng}`).join(',');
     const query = `[out:json][timeout:25];node["place"~"^(city|town)$"](around:400,${polyline});out body;`;
 
-    const res = await fetch('https://overpass-api.de/api/interpreter', {
+const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
       method:  'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body:    `data=${encodeURIComponent(query)}`,
