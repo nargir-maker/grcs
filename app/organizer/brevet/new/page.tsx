@@ -348,25 +348,69 @@ const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
       // Fill metrics immediately
       setGpxTrackPoints(parsed.trackPoints);
       // Overpass — πόλεις κατά μήκος διαδρομής (async, δεν μπλοκάρει)
-fetch('/api/overpass/cities', {
-  method:  'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body:    JSON.stringify({ trackPoints: parsed.trackPoints }),
-})
-  .then(r => r.json())
-  .then(({ cities }) => {
-    if (cities && cities.length > 0) {
-      // Αφαίρεσε την αφετηρία αν είναι ίδια με την πρώτη πόλη
-      const startName = ''; // θα συμπληρωθεί από geocoding
+// Βάλε αυτό — απευθείας στο Overpass από τον browser:
+(async () => {
+  try {
+    // Distance-based downsample ~1 σημείο ανά 5km
+    const pts = parsed.trackPoints;
+    const sampled: { lat: number; lng: number }[] = [pts[0]];
+    let distAcc = 0;
+    let lastIdx = 0;
+    for (let i = 1; i < pts.length; i++) {
+      distAcc += haversineKm(pts[i-1].lat, pts[i-1].lng, pts[i].lat, pts[i].lng);
+      if (distAcc >= 5) { sampled.push(pts[i]); distAcc = 0; lastIdx = i; }
+    }
+    if (lastIdx < pts.length - 1) sampled.push(pts[pts.length - 1]);
+
+    const polyline = sampled.map(p => `${p.lat},${p.lng}`).join(',');
+    const query = `[out:json][timeout:25];node["place"~"^(city|town)$"](around:400,${polyline});out body;`;
+
+    const res = await fetch('https://overpass-api.de/api/interpreter', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    `data=${encodeURIComponent(query)}`,
+    });
+
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const nodes = (data.elements ?? []) as {
+      lat: number; lon: number;
+      tags: { name?: string; 'name:el'?: string; place?: string };
+    }[];
+
+    // Ταξινόμηση κατά σειρά εμφάνισης στη διαδρομή
+    const withOrder = nodes
+      .filter(n => n.tags?.name)
+      .map(node => {
+        let minDist = Infinity, nearestIdx = 0;
+        sampled.forEach((pt, i) => {
+          const d = haversineKm(node.lat, node.lon, pt.lat, pt.lng);
+          if (d < minDist) { minDist = d; nearestIdx = i; }
+        });
+        return { ...node, nearestIdx };
+      })
+      .sort((a, b) => a.nearestIdx - b.nearestIdx);
+
+    // Deduplicate
+    const seen = new Set<string>();
+    const cities = withOrder.filter(n => {
+      const name = n.tags['name:el'] || n.tags.name || '';
+      if (seen.has(name)) return false;
+      seen.add(name); return true;
+    });
+
+    if (cities.length > 0) {
       const viaStr = cities
-        .map((c: { name: string }) =>
-          c.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
-        )
+        .map(c => (c.tags['name:el'] || c.tags.name || '')
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase())
         .join(' - ');
       set('viaCities', viaStr);
     }
-  })
-  .catch(() => { /* silently skip */ });
+  } catch (e) {
+    console.error('Overpass error:', e);
+  }
+})();
 
       setForm(f => ({
         ...f,
