@@ -13,6 +13,7 @@ import {
   query, where, setDoc, serverTimestamp,
 } from 'firebase/firestore';
 import Link from 'next/link';
+import { BrevetCalendarPicker } from '@/app/components/BrevetCalendarPicker';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const STD_DISTANCES = [200, 300, 400, 600, 1000, 1200, 1400] as const;
@@ -560,16 +561,18 @@ export default function NewBrevetPage() {
 
         {/* ── SECTION 2: Χρονοδιάγραμμα ── */}
         <Section title="📅 Χρονοδιάγραμμα">
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Ημερομηνία">
-              <input type="date" className={inp} value={form.date}
-                onChange={e => set('date', e.target.value)} />
-            </Field>
-            <Field label="Ώρα εκκίνησης">
-              <input type="time" className={inp} value={form.startTime}
-                onChange={e => set('startTime', e.target.value)} />
-            </Field>
-          </div>
+          <Field label="Ημερομηνία">
+            <BrevetCalendarPicker
+              value={form.date}
+              onChange={v => set('date', v)}
+              clubs={clubs}
+            />
+          </Field>
+
+          <Field label="Ώρα εκκίνησης">
+            <input type="time" className={`${inp} max-w-[150px]`} value={form.startTime}
+              onChange={e => set('startTime', e.target.value)} />
+          </Field>
 
           <Field label="Μέγιστη διάρκεια (ώρες)" hint="προσυμπληρώνεται από απόσταση">
             <input type="number" step="0.5" className={`${inp} max-w-[140px]`}
