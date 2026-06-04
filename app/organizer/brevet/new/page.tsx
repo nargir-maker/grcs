@@ -820,29 +820,33 @@ const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
               </p>
             : (
               <div className="space-y-2 mb-4">
-                {form.controls.map((c, i) => (
-                  <div key={i} className="flex items-center gap-2 bg-white/3 rounded-xl p-3">
-                    <span className="text-white/40 text-xs font-mono w-5 shrink-0">{i+1}</span>
-                    <input type="number" placeholder="km"
-                      className={`${inp} w-20 shrink-0`}
-                      value={c.km || ''}
-                      onChange={e => updateCtrl(i, 'km', parseFloat(e.target.value)||0)} />
-                    <input placeholder="Περιγραφή"
-                      className={`${inp} flex-1`}
-                      value={c.name}
-                      onChange={e => updateCtrl(i, 'name', e.target.value)} />
-                    <label className="flex items-center gap-1.5 text-white/50 text-xs shrink-0 cursor-pointer">
-                      <input type="checkbox" checked={c.isManned}
-                        onChange={e => updateCtrl(i, 'isManned', e.target.checked)}
-                        className="accent-cyan-500" />
-                      Επανδρωμένο
-                    </label>
-                    <button type="button" onClick={() => removeCtrl(i)}
-                      className="text-white/25 hover:text-red-400 transition-colors text-xl shrink-0 leading-none">
-                      ×
-                    </button>
-                  </div>
-                ))}
+{form.controls.map((c, i) => (
+  <div key={i} className="bg-white/3 rounded-xl p-3 mb-2">
+    <div className="flex items-center gap-2 mb-2">
+      <span className="text-white/40 text-xs font-mono w-5 shrink-0">{i+1}</span>
+      <input type="number" placeholder="km"
+        className={`${inp} w-24 shrink-0`}
+        value={c.km || ''}
+        onChange={e => updateCtrl(i, 'km', parseFloat(e.target.value)||0)} />
+      <input placeholder="Περιγραφή σημείου ελέγχου"
+        className={`${inp} flex-1 min-w-0`}
+        value={c.name}
+        onChange={e => updateCtrl(i, 'name', e.target.value)} />
+      <button type="button" onClick={() => removeCtrl(i)}
+        className="text-white/25 hover:text-red-400 transition-colors text-xl shrink-0 leading-none ml-1">
+        ×
+      </button>
+    </div>
+    <div className="pl-7">
+      <label className="flex items-center gap-2 text-white/50 text-xs cursor-pointer">
+        <input type="checkbox" checked={c.isManned}
+          onChange={e => updateCtrl(i, 'isManned', e.target.checked)}
+          className="accent-cyan-500" />
+        Επανδρωμένο
+      </label>
+    </div>
+  </div>
+))}
               </div>
             )
           }
