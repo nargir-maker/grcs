@@ -828,7 +828,7 @@ const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
   <div className="relative shrink-0">
     <input type="number" placeholder="0"
       className="bg-white/5 border border-white/15 text-white rounded-xl pl-4 pr-10 py-2.5
-        text-sm focus:outline-none focus:border-cyan-500/60 w-28"
+        text-sm focus:outline-none focus:border-cyan-500/60 w-36"
       value={c.km || ''}
       onChange={e => updateCtrl(i, 'km', parseFloat(e.target.value)||0)} />
     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 text-xs font-medium pointer-events-none">
