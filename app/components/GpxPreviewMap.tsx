@@ -102,20 +102,20 @@ export default function GpxPreviewMap({
       trackPoints.forEach((pt, i) => {
         if (cumKm[i] >= nextTarget && nextTarget < total - interval * 0.5) {
           const kmLabel = Math.round(cumKm[i]);
-          const icon = L.divIcon({
-            html: `<div style="
-              width:26px;height:26px;border-radius:50%;
-              background:#1e293b;border:2px solid #ef4444;
-              color:#ef4444;font-size:9px;font-weight:700;
-              display:flex;align-items:center;justify-content:center;
-              font-family:sans-serif;line-height:1;
-              box-shadow:0 1px 4px rgba(0,0,0,.6)">
-              ${kmLabel}
-            </div>`,
-            className: '',
-            iconSize:   [26, 26],
-            iconAnchor: [13, 13],
-          });
+const icon = L.divIcon({
+  html: `<div style="
+    width:26px;height:26px;border-radius:50%;
+    background:#fff;border:2px solid #ef4444;
+    color:#111;font-size:9px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    font-family:sans-serif;line-height:1;
+    box-shadow:0 1px 4px rgba(0,0,0,.6)">
+    ${kmLabel}
+  </div>`,
+  className: '',
+  iconSize:   [26, 26],
+  iconAnchor: [13, 13],
+});
           L.marker([pt.lat, pt.lng], { icon })
             .bindTooltip(`${kmLabel} km`, { permanent: false })
             .addTo(map);

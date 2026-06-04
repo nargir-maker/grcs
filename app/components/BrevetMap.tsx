@@ -46,17 +46,18 @@ function interpolateLatLng(coords: ParsedCoord[], km: number): [number, number] 
   return [a.lat + t * (b.lat - a.lat), a.lng + t * (b.lng - a.lng)];
 }
 
+// Αντικατέστησε την svgCpMarker function
 function svgCpMarker(num: number, isManned: boolean): string {
-  const fill = isManned ? '#FFF176' : '#80DEEA';
-  return `
-    <svg width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="22,3 41,41 3,41"
-        fill="${fill}" stroke="#D32F2F" stroke-width="3.5"
-        stroke-linejoin="round"/>
-      <text x="22" y="38" text-anchor="middle"
-        font-family="Arial,sans-serif" font-size="11"
-        font-weight="bold" fill="#000">CP${num}</text>
-    </svg>`;
+  const borderColor = isManned ? '#f59e0b' : '#f59e0b';
+  return `<div style="
+    width:28px;height:28px;border-radius:6px;
+    background:#1e293b;border:2.5px solid ${borderColor};
+    color:#f59e0b;font-size:14px;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 1px 6px rgba(0,0,0,.6);
+    font-family:sans-serif;">
+    🏁
+  </div>`;
 }
 
 function svgKmMarker(km: number): string {
@@ -163,19 +164,39 @@ async function initLeafletMap(
       const polyline = L.polyline(coords, { color: '#ff3d02', weight: 3, opacity: 0.9 }).addTo(map);
       map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
 
-      L.marker(coords[0], {
-        icon: L.divIcon({
-          html: `<div style="background:#22c55e;color:white;font-size:11px;font-weight:bold;padding:3px 7px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);">🟢 START</div>`,
-          className: '', iconAnchor: [30, 10],
-        }),
-      }).addTo(map).bindPopup('Αφετηρία');
+// Start
+L.marker(coords[0], {
+  icon: L.divIcon({
+    html: `<div style="
+      width:28px;height:28px;border-radius:50%;
+      background:#22c55e;border:2.5px solid #fff;
+      color:#fff;font-size:13px;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 1px 4px rgba(0,0,0,.5)">
+      🚴
+    </div>`,
+    className: '',
+    iconSize:   [28, 28],
+    iconAnchor: [14, 14],
+  }),
+}).addTo(map).bindPopup('Αφετηρία');
 
-      L.marker(coords[coords.length-1], {
-        icon: L.divIcon({
-          html: `<div style="background:#f59e0b;color:white;font-size:11px;font-weight:bold;padding:3px 7px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.3);">🏁 FINISH</div>`,
-          className: '', iconAnchor: [35, 10],
-        }),
-      }).addTo(map).bindPopup('Τερματισμός');
+// Finish
+L.marker(coords[coords.length-1], {
+  icon: L.divIcon({
+    html: `<div style="
+      width:28px;height:28px;border-radius:50%;
+      background:#ef4444;border:2.5px solid #fff;
+      color:#fff;font-size:13px;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 1px 4px rgba(0,0,0,.5)">
+      🏆
+    </div>`,
+    className: '',
+    iconSize:   [28, 28],
+    iconAnchor: [14, 14],
+  }),
+}).addTo(map).bindPopup('Τερματισμός');
 
       controls.forEach((cp, i) => {
         if (!cp.lat || !cp.lng) return;
