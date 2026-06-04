@@ -76,7 +76,7 @@ function parseGpx(text: string): GpxParsed {
 
   // Cumulative km per track point index
   const cumKm: number[] = [];
-
+  
   pts.forEach(pt => {
     const la  = parseFloat(pt.getAttribute('lat') ?? '0');
     const lo  = parseFloat(pt.getAttribute('lon') ?? '0');
@@ -90,7 +90,7 @@ function parseGpx(text: string): GpxParsed {
     cumKm.push(distKm);
     prevLa = la; prevLo = lo; prevEl = ele; first = false;
   });
-
+  
   const startPt  = pts[0];
   const finishPt = pts[pts.length - 1];
   const slat = parseFloat(startPt?.getAttribute('lat')  ?? '0');
@@ -334,6 +334,14 @@ export default function NewBrevetPage() {
     setSaveError('');
     try {
       const text   = await file.text();
+      // DEBUG — αφαίρεσε μετά
+const debugXml = new DOMParser().parseFromString(text, 'text/xml');
+const debugWpts = debugXml.querySelectorAll('wpt');
+debugWpts.forEach((w, i) => {
+  const byNS = (w as Element).getElementsByTagNameNS('*', 'name')[0];
+  const byTag = (w as Element).querySelector('name');
+  console.log(`wpt[${i}] byNS: "${byNS?.textContent}" | byTag: "${byTag?.textContent}"`);
+});
       const parsed = parseGpx(text);
       setGpxParsed(true);
 
