@@ -746,12 +746,14 @@ const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
                   {gpxTrackPoints.length} σημεία
                 </span>
               </p>
-              <GpxPreviewMap
-                trackPoints={gpxTrackPoints}
-                startCoords={form.startCoords}
-                finishCoords={form.finishCoords}
-                height="320px"
-              />
+<GpxPreviewMap
+  trackPoints={gpxTrackPoints}
+  startCoords={form.startCoords}
+  finishCoords={form.finishCoords}
+  controls={form.controls}
+  totalKm={parseFloat(form.realKm) || 0}
+  height="320px"
+/>
             </div>
           )}
 
