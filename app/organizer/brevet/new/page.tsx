@@ -119,7 +119,6 @@ const wpts = Array.from(xml.querySelectorAll('wpt')).map(w => {
 
   return { lat: wlat, lng: wlng, name, km: Math.round(nearestKm * 10) / 10 };
 });
-console.log('parsed wpts:', wpts);
 
   // Downsample track points για map preview
   const step = Math.max(1, Math.floor(pts.length / MAX_PREVIEW_PTS));
@@ -380,6 +379,7 @@ const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
                               Math.abs(startLng - finishLng) < 0.001;
           if (isSamePoint) {
             // Loop route — copy start city to finish
+            console.log('ctrlsFromWpts:', ctrlsFromWpts);
             setForm(f => ({ ...f, finish: f.start }));
           } else {
             const res  = await fetch(`/api/geocode/reverse?lat=${finishLat}&lng=${finishLng}`);
