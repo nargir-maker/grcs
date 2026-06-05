@@ -85,21 +85,30 @@ function initMap(
   });
 
   // Control points
-  controls.forEach(ctrl => {
-    if (!ctrl.lat || !ctrl.lng) return;
-    const icon = L.divIcon({
-      html: `<div style="width:28px;height:28px;border-radius:6px;
-        background:#1e293b;border:2.5px solid #f59e0b;color:#f59e0b;font-size:14px;
-        display:flex;align-items:center;justify-content:center;
-        box-shadow:0 1px 6px rgba(0,0,0,.6)">🏁</div>`,
-      className: '', iconSize: [28, 28], iconAnchor: [14, 14],
-    });
-    L.marker([ctrl.lat, ctrl.lng], { icon })
-      .bindTooltip(
-        `<b>${ctrl.name || 'Control'}</b><br/>${ctrl.km} km${ctrl.isManned ? '<br/>Επανδρωμένο' : ''}`,
-        { permanent: false }
-      ).addTo(map);
+// ── Control points ───────────────────────────────────────────────────────────
+controls.forEach((ctrl, idx) => {
+  if (!ctrl.lat || !ctrl.lng) return;
+  const icon = L.divIcon({
+    html: `<div style="
+      width:32px;height:32px;border-radius:50%;
+      background:#f59e0b;border:2.5px solid #fff;
+      color:#000;font-size:9px;font-weight:800;
+      display:flex;align-items:center;justify-content:center;
+      font-family:sans-serif;letter-spacing:-0.5px;
+      box-shadow:0 1px 6px rgba(0,0,0,.5)">
+      CP${idx + 1}
+    </div>`,
+    className: '',
+    iconSize:   [32, 32],
+    iconAnchor: [16, 16],
   });
+  const label = ctrl.name
+    ? `<b>CP${idx + 1}: ${ctrl.name}</b><br/>${ctrl.km} km`
+    : `<b>CP${idx + 1}</b><br/>${ctrl.km} km`;
+  L.marker([ctrl.lat, ctrl.lng], { icon })
+    .bindTooltip(label + (ctrl.isManned ? '<br/>Επανδρωμένο' : ''), { permanent: false })
+    .addTo(map);
+});
 
   // Start
   const [slat, slng] = startCoords.split(',').map(parseFloat);
