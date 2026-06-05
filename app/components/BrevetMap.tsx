@@ -5,6 +5,36 @@ import dynamic from 'next/dynamic';
 
 const ElevationChart = dynamic(() => import('./ElevationChart'), { ssr: false });
 
+// ── Thunderforest API key ──────────────────────────────────────────────────────
+const TF = process.env.NEXT_PUBLIC_THUNDERFOREST_KEY;
+
+// ── Tile styles — shared between inline map and fullscreen ────────────────────
+const TILE_STYLES = [
+  {
+    id: 'street',
+    label: '🗺️', title: 'Οδικός',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19,
+  },
+  {
+    id: 'cycling',
+    label: '🚴', title: 'Ποδηλατικός',
+    url: `https://api.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=${TF}`,
+    attribution: '© Thunderforest · OpenStreetMap contributors',
+    maxZoom: 22,
+  },
+  {
+    id: 'outdoors',
+    label: '⛰️', title: 'Outdoors',
+    url: `https://api.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${TF}`,
+    attribution: '© Thunderforest · OpenStreetMap contributors',
+    maxZoom: 22,
+  },
+];
+
+const DEFAULT_STYLE = 'outdoors';
+
 interface BrevetMapProps {
   gpxUrl: string;
   startCoords?: string;
@@ -46,7 +76,6 @@ function interpolateLatLng(coords: ParsedCoord[], km: number): [number, number] 
   return [a.lat + t * (b.lat - a.lat), a.lng + t * (b.lng - a.lng)];
 }
 
-// Αντικατέστησε την svgCpMarker function
 function svgCpMarker(num: number): string {
   return `<div style="
     width:32px;height:32px;border-radius:50%;
@@ -86,11 +115,11 @@ function buildKmMarkers(
   layerRef.current = [];
   if (coords.length === 0) return;
   const interval = kmInterval(zoom);
-  const totalKm = coords[coords.length - 1].distKm;
+  const totalKm  = coords[coords.length - 1].distKm;
   for (let km = interval; km < totalKm; km += interval) {
     const pos = interpolateLatLng(coords, km);
     if (!pos) continue;
-    const icon = L.divIcon({ html: svgKmMarker(km), className: '', iconAnchor: [17, 17] });
+    const icon   = L.divIcon({ html: svgKmMarker(km), className: '', iconAnchor: [17, 17] });
     const marker = L.marker(pos, { icon, zIndexOffset: 100 }).addTo(map);
     marker.bindPopup(`km ${km}`);
     layerRef.current.push(marker);
@@ -98,15 +127,15 @@ function buildKmMarkers(
 }
 
 async function initLeafletMap(
-  container: HTMLDivElement,
-  gpxUrl: string,
-  controls: { km: number; name: string; lat: number; lng: number }[],
+  container:       HTMLDivElement,
+  gpxUrl:          string,
+  controls:        { km: number; name: string; lat: number; lng: number }[],
   scrollWheelZoom: boolean,
-  onCoordsReady?: (coords: ParsedCoord[]) => void,
-  kmLayerRef?: { current: any[] },
-  onMapReady?: (map: any, L: any) => void
-,
-  onTileReady?: (tile: any) => void
+  initialStyleId:  string,
+  onCoordsReady?:  (coords: ParsedCoord[]) => void,
+  kmLayerRef?:     { current: any[] },
+  onMapReady?:     (map: any, L: any) => void,
+  onTileReady?:    (tile: any) => void,
 ): Promise<{ map: any; markerRef: { current: any } }> {
   const L = (await import('leaflet')).default;
 
@@ -118,15 +147,18 @@ async function initLeafletMap(
   delete (L.Icon.Default.prototype as any)._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+    iconUrl:       'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
   });
 
   const map = L.map(container, { zoomControl: true, scrollWheelZoom });
-  const tile = L.tileLayer(
-    'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
-    { attribution: '© OpenStreetMap · CyclOSM', maxZoom: 20 }
-  ).addTo(map);
+
+  // Default tile layer από το TILE_STYLES
+  const defaultStyle = TILE_STYLES.find(s => s.id === initialStyleId) ?? TILE_STYLES[0];
+  const tile = L.tileLayer(defaultStyle.url, {
+    attribution: defaultStyle.attribution,
+    maxZoom:     defaultStyle.maxZoom,
+  }).addTo(map);
   if (onTileReady) onTileReady(tile);
 
   const dotIcon = L.divIcon({
@@ -137,16 +169,15 @@ async function initLeafletMap(
   const markerRef = { current: dotMarker };
 
   try {
-    const response = await fetch(gpxUrl);
-    const gpxText = await response.text();
-    const parser = new DOMParser();
-    const gpxDoc = parser.parseFromString(gpxText, 'text/xml');
-    const trackPoints = gpxDoc.querySelectorAll('trkpt');
-    const coords: [number, number][] = [];
-    const parsedCoords: ParsedCoord[] = [];
+    const response  = await fetch(gpxUrl);
+    const gpxText   = await response.text();
+    const gpxDoc    = new DOMParser().parseFromString(gpxText, 'text/xml');
+    const trackPts  = gpxDoc.querySelectorAll('trkpt');
+    const coords:        [number, number][] = [];
+    const parsedCoords:  ParsedCoord[]      = [];
     let distKm = 0, prevLat = 0, prevLng = 0;
 
-    trackPoints.forEach((pt, i) => {
+    trackPts.forEach((pt, i) => {
       const lat = parseFloat(pt.getAttribute('lat') ?? '0');
       const lng = parseFloat(pt.getAttribute('lon') ?? '0');
       if (lat && lng) {
@@ -163,53 +194,48 @@ async function initLeafletMap(
       const polyline = L.polyline(coords, { color: '#ff3d02', weight: 3, opacity: 0.9 }).addTo(map);
       map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
 
-// Start
-L.marker(coords[0], {
-  icon: L.divIcon({
-    html: `<div style="
-      width:28px;height:28px;border-radius:50%;
-      background:#22c55e;border:2.5px solid #fff;
-      color:#fff;font-size:13px;
-      display:flex;align-items:center;justify-content:center;
-      box-shadow:0 1px 4px rgba(0,0,0,.5)">
-      🚴
-    </div>`,
-    className: '',
-    iconSize:   [28, 28],
-    iconAnchor: [14, 14],
-  }),
-}).addTo(map).bindPopup('Αφετηρία');
+      // Start
+      L.marker(coords[0], {
+        icon: L.divIcon({
+          html: `<div style="width:28px;height:28px;border-radius:50%;
+            background:#22c55e;border:2.5px solid #fff;color:#fff;font-size:13px;
+            display:flex;align-items:center;justify-content:center;
+            box-shadow:0 1px 4px rgba(0,0,0,.5)">🚴</div>`,
+          className: '', iconSize: [28, 28], iconAnchor: [14, 14],
+        }),
+      }).addTo(map).bindPopup('Αφετηρία');
 
-// Finish
-L.marker(coords[coords.length-1], {
-  icon: L.divIcon({
-    html: `<div style="
-      width:28px;height:28px;border-radius:50%;
-      background:#ef4444;border:2.5px solid #fff;
-      color:#fff;font-size:13px;
-      display:flex;align-items:center;justify-content:center;
-      box-shadow:0 1px 4px rgba(0,0,0,.5)">
-      🏆
-    </div>`,
-    className: '',
-    iconSize:   [28, 28],
-    iconAnchor: [14, 14],
-  }),
-}).addTo(map).bindPopup('Τερματισμός');
+      // Finish
+      L.marker(coords[coords.length - 1], {
+        icon: L.divIcon({
+          html: `<div style="width:28px;height:28px;border-radius:50%;
+            background:#ef4444;border:2.5px solid #fff;color:#fff;font-size:13px;
+            display:flex;align-items:center;justify-content:center;
+            box-shadow:0 1px 4px rgba(0,0,0,.5)">🏆</div>`,
+          className: '', iconSize: [28, 28], iconAnchor: [14, 14],
+        }),
+      }).addTo(map).bindPopup('Τερματισμός');
 
+      // Control points
       controls.forEach((cp, i) => {
         if (!cp.lat || !cp.lng) return;
         L.marker([cp.lat, cp.lng], {
-          icon: L.divIcon({ html: svgCpMarker(i + 1), className: '', iconSize: [32, 32], iconAnchor: [16, 16] }),
+          icon: L.divIcon({
+            html: svgCpMarker(i + 1),
+            className: '', iconSize: [32, 32], iconAnchor: [16, 16],
+          }),
           zIndexOffset: 300,
-        }).addTo(map).bindPopup(`<b>CP${i+1}: ${cp.name}</b><br/>km ${cp.km}`);
+        }).addTo(map).bindTooltip(
+          cp.name
+            ? `<b>CP${i+1}: ${cp.name}</b><br/>${cp.km} km`
+            : `<b>CP${i+1}</b><br/>${cp.km} km`,
+          { permanent: false }
+        );
       });
 
       if (kmLayerRef) {
         buildKmMarkers(L, map, parsedCoords, map.getZoom(), kmLayerRef);
-        map.on('zoomend', () => {
-          buildKmMarkers(L, map, parsedCoords, map.getZoom(), kmLayerRef!);
-        });
+        map.on('zoomend', () => buildKmMarkers(L, map, parsedCoords, map.getZoom(), kmLayerRef!));
       }
 
       onCoordsReady?.(parsedCoords);
@@ -223,13 +249,59 @@ L.marker(coords[coords.length-1], {
   return { map, markerRef };
 }
 
-// ── Fullscreen modal ───────────────────────────────────────────────────────────
+// ── Tile switcher buttons — reusable ─────────────────────────────────────────
+function TileSwitcher({
+  activeId, mapInstanceRef, tileLayerRef, LRef, onSwitch, position = 'bottom-left',
+}: {
+  activeId:       string;
+  mapInstanceRef: React.MutableRefObject<any>;
+  tileLayerRef:   React.MutableRefObject<any>;
+  LRef:           React.MutableRefObject<any>;
+  onSwitch:       (id: string) => void;
+  position?:      'bottom-left' | 'bottom-left-fs';
+}) {
+  const cls = position === 'bottom-left-fs'
+    ? 'absolute bottom-4 left-4 z-[1001] flex gap-1.5'
+    : 'absolute bottom-10 left-3 z-[1000] flex gap-1.5';
+
+  return (
+    <div className={cls}>
+      {TILE_STYLES.map(style => (
+        <button
+          key={style.id}
+          title={style.title}
+          onClick={() => {
+            if (!mapInstanceRef.current || !tileLayerRef.current || !LRef.current) return;
+            mapInstanceRef.current.removeLayer(tileLayerRef.current);
+            tileLayerRef.current = LRef.current.tileLayer(style.url, {
+              attribution: style.attribution, maxZoom: style.maxZoom,
+            }).addTo(mapInstanceRef.current);
+            onSwitch(style.id);
+          }}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold
+            transition-all backdrop-blur-md border"
+          style={{
+            background:  activeId === style.id ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.80)',
+            borderColor: activeId === style.id ? 'rgba(6,182,212,0.8)'  : 'rgba(255,255,255,0.15)',
+            color:       activeId === style.id ? '#000'                  : 'rgba(255,255,255,0.7)',
+            boxShadow:   activeId === style.id ? '0 0 12px rgba(6,182,212,0.4)' : 'none',
+          }}
+        >
+          <span>{style.label}</span>
+          <span>{style.title}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Fullscreen modal ──────────────────────────────────────────────────────────
 function FullscreenMap({
   gpxUrl, controls, onClose, climbProfile, storedAscent, initialStyle,
 }: {
-  gpxUrl: string;
-  controls: { km: number; name: string; lat: number; lng: number }[];
-  onClose: () => void;
+  gpxUrl:        string;
+  controls:      { km: number; name: string; lat: number; lng: number }[];
+  onClose:       () => void;
   climbProfile?: any[];
   storedAscent?: number;
   initialStyle?: string;
@@ -238,28 +310,22 @@ function FullscreenMap({
   const modalMapInstanceRef = useRef<any>(null);
   const modalDotMarkerRef   = useRef<any>(null);
   const kmLayerRef          = useRef<any[]>([]);
-  const [modalCoords, setModalCoords]         = useState<ParsedCoord[]>([]);
-  const [modalScrubberKm, setModalScrubberKm] = useState<number | null>(null);
-  const [showChart, setShowChart]             = useState(true);
-  const [fsActiveStyle, setFsActiveStyle]     = useState(initialStyle ?? 'cycling');
-  const fsTileLayerRef                        = useRef<any>(null);
-  const fsLRef                                = useRef<any>(null);
+  const fsTileLayerRef      = useRef<any>(null);
+  const fsLRef              = useRef<any>(null);
 
-  const FS_TILE_STYLES = [
-    { id: 'street',  label: '🗺️', title: 'Τυπικός',   url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                     attribution: '© OpenStreetMap contributors',                  maxZoom: 19 },
-    { id: 'cycling', label: '🚴', title: 'Ποδηλατικός', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',      attribution: '© OpenStreetMap · CyclOSM',                     maxZoom: 20 },
-    { id: 'topo',    label: '⛰️', title: 'Τοπογραφικός',   url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                       attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)',      maxZoom: 17 },
-  ];
+  const [modalCoords,     setModalCoords]     = useState<ParsedCoord[]>([]);
+  const [modalScrubberKm, setModalScrubberKm] = useState<number | null>(null);
+  const [showChart,       setShowChart]       = useState(true);
+  const [fsActiveStyle,   setFsActiveStyle]   = useState(initialStyle ?? DEFAULT_STYLE);
 
   useEffect(() => {
     if (!modalMapRef.current) return;
     let destroyed = false;
     initLeafletMap(
-      modalMapRef.current, gpxUrl, controls, true,
+      modalMapRef.current, gpxUrl, controls, true, fsActiveStyle,
       coords => { if (!destroyed) setModalCoords(coords); },
-      kmLayerRef,
-      undefined,
-      (tile) => { fsTileLayerRef.current = tile; }
+      kmLayerRef, undefined,
+      tile => { fsTileLayerRef.current = tile; },
     ).then(async ({ map, markerRef }) => {
       if (destroyed) { map.remove(); return; }
       modalMapInstanceRef.current = map;
@@ -278,9 +344,7 @@ function FullscreenMap({
   useEffect(() => {
     const marker = modalDotMarkerRef.current;
     if (!marker) return;
-    if (modalScrubberKm === null || modalCoords.length === 0) {
-      marker.setOpacity(0); return;
-    }
+    if (modalScrubberKm === null || modalCoords.length === 0) { marker.setOpacity(0); return; }
     const pos = interpolateLatLng(modalCoords, modalScrubberKm);
     if (pos) { marker.setLatLng(pos); marker.setOpacity(1); }
   }, [modalScrubberKm, modalCoords]);
@@ -300,13 +364,11 @@ function FullscreenMap({
         className="relative w-[96vw] h-[90vh] rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0A1628]"
         onClick={e => e.stopPropagation()}
       >
-        {/* ── CLOSE FULLSCREEN — top right ── */}
-        <button
-          onClick={onClose}
-          title="Κλείσιμο (Esc)"
-          className="absolute top-3 right-3 z-[1001] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm"
-          style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}
-        >
+        {/* Κλείσιμο */}
+        <button onClick={onClose} title="Κλείσιμο (Esc)"
+          className="absolute top-3 right-3 z-[1001] flex items-center gap-1.5 px-2.5 py-1.5
+            rounded-lg text-xs font-bold border backdrop-blur-sm"
+          style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}>
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none"
             viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round"
@@ -315,69 +377,41 @@ function FullscreenMap({
           Κλείσιμο
         </button>
 
-        {/* ── TOGGLE CHART — bottom right, above chart ── */}
-        <button
-          onClick={() => setShowChart(s => !s)}
-          className="absolute z-[1001] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm transition-all"
+        {/* Toggle chart */}
+        <button onClick={() => setShowChart(s => !s)}
+          className="absolute z-[1001] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+            text-xs font-bold border backdrop-blur-sm transition-all"
           style={{
-            bottom: showChart ? 'calc(42% + 8px)' : 12,
-            right: 12,
+            bottom: showChart ? 'calc(42% + 8px)' : 12, right: 12,
             backgroundColor: showChart ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.85)',
-            borderColor: showChart ? 'rgba(6,182,212,0.6)' : 'rgba(6,182,212,0.4)',
-            color: showChart ? '#000' : '#06b6d4',
-          }}
-        >
+            borderColor:     showChart ? 'rgba(6,182,212,0.6)'  : 'rgba(6,182,212,0.4)',
+            color:           showChart ? '#000' : '#06b6d4',
+          }}>
           ⛰️ {showChart ? 'Κλείσιμο γραφήματος' : 'Υψομετρικό'}
         </button>
 
-        {/* MAP */}
+        {/* Map */}
         <div ref={modalMapRef} style={{ position: 'absolute', inset: 0 }} />
 
-        {/* ── Tile layer switcher — fullscreen ── */}
-        <div className="absolute bottom-4 left-4 z-[1001] flex gap-1.5">
-          {FS_TILE_STYLES.map(style => (
-            <button
-              key={style.id}
-              title={style.title}
-              onClick={() => {
-                if (!modalMapInstanceRef.current || !fsTileLayerRef.current || !fsLRef.current) return;
-                modalMapInstanceRef.current.removeLayer(fsTileLayerRef.current);
-                fsTileLayerRef.current = fsLRef.current.tileLayer(style.url, {
-                  attribution: style.attribution, maxZoom: style.maxZoom,
-                }).addTo(modalMapInstanceRef.current);
-                setFsActiveStyle(style.id);
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold
-                transition-all backdrop-blur-md border"
-              style={{
-                background:  fsActiveStyle === style.id ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.80)',
-                borderColor: fsActiveStyle === style.id ? 'rgba(6,182,212,0.8)'  : 'rgba(255,255,255,0.15)',
-                color:       fsActiveStyle === style.id ? '#000'                  : 'rgba(255,255,255,0.7)',
-                boxShadow:   fsActiveStyle === style.id ? '0 0 12px rgba(6,182,212,0.4)' : 'none',
-              }}
-            >
-              <span>{style.label}</span>
-              <span>{style.title}</span>
-            </button>
-          ))}
-        </div>
+        {/* Tile switcher */}
+        <TileSwitcher
+          activeId={fsActiveStyle}
+          mapInstanceRef={modalMapInstanceRef}
+          tileLayerRef={fsTileLayerRef}
+          LRef={fsLRef}
+          onSwitch={setFsActiveStyle}
+          position="bottom-left-fs"
+        />
 
-        {/* ── ELEVATION PANEL — shown/hidden by toggle ── */}
-        {/* ── TOGGLE CHART BUTTON — always visible bottom-right ── */}
-        
+        {/* Elevation panel */}
         {showChart && (
-          <div
-            className="absolute bottom-0 left-0 right-0 z-[1000]"
+          <div className="absolute bottom-0 left-0 right-0 z-[1000]"
             style={{
               background: 'linear-gradient(to top, rgba(10,22,40,0.65) 0%, rgba(10,22,40,0.40) 75%, rgba(10,22,40,0.10) 100%)',
-              backdropFilter: 'blur(3px)',
-              WebkitBackdropFilter: 'blur(12px)',
+              backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(12px)',
               borderTop: '1px solid rgba(6,182,212,0.15)',
-              padding: '16px 20px 12px',
-              maxHeight: '42%',
-              overflowY: 'auto',
-            }}
-          >
+              padding: '16px 20px 12px', maxHeight: '42%', overflowY: 'auto',
+            }}>
             <ElevationChart
               gpxUrl={gpxUrl}
               climbProfile={climbProfile}
@@ -394,7 +428,7 @@ function FullscreenMap({
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 export default function BrevetMap({
   gpxUrl, startCoords, finishCoords, controls = [], scrubberKm,
 }: BrevetMapProps) {
@@ -404,28 +438,22 @@ export default function BrevetMap({
   const initializedRef = useRef(false);
   const kmLayerRef     = useRef<any[]>([]);
   const tileLayerRef   = useRef<any>(null);
-  const LRef            = useRef<any>(null);
+  const LRef           = useRef<any>(null);
+
   const [parsedCoords, setParsedCoords] = useState<ParsedCoord[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [activeStyle, setActiveStyle]   = useState<string>('cycling');
+  const [activeStyle,  setActiveStyle]  = useState<string>(DEFAULT_STYLE);
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(f => !f), []);
-
-  const TILE_STYLES = [
-    { id: 'street',  label: '🗺️', title: 'Τυπικός',   url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                     attribution: '© OpenStreetMap contributors',                  maxZoom: 19 },
-    { id: 'cycling', label: '🚴', title: 'Ποδηλατικός', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',      attribution: '© OpenStreetMap · CyclOSM',                     maxZoom: 20 },
-    { id: 'topo',    label: '⛰️', title: 'Τοπογραφικός',   url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                       attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)',      maxZoom: 17 },
-  ];
 
   useEffect(() => {
     if (!mapRef.current || initializedRef.current) return;
     initializedRef.current = true;
     initLeafletMap(
-      mapRef.current, gpxUrl, controls, false,
+      mapRef.current, gpxUrl, controls, false, DEFAULT_STYLE,
       coords => setParsedCoords(coords),
-      kmLayerRef,
-      undefined,
-      (tile) => { tileLayerRef.current = tile; }
+      kmLayerRef, undefined,
+      tile => { tileLayerRef.current = tile; },
     ).then(async ({ map, markerRef }) => {
       mapInstanceRef.current = map;
       dotMarkerRef.current   = markerRef.current;
@@ -467,45 +495,23 @@ export default function BrevetMap({
       <div className="relative" style={{ visibility: isFullscreen ? 'hidden' : 'visible' }}>
         <div
           ref={mapRef}
-          style={{ height: '400px', width: '100%' }}
+          style={{ height: '400px', width: '100%', isolation: 'isolate' }}
           className="rounded-xl overflow-hidden border border-white/10"
         />
 
-        {/* ── Tile layer switcher ── */}
-        <div className="absolute bottom-10 left-3 z-[1000] flex gap-1.5">
-          {TILE_STYLES.map(style => (
-            <button
-              key={style.id}
-              title={style.title}
-              onClick={() => {
-                if (!mapInstanceRef.current || !tileLayerRef.current || !LRef.current) return;
-                mapInstanceRef.current.removeLayer(tileLayerRef.current);
-                tileLayerRef.current = LRef.current.tileLayer(style.url, {
-                  attribution: style.attribution, maxZoom: style.maxZoom,
-                }).addTo(mapInstanceRef.current);
-                setActiveStyle(style.id);
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold
-                transition-all backdrop-blur-md border"
-              style={{
-                background:  activeStyle === style.id ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.80)',
-                borderColor: activeStyle === style.id ? 'rgba(6,182,212,0.8)'  : 'rgba(255,255,255,0.15)',
-                color:       activeStyle === style.id ? '#000'                  : 'rgba(255,255,255,0.7)',
-                boxShadow:   activeStyle === style.id ? '0 0 12px rgba(6,182,212,0.4)' : 'none',
-              }}
-            >
-              <span>{style.label}</span>
-              <span>{style.title}</span>
-            </button>
-          ))}
-        </div>
+        <TileSwitcher
+          activeId={activeStyle}
+          mapInstanceRef={mapInstanceRef}
+          tileLayerRef={tileLayerRef}
+          LRef={LRef}
+          onSwitch={setActiveStyle}
+          position="bottom-left"
+        />
 
-        <button
-          onClick={toggleFullscreen}
-          title="Πλήρης οθόνη"
-          className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm transition-all hover:brightness-110"
-          style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}
-        >
+        <button onClick={toggleFullscreen} title="Πλήρης οθόνη"
+          className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5
+            rounded-lg text-xs font-bold border backdrop-blur-sm transition-all hover:brightness-110"
+          style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}>
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none"
             viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round"
