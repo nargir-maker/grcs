@@ -15,6 +15,7 @@ import {
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { BrevetCalendarPicker } from '@/app/components/BrevetCalendarPicker';
+import { GREEK_CITIES } from '@/app/lib/greek-cities';
 
 const GpxPreviewMap = dynamic(() => import('@/app/components/GpxPreviewMap'), {
   ssr: false,
@@ -55,6 +56,52 @@ function haversineKm(la1: number, lo1: number, la2: number, lo2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+// ── Offline city detection από greek-cities.ts ────────────────────────────────
+function detectViaCities(trackPoints: { lat: number; lng: number }[]): string {
+  const RADIUS_KM = 2.5;
+
+  // Downsample 1 σημείο ανά 2km για ταχύτητα
+  const sampled: { lat: number; lng: number; idx: number }[] = [
+    { ...trackPoints[0], idx: 0 },
+  ];
+  let distAcc = 0;
+  for (let i = 1; i < trackPoints.length; i++) {
+    distAcc += haversineKm(
+      trackPoints[i-1].lat, trackPoints[i-1].lng,
+      trackPoints[i].lat,   trackPoints[i].lng,
+    );
+    if (distAcc >= 2) {
+      sampled.push({ ...trackPoints[i], idx: i });
+      distAcc = 0;
+    }
+  }
+
+  // Για κάθε πόλη βρες αν η διαδρομή περνάει εντός RADIUS_KM
+  const hits: { name: string; idx: number }[] = [];
+  GREEK_CITIES.forEach(city => {
+    let minDist = Infinity, nearestIdx = 0;
+    sampled.forEach(pt => {
+      const d = haversineKm(city.a, city.o, pt.lat, pt.lng);
+      if (d < minDist) { minDist = d; nearestIdx = pt.idx; }
+    });
+    if (minDist <= RADIUS_KM) hits.push({ name: city.n, idx: nearestIdx });
+  });
+
+  // Ταξινόμηση κατά σειρά εμφάνισης στη διαδρομή
+  hits.sort((a, b) => a.idx - b.idx);
+
+  // Deduplicate + κεφαλαία χωρίς τόνους
+  const seen = new Set<string>();
+  return hits
+    .filter(h => {
+      if (seen.has(h.name)) return false;
+      seen.add(h.name);
+      return true;
+    })
+    .map(h => h.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase())
+    .join(' - ');
+}
+
 interface GpxParsed {
   realKm:       number;
   ascent:       number;
@@ -76,7 +123,7 @@ function parseGpx(text: string): GpxParsed {
 
   // Cumulative km per track point index
   const cumKm: number[] = [];
-  
+
   pts.forEach(pt => {
     const la  = parseFloat(pt.getAttribute('lat') ?? '0');
     const lo  = parseFloat(pt.getAttribute('lon') ?? '0');
@@ -90,7 +137,7 @@ function parseGpx(text: string): GpxParsed {
     cumKm.push(distKm);
     prevLa = la; prevLo = lo; prevEl = ele; first = false;
   });
-  
+
   const startPt  = pts[0];
   const finishPt = pts[pts.length - 1];
   const slat = parseFloat(startPt?.getAttribute('lat')  ?? '0');
@@ -98,27 +145,24 @@ function parseGpx(text: string): GpxParsed {
   const flat = parseFloat(finishPt?.getAttribute('lat') ?? '0');
   const flng = parseFloat(finishPt?.getAttribute('lon') ?? '0');
 
-  // Waypoints — με namespace-safe query για το <name>
-const wpts = Array.from(xml.querySelectorAll('wpt')).map(w => {
-  const wlat = parseFloat(w.getAttribute('lat') ?? '0');
-  const wlng = parseFloat(w.getAttribute('lon') ?? '0');
+  // Waypoints — querySelector δουλεύει κανονικά
+  const wpts = Array.from(xml.querySelectorAll('wpt')).map(w => {
+    const wlat = parseFloat(w.getAttribute('lat') ?? '0');
+    const wlng = parseFloat(w.getAttribute('lon') ?? '0');
+    const name = w.querySelector('name')?.textContent?.trim() ?? '';
 
-  // Χρησιμοποιούμε querySelector — αποδείχθηκε ότι δουλεύει
-  const name = w.querySelector('name')?.textContent?.trim() ?? '';
+    // Κοντινότερο track point για km
+    let minDist = Infinity, nearestKm = 0;
+    pts.forEach((pt, i) => {
+      const la = parseFloat(pt.getAttribute('lat') ?? '0');
+      const lo = parseFloat(pt.getAttribute('lon') ?? '0');
+      if (!la || !lo) return;
+      const d = haversineKm(wlat, wlng, la, lo);
+      if (d < minDist) { minDist = d; nearestKm = cumKm[i]; }
+    });
 
-  // Βρες κοντινότερο track point για km
-  let minDist = Infinity;
-  let nearestKm = 0;
-  pts.forEach((pt, i) => {
-    const la = parseFloat(pt.getAttribute('lat') ?? '0');
-    const lo = parseFloat(pt.getAttribute('lon') ?? '0');
-    if (!la || !lo) return;
-    const d = haversineKm(wlat, wlng, la, lo);
-    if (d < minDist) { minDist = d; nearestKm = cumKm[i]; }
+    return { lat: wlat, lng: wlng, name, km: Math.round(nearestKm * 10) / 10 };
   });
-
-  return { lat: wlat, lng: wlng, name, km: Math.round(nearestKm * 10) / 10 };
-});
 
   // Downsample track points για map preview
   const step = Math.max(1, Math.floor(pts.length / MAX_PREVIEW_PTS));
@@ -161,11 +205,10 @@ interface FormState {
   certification:  string;
   organizerId:    string;
   coOrganizerId:  string;
-  // schedule — stored as single ISO datetime in info.date
+  // schedule
   date:           string;   // YYYY-MM-DD
   startTime:      string;   // HH:MM
-  // duration stored as "HH:MM" in route.duration
-  durationHours:  string;   // decimal for easier input, converted on save
+  durationHours:  string;
   allowPreride:   boolean;
   prerideDate:    string;
   prerideTime:    string;
@@ -176,23 +219,23 @@ interface FormState {
   active:           boolean;
   registrationOpen: boolean;
   // route
-  start:          string;
-  startCoords:    string;   // "lat,lng"
-  finish:         string;
-  finishCoords:   string;
-  viaCities: string;   // "ΛΑΡΙΣΑ - ΤΡΙΚΑΛΑ - ΙΩΑΝΝΙΝΑ"
-  ascent:         string;
-  descent:        string;
-  realKm:         string;
-  wcs:            string;
-  gpxUrl:         string;   // GitHub raw URL — pasted manually
-  mapUrl:         string;   // Strava / Openrunner etc.
+  start:        string;
+  startCoords:  string;
+  finish:       string;
+  finishCoords: string;
+  viaCities:    string;
+  ascent:       string;
+  descent:      string;
+  realKm:       string;
+  wcs:          string;
+  gpxUrl:       string;
+  mapUrl:       string;
   // extra
-  description:    string;
-  hasMedal:       boolean;
-  medalCost:      string;
-  entryCost:      string;
-  flecheData:     string;
+  description: string;
+  hasMedal:    boolean;
+  medalCost:   string;
+  entryCost:   string;
+  flecheData:  string;
   // controls
   controls: Control[];
 }
@@ -204,7 +247,7 @@ const EMPTY: FormState = {
   allowPreride:false, prerideDate:'', prerideTime:'07:00',
   allowPostride:false, postrideDate:'', postrideTime:'07:00',
   active:true, registrationOpen:false,
-  start:'', startCoords:'', finish:'', finishCoords:'', viaCities: '',
+  start:'', startCoords:'', finish:'', finishCoords:'', viaCities:'',
   ascent:'', descent:'', realKm:'', wcs:'',
   gpxUrl:'', mapUrl:'',
   description:'', hasMedal:false, medalCost:'', entryCost:'', flecheData:'',
@@ -220,6 +263,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
+
 function Field({ label, hint, children }: {
   label: string; hint?: string; children: React.ReactNode;
 }) {
@@ -233,6 +277,7 @@ function Field({ label, hint, children }: {
     </div>
   );
 }
+
 const inp = `w-full bg-white/5 border border-white/15 text-white rounded-xl px-4 py-2.5
   text-sm focus:outline-none focus:border-cyan-500/60 placeholder-white/25`;
 const sel = `w-full bg-[#0f1f35] border border-white/15 text-white rounded-xl px-4 py-2.5
@@ -257,18 +302,17 @@ export default function NewBrevetPage() {
   const { organizer, isOrganizer, organizerLoaded } = useAuth();
   const router = useRouter();
 
-  const [form, setForm]             = useState<FormState>({ ...EMPTY });
-  const [clubs, setClubs]           = useState<{ id: string; name: string }[]>([]);
-  const [saving, setSaving]         = useState(false);
-  const [saveError, setSaveError]   = useState('');
-  const [gpxParsed, setGpxParsed]     = useState(false);
-  const [geocoding, setGeocoding]     = useState(false);
-  const [gpxTrackPoints, setGpxTrackPoints] = useState<{lat:number;lng:number}[]>([]);
+  const [form, setForm]         = useState<FormState>({ ...EMPTY });
+  const [clubs, setClubs]       = useState<{ id: string; name: string }[]>([]);
+  const [saving, setSaving]     = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [gpxParsed, setGpxParsed] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+  const [gpxTrackPoints, setGpxTrackPoints] = useState<{ lat: number; lng: number }[]>([]);
   const [prevBrevets, setPrevBrevets] = useState<{ id: string; title: string; date: string }[]>([]);
-  const [showCopy, setShowCopy]     = useState(false);
+  const [showCopy, setShowCopy] = useState(false);
   const gpxRef = useRef<HTMLInputElement>(null);
 
-  // Guard — wait for localStorage to be read before deciding to redirect
   useEffect(() => {
     if (!organizerLoaded) return;
     if (!isOrganizer) { router.replace('/login'); return; }
@@ -279,7 +323,6 @@ export default function NewBrevetPage() {
     }));
   }, [organizerLoaded, isOrganizer, organizer]);
 
-  // Load clubs
   useEffect(() => {
     getDocs(collection(db, 'clubs')).then(snap => {
       setClubs(snap.docs
@@ -289,7 +332,6 @@ export default function NewBrevetPage() {
     });
   }, []);
 
-  // Load organiser's previous brevets for "copy" feature
   useEffect(() => {
     if (!organizer?.clubId) return;
     getDocs(query(
@@ -307,7 +349,9 @@ export default function NewBrevetPage() {
     setForm(f => ({ ...f, [key]: val }));
 
   const nominalDist = () =>
-    form.distancePreset === 'other' ? parseFloat(form.distanceCustom) || 0 : form.distancePreset as number;
+    form.distancePreset === 'other'
+      ? parseFloat(form.distanceCustom) || 0
+      : form.distancePreset as number;
 
   const onDistChange = (preset: number | 'other', custom = form.distanceCustom) => {
     setForm(f => ({
@@ -320,7 +364,6 @@ export default function NewBrevetPage() {
     }));
   };
 
-  // Computed end datetime
   const endDatetime = () => {
     if (!form.date || !form.startTime || !form.durationHours) return null;
     const start = new Date(`${form.date}T${form.startTime}`);
@@ -329,101 +372,37 @@ export default function NewBrevetPage() {
     return new Date(start.getTime() + hrs * 3_600_000);
   };
 
-  // ── GPX local parse + reverse geocoding ──────────────────────────────────
+  // ── GPX parse + geocoding + offline city detection ────────────────────────
   async function handleGpxFile(file: File) {
     setSaveError('');
     try {
       const text   = await file.text();
       const parsed = parseGpx(text);
       setGpxParsed(true);
-
-const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
-  km:       w.km,       // ← τώρα έχει τιμή
-  name:     w.name,     // ← τώρα έχει όνομα
-  isManned: false,
-  lat:      w.lat,
-  lng:      w.lng,
-}));
-
-      // Fill metrics immediately
       setGpxTrackPoints(parsed.trackPoints);
-      // Overpass — πόλεις κατά μήκος διαδρομής (async, δεν μπλοκάρει)
-// Βάλε αυτό — απευθείας στο Overpass από τον browser:
-(async () => {
-  try {
-    // Distance-based downsample ~1 σημείο ανά 5km
-    const pts = parsed.trackPoints;
-    const sampled: { lat: number; lng: number }[] = [pts[0]];
-    let distAcc = 0;
-    let lastIdx = 0;
-    for (let i = 1; i < pts.length; i++) {
-      distAcc += haversineKm(pts[i-1].lat, pts[i-1].lng, pts[i].lat, pts[i].lng);
-      if (distAcc >= 5) { sampled.push(pts[i]); distAcc = 0; lastIdx = i; }
-    }
-    if (lastIdx < pts.length - 1) sampled.push(pts[pts.length - 1]);
 
-    const polyline = sampled.map(p => `${p.lat},${p.lng}`).join(',');
-    const query = `[out:json][timeout:25];node["place"~"^(city|town)$"](around:400,${polyline});out body;`;
-
-const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body:    `data=${encodeURIComponent(query)}`,
-    });
-
-    if (!res.ok) return;
-    const data = await res.json();
-
-    const nodes = (data.elements ?? []) as {
-      lat: number; lon: number;
-      tags: { name?: string; 'name:el'?: string; place?: string };
-    }[];
-
-    // Ταξινόμηση κατά σειρά εμφάνισης στη διαδρομή
-    const withOrder = nodes
-      .filter(n => n.tags?.name)
-      .map(node => {
-        let minDist = Infinity, nearestIdx = 0;
-        sampled.forEach((pt, i) => {
-          const d = haversineKm(node.lat, node.lon, pt.lat, pt.lng);
-          if (d < minDist) { minDist = d; nearestIdx = i; }
-        });
-        return { ...node, nearestIdx };
-      })
-      .sort((a, b) => a.nearestIdx - b.nearestIdx);
-
-    // Deduplicate
-    const seen = new Set<string>();
-    const cities = withOrder.filter(n => {
-      const name = n.tags['name:el'] || n.tags.name || '';
-      if (seen.has(name)) return false;
-      seen.add(name); return true;
-    });
-
-    if (cities.length > 0) {
-      const viaStr = cities
-        .map(c => (c.tags['name:el'] || c.tags.name || '')
-          .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase())
-        .join(' - ');
-      set('viaCities', viaStr);
-    }
-  } catch (e) {
-    console.error('Overpass error:', e);
-  }
-})();
-
-      setForm(f => ({
-        ...f,
-        realKm:       String(parsed.realKm),
-        ascent:       String(parsed.ascent),
-        descent:      String(parsed.descent),
-        wcs:          String(parsed.wcs),
-        startCoords:  parsed.startCoords,
-        finishCoords: parsed.finishCoords,
-        controls:     ctrlsFromWpts.length > 0 ? ctrlsFromWpts : f.controls,
+      // Controls από waypoints
+      const ctrlsFromWpts: Control[] = parsed.waypoints.map(w => ({
+        km: w.km, name: w.name, isManned: false, lat: w.lat, lng: w.lng,
       }));
 
-      // Reverse geocoding for start & finish city names
+      // Metrics + coords
+      setForm(f => ({
+        ...f,
+        realKm:      String(parsed.realKm),
+        ascent:      String(parsed.ascent),
+        descent:     String(parsed.descent),
+        wcs:         String(parsed.wcs),
+        startCoords: parsed.startCoords,
+        finishCoords: parsed.finishCoords,
+        controls:    ctrlsFromWpts.length > 0 ? ctrlsFromWpts : f.controls,
+      }));
+
+      // Offline city detection — instant, 0 API calls
+      const viaStr = detectViaCities(parsed.trackPoints);
+      if (viaStr) set('viaCities', viaStr);
+
+      // Reverse geocoding για αφετηρία
       const [startLat, startLng]   = parsed.startCoords.split(',').map(parseFloat);
       const [finishLat, finishLng] = parsed.finishCoords.split(',').map(parseFloat);
 
@@ -436,7 +415,7 @@ const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
         } catch { /* silently skip */ }
       }
 
-      // 1-second gap to respect Nominatim rate limit
+      // 1 δευτερόλεπτο για Nominatim rate limit
       await new Promise(r => setTimeout(r, 1100));
 
       if (finishLat && finishLng) {
@@ -444,8 +423,6 @@ const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
           const isSamePoint = Math.abs(startLat - finishLat) < 0.001 &&
                               Math.abs(startLng - finishLng) < 0.001;
           if (isSamePoint) {
-            // Loop route — copy start city to finish
-            console.log('ctrlsFromWpts:', ctrlsFromWpts);
             setForm(f => ({ ...f, finish: f.start }));
           } else {
             const res  = await fetch(`/api/geocode/reverse?lat=${finishLat}&lng=${finishLng}`);
@@ -468,49 +445,48 @@ const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
       const snap = await getDoc(doc(db, 'all_brevets', id));
       if (!snap.exists()) return;
       const d     = snap.data();
-      const info  = d.info    ?? {};
-      const route = d.route   ?? {};
-      const extra = d.extra   ?? {};
+      const info  = d.info  ?? {};
+      const route = d.route ?? {};
+      const extra = d.extra ?? {};
       const ctrls: Control[] = (d.controls ?? []).map((c: any) => ({
-        km:       c.km       ?? 0,
-        name:     c.name     ?? '',
-        isManned: c.isManned ?? false,
-        lat:      c.lat      ?? 0,
-        lng:      c.lng      ?? 0,
+        km: c.km ?? 0, name: c.name ?? '', isManned: c.isManned ?? false,
+        lat: c.lat ?? 0, lng: c.lng ?? 0,
       }));
 
-      const dist = parseInt(info.distance) || 200;
+      const dist  = parseInt(info.distance) || 200;
       const isStd = (STD_DISTANCES as readonly number[]).includes(dist);
       const durStr: string = route.duration ?? '';
-      const durHrs = durStr.includes(':') ? String(HHMMtoHours(durStr)) : String(STD_DURATION_HRS[dist] ?? '');
+      const durHrs = durStr.includes(':')
+        ? String(HHMMtoHours(durStr))
+        : String(STD_DURATION_HRS[dist] ?? '');
 
       setForm(f => ({
         ...f,
-        title:          info.title          ?? f.title,
-        type:           info.type           ?? f.type,
+        title:          info.title         ?? f.title,
+        type:           info.type          ?? f.type,
         distancePreset: isStd ? dist : 'other',
         distanceCustom: isStd ? '' : String(dist),
-        certification:  info.certification  ?? f.certification,
-        organizerId:    info.organizerId    ?? f.organizerId,
-        coOrganizerId:  info.coOrganizerId  ?? '',
+        certification:  info.certification ?? f.certification,
+        organizerId:    info.organizerId   ?? f.organizerId,
+        coOrganizerId:  info.coOrganizerId ?? '',
         durationHours:  durHrs,
-        start:          route.start         ?? '',
-        startCoords:    route.startCoords   ?? '',
-        finish:         route.finish        ?? '',
-        finishCoords:   route.finishCoords  ?? '',
+        start:          route.start        ?? '',
+        startCoords:    route.startCoords  ?? '',
+        finish:         route.finish       ?? '',
+        finishCoords:   route.finishCoords ?? '',
+        viaCities:      route.viaCities    ?? '',
         ascent:         String(route.ascent  ?? ''),
         descent:        String(route.descent ?? ''),
         wcs:            String(route.wcs     ?? ''),
-        mapUrl:         route.mapUrl        ?? '',
-        description:    extra.description   ?? '',
-        hasMedal:       extra.hasMedal      ?? false,
-        medalCost:      String(extra.medalCost  ?? ''),
-        entryCost:      String(extra.entryCost  ?? ''),
-        flecheData:     extra.flecheData    ?? '',
+        mapUrl:         route.mapUrl       ?? '',
+        description:    extra.description  ?? '',
+        hasMedal:       extra.hasMedal     ?? false,
+        medalCost:      String(extra.medalCost ?? ''),
+        entryCost:      String(extra.entryCost ?? ''),
+        flecheData:     extra.flecheData   ?? '',
         controls:       ctrls,
-        // Reset per-year fields
         date:'', gpxUrl:'', realKm:'', active:true, registrationOpen:false,
-        allowPreride: info.allowPreride ?? false,
+        allowPreride:  info.allowPreride  ?? false,
         allowPostride: info.allowPostride ?? false,
       }));
       setShowCopy(false);
@@ -536,13 +512,10 @@ const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
 
     setSaving(true);
     try {
-      // Document ID: {year}_{citySlug}_{distance}_{organizerId}
       const year     = new Date(form.date).getFullYear();
       const citySlug = (form.start || 'unknown').toLowerCase()
         .replace(/\s+/g, '-').replace(/[^\w-]/g, '').slice(0, 20);
       const docId    = `${year}_${citySlug}_${dist}_${form.organizerId}`;
-
-      // Full ISO datetime for info.date (Greek convention +02:00)
       const dateIso  = `${form.date}T${form.startTime}:00+02:00`;
       const endDt    = endDatetime();
       const durHHMM  = hoursToHHMM(parseFloat(form.durationHours) || 0);
@@ -570,7 +543,7 @@ const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
           startCoords:  form.startCoords,
           finish:       form.finish,
           finishCoords: form.finishCoords,
-          viaCities:    form.viaCities,   // ← νέο  πεδίο για ενδιάμεσες πόλεις, προς το παρόν απλά string
+          viaCities:    form.viaCities,
           ascent:       parseInt(form.ascent)  || 0,
           descent:      parseInt(form.descent) || 0,
           wcs:          parseFloat(form.wcs)   || 0,
@@ -581,13 +554,13 @@ const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
           mapUrl:       form.mapUrl,
         },
         extra: {
-          description: form.description.trim(),
-          hasMedal:    form.hasMedal,
-          medalCost:   form.hasMedal ? (parseFloat(form.medalCost) || 0) : 0,
-          entryCost:   parseFloat(form.entryCost) || 0,
-          flecheData:  form.flecheData,
+          description:  form.description.trim(),
+          hasMedal:     form.hasMedal,
+          medalCost:    form.hasMedal ? (parseFloat(form.medalCost) || 0) : 0,
+          entryCost:    parseFloat(form.entryCost) || 0,
+          flecheData:   form.flecheData,
           registration: '',
-          imageUrl:    '',
+          imageUrl:     '',
           closeTimeIso: endDt?.toISOString() ?? '',
         },
         controls:  form.controls,
@@ -787,7 +760,6 @@ const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
         {/* ── SECTION 4: Διαδρομή & GPX ── */}
         <Section title="🗺️ Διαδρομή & GPX">
 
-          {/* Local GPX parse (no upload needed) */}
           <Field label="Τοπικό GPX αρχείο"
             hint="δεν ανεβαίνει — αναλύεται τοπικά για αυτόματη συμπλήρωση">
             <div className="flex items-center gap-3">
@@ -796,9 +768,7 @@ const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
                   px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2">
                 📁 Επιλογή GPX
               </button>
-              {gpxParsed && (
-                <span className="text-green-400 text-sm">✓ Αναλύθηκε</span>
-              )}
+              {gpxParsed && <span className="text-green-400 text-sm">✓ Αναλύθηκε</span>}
             </div>
             <input ref={gpxRef} type="file" accept=".gpx" className="hidden"
               onChange={e => { if (e.target.files?.[0]) handleGpxFile(e.target.files[0]); }} />
@@ -813,14 +783,14 @@ const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
                   {gpxTrackPoints.length} σημεία
                 </span>
               </p>
-<GpxPreviewMap
-  trackPoints={gpxTrackPoints}
-  startCoords={form.startCoords}
-  finishCoords={form.finishCoords}
-  controls={form.controls}
-  totalKm={parseFloat(form.realKm) || 0}
-  height="320px"
-/>
+              <GpxPreviewMap
+                trackPoints={gpxTrackPoints}
+                startCoords={form.startCoords}
+                finishCoords={form.finishCoords}
+                controls={form.controls}
+                totalKm={parseFloat(form.realKm) || 0}
+                height="320px"
+              />
             </div>
           )}
 
@@ -850,19 +820,11 @@ const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
                 placeholder={geocoding ? 'Αναζήτηση τοποθεσίας...' : 'π.χ. ΚΑΛΠΑΚΙ'} />
             </Field>
           </div>
-          
-<Field label="Διαδρομή μέσω" hint="αυτόματα από GPX — μπορείς να επεξεργαστείς">
-            <div className="relative">
-              <input className={inp} value={form.viaCities}
-                onChange={e => set('viaCities', e.target.value)}
-                placeholder="π.χ. ΛΑΡΙΣΑ - ΤΡΙΚΑΛΑ - ΙΩΑΝΝΙΝΑ" />
-              {!form.viaCities && gpxParsed && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2
-                  text-white/20 text-xs pointer-events-none animate-pulse">
-                  ⏳ αναζήτηση...
-                </span>
-              )}
-            </div>
+
+          <Field label="Διαδρομή μέσω" hint="αυτόματα από GPX — μπορείς να επεξεργαστείς">
+            <input className={inp} value={form.viaCities}
+              onChange={e => set('viaCities', e.target.value)}
+              placeholder="π.χ. ΛΑΡΙΣΑ - ΤΡΙΚΑΛΑ - ΙΩΑΝΝΙΝΑ" />
           </Field>
 
           <div className="grid grid-cols-2 gap-4">
@@ -903,44 +865,46 @@ const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
               </p>
             : (
               <div className="space-y-2 mb-4">
-{form.controls.map((c, i) => (
-  <div key={i} className="bg-white/3 rounded-xl p-3 mb-2">
-{/* Row 1: αριθμός + km + × */}
-<div className="flex items-center gap-2 mb-2">
-  <span className="text-white/40 text-xs font-mono w-5 shrink-0">{i+1}</span>
-  <div className="relative shrink-0">
-    <input type="number" placeholder="0"
-      className="bg-white/5 border border-white/15 text-white rounded-xl pl-4 pr-10 py-2.5
-        text-sm focus:outline-none focus:border-cyan-500/60 w-36"
-      value={c.km || ''}
-      onChange={e => updateCtrl(i, 'km', parseFloat(e.target.value)||0)} />
-    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 text-xs font-medium pointer-events-none">
-      km
-    </span>
-  </div>
-  <button type="button" onClick={() => removeCtrl(i)}
-    className="ml-auto text-white/25 hover:text-red-400 transition-colors text-xl shrink-0 leading-none">
-    ×
-  </button>
-</div>
-    {/* Row 2: description full width */}
-    <div className="pl-7">
-      <input placeholder="Περιγραφή σημείου ελέγχου"
-        className={`${inp} w-full`}
-        value={c.name}
-        onChange={e => updateCtrl(i, 'name', e.target.value)} />
-    </div>
-    {/* Row 3: checkbox */}
-    <div className="pl-7 mt-2">
-      <label className="flex items-center gap-2 text-white/50 text-xs cursor-pointer">
-        <input type="checkbox" checked={c.isManned}
-          onChange={e => updateCtrl(i, 'isManned', e.target.checked)}
-          className="accent-cyan-500" />
-        Επανδρωμένο
-      </label>
-    </div>
-  </div>
-))}
+                {form.controls.map((c, i) => (
+                  <div key={i} className="bg-white/3 rounded-xl p-3 mb-2">
+                    {/* Row 1: αριθμός + km + × */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-white/40 text-xs font-mono w-5 shrink-0">{i+1}</span>
+                      <div className="relative shrink-0">
+                        <input type="number" placeholder="0"
+                          className="bg-white/5 border border-white/15 text-white rounded-xl
+                            pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:border-cyan-500/60 w-36"
+                          value={c.km || ''}
+                          onChange={e => updateCtrl(i, 'km', parseFloat(e.target.value)||0)} />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2
+                          text-white/30 text-xs font-medium pointer-events-none">
+                          km
+                        </span>
+                      </div>
+                      <button type="button" onClick={() => removeCtrl(i)}
+                        className="ml-auto text-white/25 hover:text-red-400 transition-colors
+                          text-xl shrink-0 leading-none">
+                        ×
+                      </button>
+                    </div>
+                    {/* Row 2: description */}
+                    <div className="pl-7">
+                      <input placeholder="Περιγραφή σημείου ελέγχου"
+                        className={`${inp} w-full`}
+                        value={c.name}
+                        onChange={e => updateCtrl(i, 'name', e.target.value)} />
+                    </div>
+                    {/* Row 3: checkbox */}
+                    <div className="pl-7 mt-2">
+                      <label className="flex items-center gap-2 text-white/50 text-xs cursor-pointer">
+                        <input type="checkbox" checked={c.isManned}
+                          onChange={e => updateCtrl(i, 'isManned', e.target.checked)}
+                          className="accent-cyan-500" />
+                        Επανδρωμένο
+                      </label>
+                    </div>
+                  </div>
+                ))}
               </div>
             )
           }
@@ -997,7 +961,9 @@ const res = await fetch('https://overpass.kumi.systems/api/interpreter', {
             className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-black font-bold
               py-3 rounded-xl text-sm transition-all disabled:opacity-50
               flex items-center justify-center gap-2">
-            {saving && <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"/>}
+            {saving && (
+              <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"/>
+            )}
             {saving ? 'Αποθήκευση...' : '✓ Δημιουργία Brevet'}
           </button>
         </div>
