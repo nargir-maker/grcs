@@ -13,6 +13,7 @@ const TILE_STYLES = [
   {
     id: 'street',
     label: '🗺️', title: 'Οδικός',
+    tooltip: 'Οδικός χάρτης — δρόμοι, πόλεις, σήμανση',
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '© OpenStreetMap contributors',
     maxZoom: 19,
@@ -20,13 +21,15 @@ const TILE_STYLES = [
   {
     id: 'cycling',
     label: '🚴', title: 'Ποδηλατικός',
+    tooltip: 'Ποδηλατικός χάρτης — ποδηλατοδρόμοι, διαδρομές, σήμανση cycling',
     url: `https://api.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=${TF}`,
     attribution: '© Thunderforest · OpenStreetMap contributors',
     maxZoom: 22,
   },
   {
     id: 'outdoors',
-    label: '⛰️', title: 'Outdoors',
+    label: '⛰️', title: 'Τοπογραφικός',
+    tooltip: 'Τοπογραφικός χάρτης — υψόμετρο, ανάγλυφο εδάφους, μονοπάτια',
     url: `https://api.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${TF}`,
     attribution: '© Thunderforest · OpenStreetMap contributors',
     maxZoom: 22,
