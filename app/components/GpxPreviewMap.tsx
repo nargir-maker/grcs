@@ -275,7 +275,7 @@ export default function GpxPreviewMap({
       <div className="relative">
         <div
           ref={containerRef}
-          style={{ height, width: '100%', borderRadius: 12, overflow: 'hidden' }}
+          style={{ height, width: '100%', borderRadius: 12, overflow: 'hidden', isolation: 'isolate' }}
         />
 
         {/* Κουμπί fullscreen */}
