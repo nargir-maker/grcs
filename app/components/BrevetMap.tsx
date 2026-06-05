@@ -47,16 +47,15 @@ function interpolateLatLng(coords: ParsedCoord[], km: number): [number, number] 
 }
 
 // Αντικατέστησε την svgCpMarker function
-function svgCpMarker(num: number, isManned: boolean): string {
-  const borderColor = isManned ? '#f59e0b' : '#f59e0b';
+function svgCpMarker(num: number): string {
   return `<div style="
-    width:28px;height:28px;border-radius:6px;
-    background:#1e293b;border:2.5px solid ${borderColor};
-    color:#f59e0b;font-size:14px;
+    width:32px;height:32px;border-radius:50%;
+    background:#f59e0b;border:2.5px solid #fff;
+    color:#000;font-size:9px;font-weight:800;
     display:flex;align-items:center;justify-content:center;
-    box-shadow:0 1px 6px rgba(0,0,0,.6);
-    font-family:sans-serif;">
-    🏁
+    font-family:sans-serif;letter-spacing:-0.5px;
+    box-shadow:0 1px 6px rgba(0,0,0,.5)">
+    CP${num}
   </div>`;
 }
 
@@ -201,7 +200,7 @@ L.marker(coords[coords.length-1], {
       controls.forEach((cp, i) => {
         if (!cp.lat || !cp.lng) return;
         L.marker([cp.lat, cp.lng], {
-          icon: L.divIcon({ html: svgCpMarker(i + 1, true), className: '', iconAnchor: [22, 44] }),
+          icon: L.divIcon({ html: svgCpMarker(i + 1), className: '', iconSize: [32, 32], iconAnchor: [16, 16] }),
           zIndexOffset: 300,
         }).addTo(map).bindPopup(`<b>CP${i+1}: ${cp.name}</b><br/>km ${cp.km}`);
       });
