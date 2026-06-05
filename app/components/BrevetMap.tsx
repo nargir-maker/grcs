@@ -272,7 +272,7 @@ function TileSwitcher({
       {TILE_STYLES.map(style => (
         <button
           key={style.id}
-          title={style.title}
+          title={style.tooltip}
           onClick={() => {
             if (!mapInstanceRef.current || !tileLayerRef.current || !LRef.current) return;
             mapInstanceRef.current.removeLayer(tileLayerRef.current);
