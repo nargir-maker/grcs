@@ -1,8 +1,5 @@
 'use client';
 
-// app/components/LiveMap.tsx
-// Real-time Leaflet map showing GPX route + live rider positions
-
 import { useEffect, useRef, useState } from 'react';
 
 interface Rider {
@@ -28,18 +25,49 @@ interface LiveMapProps {
   riderLabelMode?: 'brevet' | 'friendly';
 }
 
-// ── SVG marker builders ────────────────────────────────────────────────────────
+// ── Tile styles ───────────────────────────────────────────────────────────────
+const TF = process.env.NEXT_PUBLIC_THUNDERFOREST_KEY;
 
+const TILE_STYLES = [
+  {
+    id: 'street',
+    label: '🗺️', title: 'Οδικός',
+    tooltip: 'Οδικός χάρτης — δρόμοι, πόλεις, σήμανση',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19,
+  },
+  {
+    id: 'cycling',
+    label: '🚴', title: 'Ποδηλατικός',
+    tooltip: 'Ποδηλατικός χάρτης — ποδηλατοδρόμοι, διαδρομές, σήμανση cycling',
+    url: `https://api.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=${TF}`,
+    attribution: '© Thunderforest · OpenStreetMap contributors',
+    maxZoom: 22,
+  },
+  {
+    id: 'outdoors',
+    label: '⛰️', title: 'Τοπογραφικός',
+    tooltip: 'Τοπογραφικός χάρτης — υψόμετρο, ανάγλυφο εδάφους, μονοπάτια',
+    url: `https://api.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${TF}`,
+    attribution: '© Thunderforest · OpenStreetMap contributors',
+    maxZoom: 22,
+  },
+];
+
+const DEFAULT_STYLE = 'outdoors';
+
+// ── SVG marker builders ───────────────────────────────────────────────────────
 function svgCpMarker(num: number): string {
-  return `
-    <svg width="40" height="40" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="22,3 41,41 3,41"
-        fill="#FFF176" stroke="#D32F2F" stroke-width="3.5"
-        stroke-linejoin="round"/>
-      <text x="22" y="38" text-anchor="middle"
-        font-family="Arial,sans-serif" font-size="11"
-        font-weight="bold" fill="#000">CP${num}</text>
-    </svg>`;
+  return `<div style="
+    width:32px;height:32px;border-radius:50%;
+    background:#f59e0b;border:2.5px solid #fff;
+    color:#000;font-size:9px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+    font-family:sans-serif;letter-spacing:-0.5px;
+    box-shadow:0 1px 6px rgba(0,0,0,.5)">
+    CP${num}
+  </div>`;
 }
 
 function svgKmMarker(km: number): string {
@@ -53,7 +81,6 @@ function svgKmMarker(km: number): string {
     </svg>`;
 }
 
-// ── Rider marker: square + name chip to the right ─────────────────────────────
 function svgRiderMarker(
   gender: string,
   isDNF: boolean,
@@ -73,42 +100,34 @@ function svgRiderMarker(
   const sqSize   = isSelected ? 40 : 32;
   const fontSize = isSelected ? 22 : 17;
 
-  // Label: brevet = "1234-Ν. Επώνυμο", friendly = "Όνομα"
-  const parts     = fullName.trim().split(' ');
-  const firstName = parts[0] ?? fullName;
-  const lastName  = parts.slice(1).join(' ');
+  const parts      = fullName.trim().split(' ');
+  const firstName  = parts[0] ?? fullName;
+  const lastName   = parts.slice(1).join(' ');
   const firstInitial = firstName.length > 0 ? firstName[0] + '.' : '';
-  const chipLabel = labelMode === 'brevet' && registryId && registryId !== '-'
+  const chipLabel  = labelMode === 'brevet' && registryId && registryId !== '-'
     ? `${registryId}-${firstInitial} ${lastName}`.trim()
     : firstName;
-  // Estimate chip width: ~8px per char + 16px padding
-  const chipW    = Math.max(56, chipLabel.length * 8.5 + 18);
-  const chipH    = 24;
-  const gap      = 4;
-  const totalW   = sqSize + gap + chipW;
-  const totalH   = Math.max(sqSize, chipH);
-  const chipY    = (totalH - chipH) / 2;
-  const chipX    = sqSize + gap;
-  const sqY      = (totalH - sqSize) / 2;
+  const chipW = Math.max(56, chipLabel.length * 8.5 + 18);
+  const chipH = 24, gap = 4;
+  const totalW = sqSize + gap + chipW;
+  const totalH = Math.max(sqSize, chipH);
+  const chipY  = (totalH - chipH) / 2;
+  const chipX  = sqSize + gap;
+  const sqY    = (totalH - sqSize) / 2;
 
   return `
     <svg width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}"
       xmlns="http://www.w3.org/2000/svg">
-      ${isSelected ? `
-        <defs>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="2" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>` : ''}
-      <!-- Square marker -->
+      ${isSelected ? `<defs><filter id="glow">
+        <feGaussianBlur stdDeviation="2" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter></defs>` : ''}
       <rect x="1" y="${sqY + 1}" width="${sqSize - 2}" height="${sqSize - 2}"
         rx="7" ry="7" fill="${bg}" stroke="white" stroke-width="2.5"
         ${isSelected ? 'filter="url(#glow)"' : ''}/>
       <text x="${sqSize / 2}" y="${sqY + sqSize / 2 + fontSize * 0.35}"
         text-anchor="middle" font-family="Arial,sans-serif"
         font-size="${fontSize}" font-weight="bold" fill="white">${symbol}</text>
-      <!-- Name chip -->
       <rect x="${chipX}" y="${chipY}" width="${chipW}" height="${chipH}"
         rx="6" ry="6" fill="${bg}" fill-opacity="0.88"
         stroke="white" stroke-opacity="0.5" stroke-width="1.2"/>
@@ -118,12 +137,13 @@ function svgRiderMarker(
     </svg>`;
 }
 
-// ── Haversine ─────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  const a = Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
@@ -163,40 +183,34 @@ function buildKmMarkers(
   layerRef.current.forEach(m => map.removeLayer(m));
   layerRef.current = [];
   if (coords.length === 0) return;
-
   const interval = kmInterval(zoom);
-  const totalKm = coords[coords.length - 1].distKm;
-
+  const totalKm  = coords[coords.length - 1].distKm;
   for (let km = interval; km < totalKm; km += interval) {
     const pos = interpolateLatLng(coords, km);
     if (!pos) continue;
-    const icon = L.divIcon({
-      html: svgKmMarker(km),
-      className: '',
-      iconAnchor: [17, 17],
-    });
+    const icon   = L.divIcon({ html: svgKmMarker(km), className: '', iconAnchor: [17, 17] });
     const marker = L.marker(pos, { icon, zIndexOffset: 100 }).addTo(map);
     marker.bindPopup(`km ${km}`);
     layerRef.current.push(marker);
   }
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 export default function LiveMap({
   gpxUrl, controls, riders, selectedRiderId, onRiderSelect,
   mapHeight = '500px',
   riderLabelMode = 'brevet',
 }: LiveMapProps) {
-  const mapRef          = useRef<HTMLDivElement>(null);
-  const mapInstance     = useRef<any>(null);
-  const riderMarkers    = useRef<Map<string, any>>(new Map());
-  const kmLayerRef      = useRef<any[]>([]);
-  const parsedCoords    = useRef<ParsedCoord[]>([]);
-  const tileLayerRef    = useRef<any>(null);
-  const [L, setL]       = useState<any>(null);
-  const [activeStyle, setActiveStyle] = useState<string>('cycling');
+  const mapRef       = useRef<HTMLDivElement>(null);
+  const mapInstance  = useRef<any>(null);
+  const riderMarkers = useRef<Map<string, any>>(new Map());
+  const kmLayerRef   = useRef<any[]>([]);
+  const parsedCoords = useRef<ParsedCoord[]>([]);
+  const tileLayerRef = useRef<any>(null);
+  const [L, setL]    = useState<any>(null);
+  const [activeStyle, setActiveStyle] = useState<string>(DEFAULT_STYLE);
 
-  // Init map once
+  // ── Init map once ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
@@ -213,17 +227,16 @@ export default function LiveMap({
       });
 
       const map = leaflet.map(mapRef.current!, {
-        zoomControl: true,
-        scrollWheelZoom: true,
+        zoomControl: true, scrollWheelZoom: true,
       });
 
-      const tile = leaflet.tileLayer(
-        'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
-        { attribution: '© OpenStreetMap · CyclOSM', maxZoom: 20 }
-      ).addTo(map);
+      // Default tile — Outdoors
+      const defaultStyle = TILE_STYLES.find(s => s.id === DEFAULT_STYLE)!;
+      const tile = leaflet.tileLayer(defaultStyle.url, {
+        attribution: defaultStyle.attribution, maxZoom: defaultStyle.maxZoom,
+      }).addTo(map);
       tileLayerRef.current = tile;
-
-      mapInstance.current = map;
+      mapInstance.current  = map;
 
       if (gpxUrl) {
         try {
@@ -232,7 +245,7 @@ export default function LiveMap({
           const xml  = new DOMParser().parseFromString(text, 'text/xml');
           const pts  = xml.querySelectorAll('trkpt');
           const coords: [number, number][] = [];
-          const parsed: ParsedCoord[] = [];
+          const parsed: ParsedCoord[]      = [];
           let distKm = 0, prevLat = 0, prevLng = 0;
 
           pts.forEach((pt, i) => {
@@ -255,33 +268,43 @@ export default function LiveMap({
             }).addTo(map);
             map.fitBounds(poly.getBounds(), { padding: [30, 30] });
 
-            // START
+            // START 🚴
             leaflet.marker(coords[0], {
               icon: leaflet.divIcon({
-                html: `<div style="background:#22c55e;color:white;font-size:10px;font-weight:bold;padding:3px 6px;border-radius:10px;white-space:nowrap;">🟢 START</div>`,
-                className: '', iconAnchor: [28, 10],
+                html: `<div style="width:28px;height:28px;border-radius:50%;
+                  background:#22c55e;border:2.5px solid #fff;color:#fff;font-size:13px;
+                  display:flex;align-items:center;justify-content:center;
+                  box-shadow:0 1px 4px rgba(0,0,0,.5)">🚴</div>`,
+                className: '', iconSize: [28, 28], iconAnchor: [14, 14],
               }),
-            }).addTo(map);
+            }).addTo(map).bindPopup('Αφετηρία');
 
-            // FINISH
+            // FINISH 🏆
             leaflet.marker(coords[coords.length - 1], {
               icon: leaflet.divIcon({
-                html: `<div style="background:#f59e0b;color:white;font-size:10px;font-weight:bold;padding:3px 6px;border-radius:10px;white-space:nowrap;">🏁 FINISH</div>`,
-                className: '', iconAnchor: [32, 10],
+                html: `<div style="width:28px;height:28px;border-radius:50%;
+                  background:#ef4444;border:2.5px solid #fff;color:#fff;font-size:13px;
+                  display:flex;align-items:center;justify-content:center;
+                  box-shadow:0 1px 4px rgba(0,0,0,.5)">🏆</div>`,
+                className: '', iconSize: [28, 28], iconAnchor: [14, 14],
               }),
-            }).addTo(map);
+            }).addTo(map).bindPopup('Τερματισμός');
 
-            // CP MARKERS
+            // CP MARKERS — κίτρινοι κύκλοι CPx
             controls.forEach((cp, i) => {
               if (!cp.lat || !cp.lng) return;
               leaflet.marker([cp.lat, cp.lng], {
                 icon: leaflet.divIcon({
                   html: svgCpMarker(i + 1),
-                  className: '',
-                  iconAnchor: [20, 40],
+                  className: '', iconSize: [32, 32], iconAnchor: [16, 16],
                 }),
                 zIndexOffset: 300,
-              }).addTo(map).bindPopup(`<b>CP${i+1}: ${cp.name}</b><br/>km ${cp.km}`);
+              }).addTo(map).bindTooltip(
+                cp.name
+                  ? `<b>CP${i+1}: ${cp.name}</b><br/>${cp.km} km`
+                  : `<b>CP${i+1}</b><br/>${cp.km} km`,
+                { permanent: false }
+              );
             });
 
             // KM MARKERS
@@ -310,7 +333,7 @@ export default function LiveMap({
     };
   }, [gpxUrl]);
 
-  // ── Update rider markers ───────────────────────────────────────────────────
+  // ── Update rider markers ──────────────────────────────────────────────────
   useEffect(() => {
     if (!mapInstance.current || !L) return;
     const map = mapInstance.current;
@@ -324,9 +347,9 @@ export default function LiveMap({
       const sqSize     = isSelected ? 40 : 32;
 
       const icon = L.divIcon({
-        html: svgRiderMarker(rider.gender, isDNF, isFinished, isSelected, rider.fullName, rider.registryId ?? '', riderLabelMode),
+        html: svgRiderMarker(rider.gender, isDNF, isFinished, isSelected,
+          rider.fullName, rider.registryId ?? '', riderLabelMode),
         className: '',
-        // Anchor at center of the square (left part of the SVG)
         iconAnchor: [sqSize / 2, sqSize / 2],
       });
 
@@ -355,7 +378,7 @@ export default function LiveMap({
       }
     });
 
-    // Remove markers for riders no longer in list
+    // Αφαίρεση markers για riders που δεν υπάρχουν πλέον
     riderMarkers.current.forEach((marker, riderId) => {
       if (!riders.find(r => r.id === riderId)) {
         map.removeLayer(marker);
@@ -370,21 +393,14 @@ export default function LiveMap({
         map.panTo([rider.lat, rider.lng], { animate: true });
       }
     }
-
   }, [riders, selectedRiderId, L]);
 
-  const TILE_STYLES = [
-    { id: 'street',  label: '🗺️', title: 'Τυπικός',  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                     attribution: '© OpenStreetMap contributors',                  maxZoom: 19 },
-    { id: 'cycling', label: '🚴', title: 'Ποδηλατικός', url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',      attribution: '© OpenStreetMap · CyclOSM',                     maxZoom: 20 },
-    { id: 'topo',    label: '⛰️', title: 'Τοπογραφικός',   url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                       attribution: '© OpenStreetMap · OpenTopoMap (CC-BY-SA)',      maxZoom: 17 },
-  ];
-
+  // ── Tile switcher ─────────────────────────────────────────────────────────
   function switchTileLayer(style: typeof TILE_STYLES[0]) {
     if (!mapInstance.current || !L || !tileLayerRef.current) return;
     mapInstance.current.removeLayer(tileLayerRef.current);
     tileLayerRef.current = L.tileLayer(style.url, {
-      attribution: style.attribution,
-      maxZoom: style.maxZoom,
+      attribution: style.attribution, maxZoom: style.maxZoom,
     }).addTo(mapInstance.current);
     setActiveStyle(style.id);
   }
@@ -393,26 +409,26 @@ export default function LiveMap({
     <>
       <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-      <div className="relative" style={{ height: mapHeight }}>
+      <div className="relative" style={{ height: mapHeight, isolation: 'isolate' }}>
         <div
           ref={mapRef}
           style={{ height: '100%', width: '100%' }}
           className="rounded-2xl overflow-hidden border border-white/10"
         />
-        {/* ── Tile layer switcher — bottom left ── */}
+        {/* Tile switcher */}
         <div className="absolute bottom-4 left-4 z-[1000] flex gap-1.5">
           {TILE_STYLES.map(style => (
             <button
               key={style.id}
               onClick={() => switchTileLayer(style)}
-              title={style.title}
+              title={style.tooltip}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg
                 text-xs font-bold transition-all backdrop-blur-md border"
               style={{
-                background:   activeStyle === style.id ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.80)',
-                borderColor:  activeStyle === style.id ? 'rgba(6,182,212,0.8)'  : 'rgba(255,255,255,0.15)',
-                color:        activeStyle === style.id ? '#000'                  : 'rgba(255,255,255,0.7)',
-                boxShadow:    activeStyle === style.id ? '0 0 12px rgba(6,182,212,0.4)' : 'none',
+                background:  activeStyle === style.id ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.80)',
+                borderColor: activeStyle === style.id ? 'rgba(6,182,212,0.8)'  : 'rgba(255,255,255,0.15)',
+                color:       activeStyle === style.id ? '#000'                  : 'rgba(255,255,255,0.7)',
+                boxShadow:   activeStyle === style.id ? '0 0 12px rgba(6,182,212,0.4)' : 'none',
               }}
             >
               <span>{style.label}</span>
