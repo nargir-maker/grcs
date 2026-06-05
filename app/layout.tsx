@@ -47,7 +47,7 @@ export default function RootLayout({
             <footer className="border-t border-white/10 px-6 py-8">
               <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <img src="/grc-logo.png" alt="GRC" className="w-8 h-8 object-contain" />
+                  <img src="/grc-logo.png" alt="GRC" className="w-12 h-12 object-contain" />
                   <span className="text-white/40 text-sm">
                     GRC — Greek Randonneuring Community
                   </span>

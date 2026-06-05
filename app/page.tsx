@@ -38,7 +38,7 @@ export default function Home() {
             <img
               src="/grc-logo.png"
               alt="GRC Logo"
-              className="w-48 h-48 object-contain drop-shadow-2xl"
+              className="w-64 h-64 object-contain drop-shadow-2xl"
             />
           </div>
 
