@@ -58,39 +58,38 @@ function haversineKm(la1: number, lo1: number, la2: number, lo2: number) {
 
 // ── Offline city detection από greek-cities.ts ────────────────────────────────
 function detectViaCities(trackPoints: { lat: number; lng: number }[]): string {
-  const RADIUS_KM = 0.5;
+  const RADIUS_KM = 2.5;
 
-  // Downsample 1 σημείο ανά 2km για ταχύτητα
-  const sampled: { lat: number; lng: number; idx: number }[] = [
-    { ...trackPoints[0], idx: 0 },
+  // Cumulative km παράλληλα με το downsample
+  const sampled: { lat: number; lng: number; idx: number; km: number }[] = [
+    { ...trackPoints[0], idx: 0, km: 0 },
   ];
-  let distAcc = 0;
+  let distAcc = 0, totalKm = 0;
   for (let i = 1; i < trackPoints.length; i++) {
-    distAcc += haversineKm(
+    const d = haversineKm(
       trackPoints[i-1].lat, trackPoints[i-1].lng,
       trackPoints[i].lat,   trackPoints[i].lng,
     );
+    totalKm  += d;
+    distAcc  += d;
     if (distAcc >= 2) {
-      sampled.push({ ...trackPoints[i], idx: i });
+      sampled.push({ ...trackPoints[i], idx: i, km: totalKm });
       distAcc = 0;
     }
   }
 
-  // Για κάθε πόλη βρες αν η διαδρομή περνάει εντός RADIUS_KM
-  const hits: { name: string; idx: number }[] = [];
+  const hits: { name: string; idx: number; km: number }[] = [];
   GREEK_CITIES.forEach(city => {
-    let minDist = Infinity, nearestIdx = 0;
+    let minDist = Infinity, nearestIdx = 0, nearestKm = 0;
     sampled.forEach(pt => {
       const d = haversineKm(city.a, city.o, pt.lat, pt.lng);
-      if (d < minDist) { minDist = d; nearestIdx = pt.idx; }
+      if (d < minDist) { minDist = d; nearestIdx = pt.idx; nearestKm = pt.km; }
     });
-    if (minDist <= RADIUS_KM) hits.push({ name: city.n, idx: nearestIdx });
+    if (minDist <= RADIUS_KM) hits.push({ name: city.n, idx: nearestIdx, km: nearestKm });
   });
 
-  // Ταξινόμηση κατά σειρά εμφάνισης στη διαδρομή
   hits.sort((a, b) => a.idx - b.idx);
 
-  // Deduplicate + κεφαλαία χωρίς τόνους
   const seen = new Set<string>();
   return hits
     .filter(h => {
@@ -98,7 +97,11 @@ function detectViaCities(trackPoints: { lat: number; lng: number }[]): string {
       seen.add(h.name);
       return true;
     })
-    .map(h => h.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase())
+    .map(h => {
+      const nameClean = h.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+      const kmRounded = Math.round(h.km);
+      return `${nameClean} (${kmRounded}χλμ)`;
+    })
     .join(' - ');
 }
 
