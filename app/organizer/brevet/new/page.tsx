@@ -58,7 +58,7 @@ function haversineKm(la1: number, lo1: number, la2: number, lo2: number) {
 
 // ── Offline city detection από greek-cities.ts ────────────────────────────────
 function detectViaCities(trackPoints: { lat: number; lng: number }[]): string {
-  const RADIUS_KM = 0.05; // Μέγιστη απόσταση για να θεωρήσουμε ότι η διαδρομή περνάει από την πόλη
+  const RADIUS_KM = 0.5; // Μέγιστη απόσταση για να θεωρήσουμε ότι η διαδρομή περνάει από την πόλη
 
   // Cumulative km παράλληλα με το downsample
   const sampled: { lat: number; lng: number; idx: number; km: number }[] = [
