@@ -30,6 +30,7 @@ interface CommunityStats {
   certTrend: Record<string, { year: number; value: number }[]>;
   typeTrend: Record<string, { year: number; value: number }[]>;
   orgTrend:  Record<string, { year: number; value: number }[]>;
+  orgIdMap:  Record<string, string>;
 }
 
 type DrillDown =
@@ -83,6 +84,7 @@ function computeStats(docs: any[]): CommunityStats {
   const certYearBoth = new Map<number, number>();
   const typeYearMap  = new Map<string, Map<number, number>>();
   const orgYearMap   = new Map<string, Map<number, number>>();
+  const orgIdMap: Record<string, string> = {};
 
   function incN<K1, K2>(m: Map<K1, Map<K2, number>>, k1: K1, k2: K2) {
     if (!m.has(k1)) m.set(k1, new Map());
@@ -124,6 +126,10 @@ function computeStats(docs: any[]): CommunityStats {
         }
         typeMap.set(type, (typeMap.get(type) ?? 0) + 1);
         orgMap.set(org, (orgMap.get(org) ?? 0) + 1);
+        if (!orgIdMap[org] && evt.eid) {
+          const parts = String(evt.eid).split('_');
+          if (parts.length >= 4) orgIdMap[org] = parts[parts.length - 1];
+        }
         incN(yearOrgMap, year, org);
         incN(typeYearMap, type, year);
         incN(orgYearMap, org, year);
@@ -196,7 +202,7 @@ function computeStats(docs: any[]): CommunityStats {
     certDistribution: [{ name: 'ACP', value: certACP }, { name: 'HAR', value: certHAR }, { name: 'ACP+HAR', value: certBoth }].filter(x => x.value > 0),
     typeDistribution: Array.from(typeMap.entries()).map(([n,v]) => ({ name: n, value: v })).sort((a,b) => b.value-a.value),
     byOrganizer: Array.from(orgMap.entries()).map(([n,v]) => ({ name: n, value: v })).sort((a,b) => b.value-a.value).slice(0,8),
-    yearDetail, distTrend, certTrend, typeTrend, orgTrend,
+    yearDetail, distTrend, certTrend, typeTrend, orgTrend, orgIdMap,
   };
 }
 
@@ -678,30 +684,50 @@ export default function StatisticsPage() {
         </div>
 
         {/* Drill-down panel */}
-        {dd && (
-          <div
-            className="mt-4 rounded-2xl border border-white/10 overflow-hidden"
-            style={{
-              opacity: ddVisible ? 1 : 0,
-              transform: ddVisible ? 'translateY(0)' : 'translateY(16px)',
-              transition: 'opacity 0.33s ease, transform 0.33s ease',
-            }}
-          >
-            {/* Header */}
-            <div className="flex items-center gap-3 px-5 py-4 bg-white/[0.04] border-b border-white/10">
-              <button onClick={closeDD}
-                className="flex items-center gap-1.5 text-white/40 hover:text-white text-sm transition-colors shrink-0">
-                ← Πίσω
-              </button>
-              <span className="text-white/15 shrink-0">|</span>
-              <span className="text-white/75 text-sm font-semibold truncate">{getDDTitle(dd)}</span>
+        {dd && (() => {
+          const orgLogoId = dd.type === 'organizer' ? stats?.orgIdMap?.[dd.org] : null;
+          return (
+            <div
+              className="mt-4"
+              style={{
+                opacity: ddVisible ? 1 : 0,
+                transform: ddVisible ? 'translateY(0)' : 'translateY(16px)',
+                transition: 'opacity 0.33s ease, transform 0.33s ease',
+              }}
+            >
+              {/* Floating club logo (organizer drill-down only) */}
+              {orgLogoId && (
+                <div className="flex justify-center relative z-10">
+                  <img
+                    src={`/logos/${orgLogoId}.png`}
+                    alt={dd.type === 'organizer' ? dd.org : ''}
+                    className="w-28 h-28 object-contain rounded-full border-2 border-white/10 bg-[#0c1a30] drop-shadow-2xl"
+                    style={{ marginBottom: '-52px' }}
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
+                  />
+                </div>
+              )}
+
+              {/* Panel */}
+              <div className="rounded-2xl border border-white/10 overflow-hidden">
+                {/* Header */}
+                <div className={`flex items-center gap-3 px-5 bg-white/[0.04] border-b border-white/10
+                  ${orgLogoId ? 'pt-16 pb-4' : 'py-4'}`}>
+                  <button onClick={closeDD}
+                    className="flex items-center gap-1.5 text-white/40 hover:text-white text-sm transition-colors shrink-0">
+                    ← Πίσω
+                  </button>
+                  <span className="text-white/15 shrink-0">|</span>
+                  <span className="text-white/75 text-sm font-semibold truncate">{getDDTitle(dd)}</span>
+                </div>
+                {/* Content */}
+                <div className="p-5 sm:p-6 bg-[#0A1628]">
+                  {stats && renderDrillChart(dd, stats)}
+                </div>
+              </div>
             </div>
-            {/* Content */}
-            <div className="p-5 sm:p-6 bg-[#0A1628]">
-              {stats && renderDrillChart(dd, stats)}
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
       </div>
     </div>
