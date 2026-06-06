@@ -5,6 +5,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/app/lib/firebase';
 import { getPublicMembers } from '@/app/lib/publicMembersCache';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 import {
@@ -568,6 +570,7 @@ export default function StatisticsPage() {
   const enabled = usePageEnabled('results');
 
   const [stats, setStats]             = useState<CommunityStats | null>(null);
+  const [clubNameToId, setClubNameToId] = useState<Record<string, string>>({});
   const [loading, setLoading]         = useState(true);
   const [ready, setReady]             = useState(false);
   const [activeChart, setActiveChart] = useState<ChartId>('participations');
@@ -584,9 +587,25 @@ export default function StatisticsPage() {
 
   useEffect(() => {
     if (!session) return;
-    getPublicMembers()
-      .then(docs => { setStats(computeStats(docs)); setLoading(false); setTimeout(() => setReady(true), 80); })
-      .catch(e => { console.error(e); setLoading(false); });
+    Promise.all([
+      getPublicMembers(),
+      getDocs(collection(db, 'clubs')),
+    ]).then(([docs, clubSnap]) => {
+      const nameMap: Record<string, string> = {};
+      clubSnap.docs.forEach(d => {
+        const data = d.data();
+        const names = [data.CLUB_NAME_SHORT_EN, data.CLUB_NAME_SHORT_GR].filter(Boolean) as string[];
+        names.forEach(n => {
+          const trimmed = n.trim();
+          nameMap[trimmed] = d.id;
+          if (trimmed.length > 22) nameMap[trimmed.slice(0, 22)] = d.id;
+        });
+      });
+      setClubNameToId(nameMap);
+      setStats(computeStats(docs));
+      setLoading(false);
+      setTimeout(() => setReady(true), 80);
+    }).catch(e => { console.error(e); setLoading(false); });
   }, [session]);
 
   const closeDD = useCallback(() => {
@@ -628,7 +647,12 @@ export default function StatisticsPage() {
 
   return (
     <div className="min-h-screen bg-[#0A1628] px-5 py-12">
-      <div className="max-w-4xl mx-auto">
+      {/* Ghost GRC watermark */}
+      <div className="pointer-events-none fixed inset-0 flex items-center justify-center z-0 select-none">
+        <img src="/grc-logo.png" alt="" className="w-[640px] h-[640px] object-contain" style={{ opacity: 0.045 }} />
+      </div>
+
+      <div className="max-w-4xl mx-auto relative z-10">
 
         {/* Header */}
         <div className="mb-10">
@@ -685,7 +709,7 @@ export default function StatisticsPage() {
 
         {/* Drill-down panel */}
         {dd && (() => {
-          const orgLogoId = dd.type === 'organizer' ? stats?.orgIdMap?.[dd.org] : null;
+          const orgLogoId = dd.type === 'organizer' ? (clubNameToId[dd.org] ?? null) : null;
           return (
             <div
               className="mt-4"
