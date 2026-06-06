@@ -23,58 +23,54 @@ export default function AboutPage() {
         {/* ── COIN IMAGE + ECOSYSTEM ── */}
 {/* ── COIN IMAGE + ECOSYSTEM ── */}
 <section className="mb-14">
-  <div
-    className="relative rounded-3xl border border-white/10 shadow-2xl"
-    style={{
-      backgroundImage: 'url(/grc-coin.png)',
-      backgroundSize: '85%',
-      backgroundPosition: 'center 10%',
-      backgroundRepeat: 'no-repeat',
-      backgroundColor: '#0A1628',
-      minHeight: '680px',
-    }}
-  >
-    {/* Subtle gradient at bottom για smooth transition στα cards */}
-    <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-transparent via-transparent to-[#0A1628]/60" />
+  {/* Τίτλος ΕΞΩ από το πλαίσιο — όπως τα υπόλοιπα sections */}
+  <h2 className="text-white font-bold text-xl mb-4 flex items-center gap-3">
+    <span className="text-cyan-400">01</span>
+    Η πλατφόρμα &amp; η εφαρμογή
+  </h2>
 
-    {/* Content */}
-    <div className="relative z-10 px-6 pt-8 pb-10 sm:px-10">
-      <h2
-        className="text-white font-bold text-2xl mb-0 flex items-center gap-3"
-        style={{ textShadow: '0 2px 12px rgba(0,0,0,0.9)' }}
-      >
-        <span className="text-cyan-400">01</span>
-        Η πλατφόρμα &amp; η εφαρμογή
-      </h2>
+  {/* Outer card — ίδιο style με τα υπόλοιπα sections */}
+  <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
 
-      {/* Spacer — logos φαίνονται, cards ξεκινούν κάτω */}
-      <div style={{ height: '320px' }} />
+    {/* Coin image box — δικό του border/rounded container */}
+    <div
+      className="rounded-xl border border-white/10 overflow-hidden mb-6"
+      style={{
+        backgroundImage: 'url(/grc-coin.png)',
+        backgroundSize: '85%',
+        backgroundPosition: 'center 10%',
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: '#0A1628',
+        minHeight: '320px',
+      }}
+    />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        {/* GRC Website */}
-        <div className="bg-[#0A1628]/40 backdrop-blur-sm border border-white/15 rounded-2xl p-6">
-          <p className="text-white font-bold text-base leading-snug mb-1">GRC Platform</p>
-          <p className="text-white/35 text-xs mb-4">grcs-vert.vercel.app</p>
-          <p className="text-white/75 text-sm leading-relaxed">
-            Το web platform με ημερολόγιο brevets, στατιστικά κοινότητας, ιστορικό αγώνων, live tracking και προφίλ αναβατών.
-          </p>
-        </div>
+    {/* Cards κάτω από την εικόνα */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      {/* GRC Website */}
+      <div className="bg-[#0A1628]/40 backdrop-blur-sm border border-white/15 rounded-2xl p-6">
+        <p className="text-white font-bold text-base leading-snug mb-1">GRC Platform</p>
+        <p className="text-white/35 text-xs mb-4">grcs-vert.vercel.app</p>
+        <p className="text-white/75 text-sm leading-relaxed">
+          Το web platform με ημερολόγιο brevets, στατιστικά κοινότητας, ιστορικό αγώνων, live tracking και προφίλ αναβατών.
+        </p>
+      </div>
 
-        {/* Greek Brevets Tracker app */}
-        <div className="bg-[#0A1628]/40 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-6">
-          <p className="text-white font-bold text-base leading-snug mb-1">Greek Brevets Tracker</p>
-          <p className="text-white/35 text-xs mb-4">Εφαρμογή κινητού</p>
-          <p className="text-white/75 text-sm leading-relaxed">
-            Η συνοδευτική εφαρμογή για κινητό — ιστορικό αναβάτη, live GPS tracking, ειδοποιήσεις brevets και ό,τι χρειάζεσαι στη σέλα.
-          </p>
-          <div className="mt-4">
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-green-500/15 text-green-400 border border-green-500/25">
-              Android
-            </span>
-          </div>
+      {/* Greek Brevets Tracker app */}
+      <div className="bg-[#0A1628]/40 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-6">
+        <p className="text-white font-bold text-base leading-snug mb-1">Greek Brevets Tracker</p>
+        <p className="text-white/35 text-xs mb-4">Εφαρμογή κινητού</p>
+        <p className="text-white/75 text-sm leading-relaxed">
+          Η συνοδευτική εφαρμογή για κινητό — ιστορικό αναβάτη, live GPS tracking, ειδοποιήσεις brevets και ό,τι χρειάζεσαι στη σέλα.
+        </p>
+        <div className="mt-4">
+          <span className="text-xs font-bold px-3 py-1 rounded-full bg-green-500/15 text-green-400 border border-green-500/25">
+            Android
+          </span>
         </div>
       </div>
     </div>
+
   </div>
 </section>
 
