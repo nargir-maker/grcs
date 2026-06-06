@@ -167,12 +167,27 @@ export default function AboutPage() {
         </section>
 
         {/* ── PBP ── */}
-        <section className="mb-12">
+        <section className="mb-14">
           <h2 className="text-white font-bold text-xl mb-4 flex items-center gap-3">
             <span className="text-cyan-400">05</span>
             Paris — Brest — Paris
           </h2>
+          
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+            
+            {/* Image Box 05 */}
+            <div
+              className="rounded-xl border border-white/10 overflow-hidden mb-6"
+              style={{
+                backgroundImage: 'url(/bg12.png)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                backgroundColor: '#0A1628',
+                minHeight: '260px',
+              }}
+            />
+
             <p className="text-white/70 leading-relaxed">
               Κάθε τέσσερα χρόνια, εκατοντάδες Έλληνες αναβάτες στοχεύουν στο ιερό προσκύνημα του Randonneuring — το <span className="text-white font-medium">Paris-Brest-Paris</span>. 1.200 χιλιόμετρα σε 90 ώρες. Η Ελλάδα έχει ήδη γράψει τη δική της ιστορία εκεί.
             </p>
