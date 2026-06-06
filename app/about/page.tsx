@@ -91,7 +91,7 @@ export default function AboutPage() {
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
                 backgroundColor: '#0A1628',
-                minHeight: '260px',
+                minHeight: '280px',
               }}
             />
 
@@ -128,7 +128,7 @@ export default function AboutPage() {
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
                 backgroundColor: '#0A1628',
-                minHeight: '260px',
+                minHeight: '280px',
               }}
             />
 
@@ -184,7 +184,7 @@ export default function AboutPage() {
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
                 backgroundColor: '#0A1628',
-                minHeight: '260px',
+                minHeight: '280px',
               }}
             />
 
