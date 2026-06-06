@@ -24,6 +24,7 @@ interface PageSetting {
 const PAGES: PageSetting[] = [
   { key: 'members',  label: 'Αναβάτες',      path: '/members',  icon: '👥', description: 'Hall of fame — λίστα δημόσιων μελών' },
   { key: 'results',  label: 'Αποτελέσματα',  path: '/results',  icon: '🏅', description: 'Αποτελέσματα brevets' },
+  { key: 'history',  label: 'Ιστορικό',      path: '/history',  icon: '📜', description: 'Ιστορικό brevets — όλοι οι αγώνες' },
   { key: 'live',     label: 'Live',           path: '/live',     icon: '📡', description: 'Live παρακολούθηση αναβατών' },
   { key: 'about',    label: 'Σχετικά',        path: '/about',    icon: 'ℹ️', description: 'Σελίδα "Σχετικά με την πλατφόρμα"' },
   { key: 'brevets',  label: 'Brevets',        path: '/brevets',  icon: '📅', description: 'Ημερολόγιο brevets' },

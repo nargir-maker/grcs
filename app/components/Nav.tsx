@@ -32,6 +32,9 @@ if (isOrganizer && organizer) {
           <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors">
             Brevets
           </Link>
+          <Link href="/history" className="text-white/60 hover:text-white text-sm transition-colors">
+            Ιστορικό
+          </Link>
           <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors">
             Live
           </Link>
@@ -97,6 +100,8 @@ if (isOrganizer && organizer) {
         <div className="sm:hidden mt-4 pb-4 border-t border-white/10 pt-4 flex flex-col gap-4">
           <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>Brevets</Link>
+          <Link href="/history" className="text-white/60 hover:text-white text-sm transition-colors"
+            onClick={() => setMenuOpen(false)}>Ιστορικό</Link>
           <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>Live</Link>
           <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors"
@@ -138,6 +143,9 @@ if (isOrganizer && organizer) {
         <div className="hidden sm:flex items-center gap-8">
           <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors">
             Brevets
+          </Link>
+          <Link href="/history" className="text-white/60 hover:text-white text-sm transition-colors">
+            Ιστορικό
           </Link>
           <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors">
             Live
@@ -242,6 +250,11 @@ if (isOrganizer && organizer) {
             className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>
             Brevets
+          </Link>
+          <Link href="/history"
+            className="text-white/60 hover:text-white text-sm transition-colors"
+            onClick={() => setMenuOpen(false)}>
+            Ιστορικό
           </Link>
           <Link href="/live"
             className="text-white/60 hover:text-white text-sm transition-colors"
