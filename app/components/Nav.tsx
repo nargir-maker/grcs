@@ -36,7 +36,7 @@ if (isOrganizer && organizer) {
             Live
           </Link>
           <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors">
-            Αποτελέσματα
+            Στατιστικά
           </Link>
           <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors">
             Αναβάτες
@@ -100,7 +100,7 @@ if (isOrganizer && organizer) {
           <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>Live</Link>
           <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>Αποτελέσματα</Link>
+            onClick={() => setMenuOpen(false)}>Στατιστικά</Link>
           <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>Αναβάτες</Link>
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors"
@@ -143,7 +143,7 @@ if (isOrganizer && organizer) {
             Live
           </Link>
           <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors">
-            Αποτελέσματα
+            Στατιστικά
           </Link>
           <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors">
             Αναβάτες
@@ -251,7 +251,7 @@ if (isOrganizer && organizer) {
           <Link href="/results"
             className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>
-            Αποτελέσματα
+            Στατιστικά
           </Link>
           <Link href="/members"
             className="text-white/60 hover:text-white text-sm transition-colors"
