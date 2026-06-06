@@ -22,52 +22,49 @@ export default function AboutPage() {
 
         {/* ── COIN IMAGE + ECOSYSTEM ── */}
         <section className="mb-14">
-          <div className="relative rounded-3xl overflow-hidden mb-8 border border-white/10 shadow-2xl">
+          <div className="rounded-3xl overflow-hidden mb-8 border border-white/10 shadow-2xl">
             <img
               src="/grc-coin.png"
               alt="GRC & Greek Brevets Tracker collector coins"
-              className="w-full object-cover"
+              className="w-full block"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0A1628] via-[#0A1628]/20 to-transparent" />
           </div>
 
           <h2 className="text-white font-bold text-xl mb-4 flex items-center gap-3">
             <span className="text-cyan-400">01</span>
-            Δύο πλατφόρμες, μία κοινότητα
+            Η πλατφόρμα & η εφαρμογή
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* GRC Website */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-              <div className="flex items-center gap-2.5 mb-3">
-                <img src="/grc-logo.png" alt="GRC" className="w-9 h-9 object-contain" />
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <img src="/grc-logo.png" alt="GRC" className="w-14 h-14 object-contain" />
                 <div>
-                  <p className="text-white font-bold text-sm leading-none">GRC Platform</p>
-                  <p className="text-white/35 text-[10px] mt-0.5">grcs-vert.vercel.app</p>
+                  <p className="text-white font-bold text-base leading-snug">GRC Platform</p>
+                  <p className="text-white/35 text-xs mt-0.5">grcs-vert.vercel.app</p>
                 </div>
               </div>
-              <p className="text-white/60 text-sm leading-relaxed">
+              <p className="text-white/65 text-sm leading-relaxed">
                 Το web platform με ημερολόγιο brevets, στατιστικά κοινότητας, ιστορικό αγώνων, live tracking και προφίλ αναβατών.
               </p>
             </div>
 
             {/* Greek Brevets Tracker app */}
-            <div className="bg-white/5 border border-cyan-500/25 rounded-2xl p-5">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/30 to-blue-600/30
-                  border border-cyan-500/30 flex items-center justify-center text-lg">
-                  📱
-                </div>
+            <div className="bg-white/5 border border-cyan-500/25 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <img src="/GBT_logo_512c.png" alt="Greek Brevets Tracker"
+                  className="w-14 h-14 object-contain rounded-2xl" />
                 <div>
-                  <p className="text-white font-bold text-sm leading-none">Greek Brevets Tracker</p>
-                  <p className="text-white/35 text-[10px] mt-0.5">Mobile app</p>
+                  <p className="text-white font-bold text-base leading-snug">Greek Brevets Tracker</p>
+                  <p className="text-white/35 text-xs mt-0.5">Εφαρμογή κινητού</p>
                 </div>
               </div>
-              <p className="text-white/60 text-sm leading-relaxed">
+              <p className="text-white/65 text-sm leading-relaxed">
                 Η συνοδευτική εφαρμογή για κινητό — ιστορικό αναβάτη, live GPS tracking, ειδοποιήσεις brevets και ό,τι χρειάζεσαι στη σέλα.
               </p>
-              <div className="mt-3 flex gap-2">
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full
+              <div className="mt-4 flex gap-2">
+                <span className="text-xs font-bold px-3 py-1 rounded-full
                   bg-green-500/10 text-green-400 border border-green-500/20">
                   Android
                 </span>
