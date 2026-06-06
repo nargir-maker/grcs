@@ -21,18 +21,21 @@ export default function AboutPage() {
         </div>
 
         {/* ── COIN IMAGE + ECOSYSTEM ── */}
+{/* ── COIN IMAGE + ECOSYSTEM ── */}
 <section className="mb-14">
   <div
     className="relative rounded-3xl border border-white/10 shadow-2xl"
     style={{
       backgroundImage: 'url(/grc-coin.png)',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center top',
-      minHeight: '520px',
+      backgroundSize: '85%',
+      backgroundPosition: 'center 10%',
+      backgroundRepeat: 'no-repeat',
+      backgroundColor: '#0A1628',
+      minHeight: '680px',
     }}
   >
-    {/* Dark gradient overlay */}
-    <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-[#0A1628]/60 via-[#0A1628]/30 to-[#0A1628]/90" />
+    {/* Subtle gradient at bottom για smooth transition στα cards */}
+    <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-transparent via-transparent to-[#0A1628]/60" />
 
     {/* Content */}
     <div className="relative z-10 px-6 pt-8 pb-10 sm:px-10">
@@ -44,12 +47,12 @@ export default function AboutPage() {
         Η πλατφόρμα &amp; η εφαρμογή
       </h2>
 
-      {/* Spacer — pushes cards down so logos show above them */}
-      <div style={{ height: '220px' }} />
+      {/* Spacer — logos φαίνονται, cards ξεκινούν κάτω */}
+      <div style={{ height: '320px' }} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         {/* GRC Website */}
-        <div className="bg-[#0A1628]/70 backdrop-blur-md border border-white/20 rounded-2xl p-6">
+        <div className="bg-[#0A1628]/40 backdrop-blur-sm border border-white/15 rounded-2xl p-6">
           <p className="text-white font-bold text-base leading-snug mb-1">GRC Platform</p>
           <p className="text-white/35 text-xs mb-4">grcs-vert.vercel.app</p>
           <p className="text-white/75 text-sm leading-relaxed">
@@ -58,7 +61,7 @@ export default function AboutPage() {
         </div>
 
         {/* Greek Brevets Tracker app */}
-        <div className="bg-[#0A1628]/70 backdrop-blur-md border border-cyan-500/30 rounded-2xl p-6">
+        <div className="bg-[#0A1628]/40 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-6">
           <p className="text-white font-bold text-base leading-snug mb-1">Greek Brevets Tracker</p>
           <p className="text-white/35 text-xs mb-4">Εφαρμογή κινητού</p>
           <p className="text-white/75 text-sm leading-relaxed">
