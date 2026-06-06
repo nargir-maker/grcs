@@ -61,6 +61,7 @@ type ChartId = typeof CHARTS[number]['id'];
 const axisStyle = { fill: 'rgba(255,255,255,0.28)', fontSize: 11 };
 const gridStyle  = { stroke: 'rgba(255,255,255,0.06)' };
 function fmtLarge(v: number) {
+  if (!isFinite(v) || isNaN(v)) return '0';
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
   if (v >= 1_000)     return `${(v / 1_000).toFixed(0)}k`;
   return `${v}`;
@@ -110,7 +111,7 @@ function computeStats(docs: any[]): CommunityStats {
       hasAny = true;
 
       for (const evt of events) {
-        const d = evt.d ?? 0;
+        const d = Number(evt.d) || 0;
         const type = evt.t || 'BRM';
         const org = (evt.og || 'Άλλος').slice(0, 22);
         const hasA = !!(evt.acp && evt.acp !== '');
@@ -139,7 +140,8 @@ function computeStats(docs: any[]): CommunityStats {
     const dists = new Set<number>();
     for (const e of events) {
       const ok = field === 'acp' ? !!(e.acp && e.acp !== '') : !!(e.har && e.har !== '' && e.har !== 'AUR0');
-      if (ok && [200, 300, 400, 600].includes(e.d)) dists.add(e.d);
+      const ed = Number(e.d) || 0;
+      if (ok && [200, 300, 400, 600].includes(ed)) dists.add(ed);
     }
     return [200, 300, 400, 600].every(d => dists.has(d));
   }
@@ -148,7 +150,7 @@ function computeStats(docs: any[]): CommunityStats {
   const byYear: YearStats[] = Array.from(yearMemberMap.entries()).map(([year, mm]) => {
     let km = 0, ascent = 0, completions = 0, srEarners = 0;
     for (const [, evts] of mm) {
-      for (const e of evts) { km += e.d ?? 0; ascent += e.as ?? 0; completions++; }
+      for (const e of evts) { km += Number(e.d) || 0; ascent += Number(e.as) || 0; completions++; }
       if (hasSR(evts, 'acp') || hasSR(evts, 'har')) srEarners++;
     }
     totalKm += km; totalAscent += ascent; totalCompletions += completions;
