@@ -21,71 +21,59 @@ export default function AboutPage() {
         </div>
 
         {/* ── COIN IMAGE + ECOSYSTEM ── */}
-        <section className="mb-14">
-          {/* Coin as background — cards overlaid on top */}
-          <div
-            className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl"
-            style={{
-              backgroundImage: 'url(/grc-coin.png)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          >
-            {/* Dark gradient overlay for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0A1628]/80 via-[#0A1628]/55 to-[#0A1628]/85" />
+<section className="mb-14">
+  <div
+    className="relative rounded-3xl border border-white/10 shadow-2xl"
+    style={{
+      backgroundImage: 'url(/grc-coin.png)',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center top',
+      minHeight: '520px',
+    }}
+  >
+    {/* Dark gradient overlay */}
+    <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-[#0A1628]/60 via-[#0A1628]/30 to-[#0A1628]/90" />
 
-            {/* Content */}
-            <div className="relative z-10 px-6 py-10 sm:px-10">
-              <h2
-                className="text-white font-bold text-2xl mb-8 flex items-center gap-3"
-                style={{ textShadow: '0 2px 12px rgba(0,0,0,0.9)' }}
-              >
-                <span className="text-cyan-400">01</span>
-                Η πλατφόρμα &amp; η εφαρμογή
-              </h2>
+    {/* Content */}
+    <div className="relative z-10 px-6 pt-8 pb-10 sm:px-10">
+      <h2
+        className="text-white font-bold text-2xl mb-0 flex items-center gap-3"
+        style={{ textShadow: '0 2px 12px rgba(0,0,0,0.9)' }}
+      >
+        <span className="text-cyan-400">01</span>
+        Η πλατφόρμα &amp; η εφαρμογή
+      </h2>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {/* GRC Website */}
-                <div className="bg-[#0A1628]/65 backdrop-blur-md border border-white/20 rounded-2xl p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="shrink-0 w-14 h-14">
-                      <img src="/grc-logo.png" alt="GRC" className="w-full h-full object-contain" />
-                    </div>
-                    <div>
-                      <p className="text-white font-bold text-base leading-snug">GRC Platform</p>
-                      <p className="text-white/35 text-xs mt-0.5">grcs-vert.vercel.app</p>
-                    </div>
-                  </div>
-                  <p className="text-white/75 text-sm leading-relaxed">
-                    Το web platform με ημερολόγιο brevets, στατιστικά κοινότητας, ιστορικό αγώνων, live tracking και προφίλ αναβατών.
-                  </p>
-                </div>
+      {/* Spacer — pushes cards down so logos show above them */}
+      <div style={{ height: '220px' }} />
 
-                {/* Greek Brevets Tracker app */}
-                <div className="bg-[#0A1628]/65 backdrop-blur-md border border-cyan-500/30 rounded-2xl p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="shrink-0 w-12 h-12 rounded-xl overflow-hidden">
-                      <img src="/GBT_logo_512c.png" alt="Greek Brevets Tracker" className="w-full h-full object-cover" />
-                    </div>
-                    <div>
-                      <p className="text-white font-bold text-base leading-snug">Greek Brevets Tracker</p>
-                      <p className="text-white/35 text-xs mt-0.5">Εφαρμογή κινητού</p>
-                    </div>
-                  </div>
-                  <p className="text-white/75 text-sm leading-relaxed">
-                    Η συνοδευτική εφαρμογή για κινητό — ιστορικό αναβάτη, live GPS tracking, ειδοποιήσεις brevets και ό,τι χρειάζεσαι στη σέλα.
-                  </p>
-                  <div className="mt-4">
-                    <span className="text-xs font-bold px-3 py-1 rounded-full
-                      bg-green-500/15 text-green-400 border border-green-500/25">
-                      Android
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {/* GRC Website */}
+        <div className="bg-[#0A1628]/70 backdrop-blur-md border border-white/20 rounded-2xl p-6">
+          <p className="text-white font-bold text-base leading-snug mb-1">GRC Platform</p>
+          <p className="text-white/35 text-xs mb-4">grcs-vert.vercel.app</p>
+          <p className="text-white/75 text-sm leading-relaxed">
+            Το web platform με ημερολόγιο brevets, στατιστικά κοινότητας, ιστορικό αγώνων, live tracking και προφίλ αναβατών.
+          </p>
+        </div>
+
+        {/* Greek Brevets Tracker app */}
+        <div className="bg-[#0A1628]/70 backdrop-blur-md border border-cyan-500/30 rounded-2xl p-6">
+          <p className="text-white font-bold text-base leading-snug mb-1">Greek Brevets Tracker</p>
+          <p className="text-white/35 text-xs mb-4">Εφαρμογή κινητού</p>
+          <p className="text-white/75 text-sm leading-relaxed">
+            Η συνοδευτική εφαρμογή για κινητό — ιστορικό αναβάτη, live GPS tracking, ειδοποιήσεις brevets και ό,τι χρειάζεσαι στη σέλα.
+          </p>
+          <div className="mt-4">
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-green-500/15 text-green-400 border border-green-500/25">
+              Android
+            </span>
           </div>
-        </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
         {/* ── WHAT IS RANDONNEURING ── */}
         <section className="mb-12">
