@@ -37,11 +37,11 @@ export default function AboutPage() {
       className="rounded-xl border border-white/10 overflow-hidden mb-6"
       style={{
         backgroundImage: 'url(/grc-coin.png)',
-        backgroundSize: '85%',
-        backgroundPosition: 'center 10%',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
         backgroundColor: '#0A1628',
-        minHeight: '320px',
+        minHeight: '420px', // Αυξήθηκε ελαφρώς για να αναδείξει το 16:9 3D render χωρίς να «μπουκώσει» το ύψος
       }}
     />
 
