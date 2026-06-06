@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 
 export const metadata: Metadata = {
   title: 'Σχετικά — GRC Platform',
@@ -23,10 +24,13 @@ export default function AboutPage() {
         {/* ── COIN IMAGE + ECOSYSTEM ── */}
         <section className="mb-14">
           <div className="rounded-3xl overflow-hidden mb-8 border border-white/10 shadow-2xl">
-            <img
+            <Image
               src="/grc-coin.png"
               alt="GRC & Greek Brevets Tracker collector coins"
-              className="w-full block"
+              width={1040}
+              height={1024}
+              className="w-full h-auto"
+              priority
             />
           </div>
 
@@ -39,7 +43,10 @@ export default function AboutPage() {
             {/* GRC Website */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-4">
-                <img src="/grc-logo.png" alt="GRC" className="w-14 h-14 object-contain" />
+                <div className="shrink-0 w-14 h-14">
+                  <Image src="/grc-logo.png" alt="GRC" width={56} height={56}
+                    className="w-full h-full object-contain" />
+                </div>
                 <div>
                   <p className="text-white font-bold text-base leading-snug">GRC Platform</p>
                   <p className="text-white/35 text-xs mt-0.5">grcs-vert.vercel.app</p>
@@ -53,8 +60,10 @@ export default function AboutPage() {
             {/* Greek Brevets Tracker app */}
             <div className="bg-white/5 border border-cyan-500/25 rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-4">
-                <img src="/GBT_logo_512c.png" alt="Greek Brevets Tracker"
-                  className="w-14 h-14 object-contain rounded-2xl" />
+                <div className="shrink-0 w-12 h-12 rounded-xl overflow-hidden">
+                  <Image src="/GBT_logo_512c.png" alt="Greek Brevets Tracker" width={48} height={48}
+                    className="w-full h-full object-contain" />
+                </div>
                 <div>
                   <p className="text-white font-bold text-base leading-snug">Greek Brevets Tracker</p>
                   <p className="text-white/35 text-xs mt-0.5">Εφαρμογή κινητού</p>
