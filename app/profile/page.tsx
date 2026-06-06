@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
 import { YearCard, ClubsProvider } from '@/app/components/BrevetCards';
 import { auth } from '@/app/lib/firebase';
@@ -272,6 +272,15 @@ export default function ProfilePage() {
           const memberSnap = await getDoc(doc(db, 'members', linkedId));
           if (memberSnap.exists()) {
             setMember(parseMember(linkedId, memberSnap.data()));
+
+            // 3. Track web activity (fire-and-forget)
+            const userRef = usersSnap.docs[0].ref;
+            const userData = usersSnap.docs[0].data();
+            const now = new Date().toISOString();
+            const updates: Record<string, unknown> = { lastSeenWeb: now, loginCountWeb: increment(1) };
+            if (!userData.firstSeenWeb) updates.firstSeenWeb = now;
+            updateDoc(userRef, updates).catch(() => {});
+
             setLoading(false);
             return;
           }

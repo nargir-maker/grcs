@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
 import Link from 'next/link';
 
@@ -32,6 +32,15 @@ const PAGES: PageSetting[] = [
 
 type PagesEnabled = Record<string, boolean>;
 
+interface UserActivity {
+  email: string;
+  displayName: string;
+  lastSeenWeb?: string;
+  firstSeenWeb?: string;
+  loginCountWeb?: number;
+  linkedLegacyMemberId?: string;
+}
+
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -43,6 +52,7 @@ export default function AdminPage() {
   const [savedAt,    setSavedAt]        = useState<string | null>(null);
   const [memberCount, setMemberCount]   = useState<number | null>(null);
   const [brevetCount, setBrevetCount]   = useState<number | null>(null);
+  const [webUsers,   setWebUsers]       = useState<UserActivity[]>([]);
 
   // ── Auth check ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -116,6 +126,22 @@ export default function AdminPage() {
         )
       );
       setBrevetCount(brevetsSnap.size);
+    } catch {}
+
+    try {
+      const snap = await getDocs(query(collection(db, 'users'), orderBy('lastSeenWeb', 'desc'), limit(50)));
+      const list: UserActivity[] = snap.docs.map(d => {
+        const x = d.data();
+        return {
+          email: x.email ?? '',
+          displayName: x.displayName ?? x.email ?? '',
+          lastSeenWeb: x.lastSeenWeb,
+          firstSeenWeb: x.firstSeenWeb,
+          loginCountWeb: x.loginCountWeb,
+          linkedLegacyMemberId: x.linkedLegacyMemberId,
+        };
+      });
+      setWebUsers(list);
     } catch {}
   }
 
@@ -229,6 +255,44 @@ export default function AdminPage() {
               );
             })}
           </div>
+        </div>
+
+        {/* Web activity */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden mb-6">
+          <div className="px-6 py-4 border-b border-white/10">
+            <h2 className="text-white font-bold">Δραστηριότητα Web</h2>
+            <p className="text-white/40 text-xs mt-1">
+              Μέλη που έχουν επισκεφτεί το site — ταξινομημένα κατά τελευταία επίσκεψη
+            </p>
+          </div>
+          {webUsers.length === 0 ? (
+            <p className="text-white/30 text-sm text-center py-8">Δεν υπάρχουν δεδομένα ακόμη</p>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {webUsers.map((u, i) => (
+                <div key={i} className="flex items-center justify-between px-6 py-3 gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white text-sm font-medium truncate">{u.displayName || u.email}</p>
+                    <p className="text-white/35 text-xs truncate">{u.email}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    {u.lastSeenWeb ? (
+                      <>
+                        <p className="text-cyan-400 text-xs font-mono">
+                          {new Date(u.lastSeenWeb).toLocaleDateString('el-GR')}
+                        </p>
+                        <p className="text-white/30 text-xs">
+                          {u.loginCountWeb ?? 0} επισκέψεις
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-white/20 text-xs">—</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Quick links */}
