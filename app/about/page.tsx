@@ -41,7 +41,7 @@ export default function AboutPage() {
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
         backgroundColor: '#0A1628',
-        minHeight: '420px', // Αυξήθηκε ελαφρώς για να αναδείξει το 16:9 3D render χωρίς να «μπουκώσει» το ύψος
+        minHeight: '280px', // Αυξήθηκε ελαφρώς για να αναδείξει το 16:9 3D render χωρίς να «μπουκώσει» το ύψος
       }}
     />
 
