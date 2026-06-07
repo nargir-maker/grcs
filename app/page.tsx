@@ -4,21 +4,21 @@ import { useEffect, useState } from 'react';
 import { db } from '@/app/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
-// ── TYPES ──────────────────────────────────────────────────────
+// ── ΤΥΠΟΙ (όπως στη σελίδα /brevets) ──────────────────────────
 interface Brevet {
   id: string;
   title: string;
   distance: number;
-  startDateTime: Date;
-  endDateTime: Date;
+  date: string;         // ISO string (από το Firestore)
   organizer: string;
   organizerId: string;
   organizerLogo: string;
-  start: string;
+  start: string;        // πόλη εκκίνησης
   imageUrl: string;
+  startTime?: string;   // ώρα έναρξης π.χ. "07:00"
 }
 
-// ── Βοηθητικές ─────────────────────────────────────────────────
+// ── ΒΟΗΘΗΤΙΚΕΣ ΓΙΑ ΥΠΟΛΟΓΙΣΜΟ LIVE ────────────────────────────
 function getTimeLimitHours(distanceKm: number): number {
   if (distanceKm <= 200) return 13.5;
   if (distanceKm <= 300) return 20;
@@ -28,19 +28,39 @@ function getTimeLimitHours(distanceKm: number): number {
   return 75 + (distanceKm - 1000) / 1000 * 75;
 }
 
-function parseGreekDateTime(dateStr: string, timeStr: string): Date | null {
-  if (!dateStr) return null;
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const [hours, minutes] = (timeStr || '07:00').split(':').map(Number);
-  if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hours) || isNaN(minutes)) return null;
-  return new Date(year, month - 1, day, hours, minutes);
+function isBrevetLiveNow(brevet: Brevet, now: Date): boolean {
+  if (!brevet.date) return false;
+  const startTimeStr = brevet.startTime || '07:00';
+  const [year, month, day] = brevet.date.split('T')[0].split('-').map(Number);
+  const [hours, minutes] = startTimeStr.split(':').map(Number);
+  if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hours) || isNaN(minutes)) return false;
+
+  const startDate = new Date(year, month - 1, day, hours, minutes);
+  const timeLimit = getTimeLimitHours(brevet.distance);
+  const endDate = new Date(startDate.getTime() + timeLimit * 60 * 60 * 1000);
+
+  return now >= startDate && now <= endDate;
 }
 
-function isLiveNow(start: Date, end: Date, now: Date): boolean {
-  return now >= start && now <= end;
+function isUpcoming(brevet: Brevet, now: Date): boolean {
+  if (!brevet.date) return false;
+  const startTimeStr = brevet.startTime || '07:00';
+  const [year, month, day] = brevet.date.split('T')[0].split('-').map(Number);
+  const [hours, minutes] = startTimeStr.split(':').map(Number);
+  if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hours) || isNaN(minutes)) return false;
+
+  const startDate = new Date(year, month - 1, day, hours, minutes);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+  const nextWeek = new Date(now);
+  nextWeek.setDate(now.getDate() + 7);
+  nextWeek.setHours(23, 59, 59, 999);
+
+  return startDate >= tomorrow && startDate <= nextWeek;
 }
 
-// ── CACHE ──────────────────────────────────────────────────────
+// ── CACHE (ίδια με /brevets) ───────────────────────────────────
 let cachedBrevets: Brevet[] = [];
 let cachedClubs: Record<string, string> = {};
 let cachedLogos: Record<string, string> = {};
@@ -55,7 +75,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchAndFilter() {
       try {
-        // 1. Φόρτωση clubs αν χρειάζεται
+        // 1. Φόρτωση clubs (όπως στη σελίδα brevets)
         if (Object.keys(cachedClubs).length === 0) {
           const clubsSnap = await getDocs(collection(db, 'clubs'));
           clubsSnap.forEach(doc => {
@@ -65,7 +85,7 @@ export default function Home() {
           });
         }
 
-        // 2. Φόρτωση brevets (cache ή από Firestore)
+        // 2. Φόρτωση brevets (ίδια λογική)
         let brevetsData = cachedBrevets;
         if (!brevetsData.length || Date.now() - cacheTimestamp > CACHE_TTL) {
           const currentYear = new Date().getFullYear();
@@ -82,49 +102,44 @@ export default function Home() {
             const info = d.info || {};
             const route = d.route || {};
             const extra = d.extra || {};
-            const distance = parseInt(info.distance?.toString() ?? '0') || 0;
-            const dateStr = info.date?.toString() ?? '';
-            const startTimeStr = info.startTime?.toString() ?? '07:00';
-            const startDateTime = parseGreekDateTime(dateStr, startTimeStr);
-            if (!startDateTime) return;
 
-            const timeLimit = getTimeLimitHours(distance);
-            const endDateTime = new Date(startDateTime.getTime() + timeLimit * 60 * 60 * 1000);
+            let parsedDate = '';
+            try {
+              const dateStr = info.date?.toString() ?? '';
+              const d2 = new Date(dateStr.split('+')[0]);
+              if (!isNaN(d2.getTime())) parsedDate = d2.toISOString();
+            } catch { /* ignore */ }
+
             const orgId = info.organizerId?.toString() ?? '';
-
             temp.push({
               id: doc.id,
               title: info.title?.toString() ?? doc.id,
-              distance,
-              startDateTime,
-              endDateTime,
+              distance: parseInt(info.distance?.toString() ?? '0') || 0,
+              date: parsedDate,
               organizer: cachedClubs[orgId] ?? '',
               organizerId: orgId,
               organizerLogo: cachedLogos[orgId] ?? '/logos/000000.png',
               start: route.start?.toString() ?? '',
               imageUrl: extra.imageUrl?.toString() ?? '',
+              startTime: info.startTime?.toString() ?? '07:00', // αν λείπει, default 07:00
             });
           });
 
-          temp.sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+          temp.sort((a, b) => {
+            if (!a.date) return 1;
+            if (!b.date) return -1;
+            return new Date(a.date).getTime() - new Date(b.date).getTime();
+          });
+
           cachedBrevets = temp;
           cacheTimestamp = Date.now();
           brevetsData = temp;
         }
 
-        // 3. Φιλτράρισμα
-        const now = new Date(); // τοπική ώρα
-        // Live: τώρα μεταξύ έναρξης και λήξης
-        const live = brevetsData.filter(b => isLiveNow(b.startDateTime, b.endDateTime, now));
-
-        // Επερχόμενα: από αύριο (00:00) έως +7 ημέρες (23:59)
-        const tomorrow = new Date(now);
-        tomorrow.setDate(now.getDate() + 1);
-        tomorrow.setHours(0, 0, 0, 0);
-        const nextWeek = new Date(now);
-        nextWeek.setDate(now.getDate() + 7);
-        nextWeek.setHours(23, 59, 59, 999);
-        const upcoming = brevetsData.filter(b => b.startDateTime >= tomorrow && b.startDateTime <= nextWeek);
+        // 3. Φιλτράρισμα live & upcoming
+        const now = new Date(); // τοπική ώρα Ελλάδας (αν το site είναι hosted σε Ελλάδα ή ο χρήστης έχει σωστή ζώνη)
+        const live = brevetsData.filter(b => isBrevetLiveNow(b, now));
+        const upcoming = brevetsData.filter(b => isUpcoming(b, now));
 
         setLiveBrevets(live);
         setUpcomingBrevets(upcoming);
@@ -138,11 +153,12 @@ export default function Home() {
     fetchAndFilter();
   }, []);
 
-  // ── COMPONENT SCROLLING CARDS (με γρηγορότερη ταχύτητα) ──
+  // ── COMPONENT SCROLLING CARDS (δεν εξαφανίζεται όταν άδειο) ──
   const ScrollSection = ({ title, icon, brevets, emptyMsg, liveMode = false }: 
     { title: string; icon: string; brevets: Brevet[]; emptyMsg: string; liveMode?: boolean }) => {
-    if (brevets.length === 0 && !loading) return null;
-    // Διπλασιασμός για ατέρμονο scroll (μπορεί να δημιουργήσει οπτική διπλοτυπία αν είναι 1-2 brevets)
+    
+    // Πάντα εμφανίζουμε τον τίτλο, ακόμα κι αν φορτώνει ή είναι άδειο
+    const showContent = !loading && brevets.length > 0;
     const doubled = [...brevets, ...brevets];
 
     return (
@@ -159,7 +175,7 @@ export default function Home() {
           <div className="flex justify-center py-8">
             <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : brevets.length === 0 ? (
+        ) : !showContent ? (
           <div className="text-center py-8">
             <p className="text-white/40 text-sm">{emptyMsg}</p>
           </div>
@@ -167,10 +183,11 @@ export default function Home() {
           <div className="w-full overflow-hidden">
             <div className="flex gap-5 w-max px-6 animate-scroll-fast">
               {doubled.map((b, idx) => {
-                const dayMonth = b.startDateTime.toLocaleDateString('el-GR', { day: 'numeric', month: 'short' });
-                const hours = b.startDateTime.getHours().toString().padStart(2,'0');
-                const minutes = b.startDateTime.getMinutes().toString().padStart(2,'0');
-                const isLiveNowFlag = liveMode && isLiveNow(b.startDateTime, b.endDateTime, new Date());
+                const dateObj = b.date ? new Date(b.date) : null;
+                const dayMonth = dateObj ? dateObj.toLocaleDateString('el-GR', { day: 'numeric', month: 'short' }) : '';
+                const hours = (b.startTime || '07:00').split(':')[0];
+                const minutes = (b.startTime || '07:00').split(':')[1];
+                const isLiveNowFlag = liveMode && isBrevetLiveNow(b, new Date());
 
                 return (
                   <a
@@ -228,10 +245,10 @@ export default function Home() {
     );
   };
 
-  // ── RENDER ΣΕΛΙΔΑΣ (ίδιο hero) ──
+  // ── RENDER ΣΕΛΙΔΑΣ (hero ίδιο) ──
   return (
     <div className="min-h-screen bg-[#0A1628] font-sans">
-      {/* HERO (παραμένει ίδιο) */}
+      {/* HERO (ακριβώς ίδιο) */}
       <section className="relative w-full h-screen flex items-center justify-center overflow-hidden">
         <video autoPlay muted loop playsInline poster="/hero-poster.jpg" className="absolute inset-0 w-full h-full object-cover">
           <source src="/hero.webm" type="video/webm" />
@@ -255,7 +272,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ΝΕΕΣ ΕΝΟΤΗΤΕΣ */}
+      {/* ΝΕΕΣ ΕΝΟΤΗΤΕΣ (πάντα ορατές, είτε άδειες είτε γεμάτες) */}
       <div className="max-w-6xl mx-auto px-6 pt-12">
         <ScrollSection
           title="LIVE τώρα"
@@ -292,7 +309,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Ταχύτερη κίνηση scroll — 20 δευτερόλεπτα */}
       <style>{`
         @keyframes scrollAnimation {
           0% { transform: translateX(0); }
