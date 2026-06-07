@@ -4,21 +4,21 @@ import { useEffect, useState } from 'react';
 import { db } from '@/app/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
-// ── ΤΥΠΟΙ (όπως στη σελίδα /brevets) ──────────────────────────
+// ── TYPES ──────────────────────────────────────────────────────
 interface Brevet {
   id: string;
   title: string;
   distance: number;
-  date: string;         // ISO string (από το Firestore)
+  date: string;         // ISO string
   organizer: string;
   organizerId: string;
   organizerLogo: string;
-  start: string;        // πόλη εκκίνησης
+  start: string;
   imageUrl: string;
-  startTime?: string;   // ώρα έναρξης π.χ. "07:00"
+  startTime?: string;
 }
 
-// ── ΒΟΗΘΗΤΙΚΕΣ ΓΙΑ ΥΠΟΛΟΓΙΣΜΟ LIVE ────────────────────────────
+// ── ΒΟΗΘΗΤΙΚΕΣ ΓΙΑ LIVE ───────────────────────────────────────
 function getTimeLimitHours(distanceKm: number): number {
   if (distanceKm <= 200) return 13.5;
   if (distanceKm <= 300) return 20;
@@ -60,7 +60,7 @@ function isUpcoming(brevet: Brevet, now: Date): boolean {
   return startDate >= tomorrow && startDate <= nextWeek;
 }
 
-// ── CACHE (ίδια με /brevets) ───────────────────────────────────
+// ── CACHE (όπως στη σελίδα /brevets) ───────────────────────────
 let cachedBrevets: Brevet[] = [];
 let cachedClubs: Record<string, string> = {};
 let cachedLogos: Record<string, string> = {};
@@ -75,7 +75,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchAndFilter() {
       try {
-        // 1. Φόρτωση clubs (όπως στη σελίδα brevets)
+        // Φόρτωση clubs
         if (Object.keys(cachedClubs).length === 0) {
           const clubsSnap = await getDocs(collection(db, 'clubs'));
           clubsSnap.forEach(doc => {
@@ -85,7 +85,7 @@ export default function Home() {
           });
         }
 
-        // 2. Φόρτωση brevets (ίδια λογική)
+        // Φόρτωση brevets (ίδια λογική με /brevets)
         let brevetsData = cachedBrevets;
         if (!brevetsData.length || Date.now() - cacheTimestamp > CACHE_TTL) {
           const currentYear = new Date().getFullYear();
@@ -121,7 +121,7 @@ export default function Home() {
               organizerLogo: cachedLogos[orgId] ?? '/logos/000000.png',
               start: route.start?.toString() ?? '',
               imageUrl: extra.imageUrl?.toString() ?? '',
-              startTime: info.startTime?.toString() ?? '07:00', // αν λείπει, default 07:00
+              startTime: info.startTime?.toString() ?? '07:00',
             });
           });
 
@@ -136,8 +136,7 @@ export default function Home() {
           brevetsData = temp;
         }
 
-        // 3. Φιλτράρισμα live & upcoming
-        const now = new Date(); // τοπική ώρα Ελλάδας (αν το site είναι hosted σε Ελλάδα ή ο χρήστης έχει σωστή ζώνη)
+        const now = new Date();
         const live = brevetsData.filter(b => isBrevetLiveNow(b, now));
         const upcoming = brevetsData.filter(b => isUpcoming(b, now));
 
@@ -153,17 +152,13 @@ export default function Home() {
     fetchAndFilter();
   }, []);
 
-  // ── COMPONENT SCROLLING CARDS (δεν εξαφανίζεται όταν άδειο) ──
+  // ── COMPONENT SCROLLING CARDS (χωρίς διπλασιασμό, μόνο manual scroll) ──
   const ScrollSection = ({ title, icon, brevets, emptyMsg, liveMode = false }: 
     { title: string; icon: string; brevets: Brevet[]; emptyMsg: string; liveMode?: boolean }) => {
     
-    // Πάντα εμφανίζουμε τον τίτλο, ακόμα κι αν φορτώνει ή είναι άδειο
-    const showContent = !loading && brevets.length > 0;
-    const doubled = [...brevets, ...brevets];
-
     return (
-      <div className="mb-16 -mx-6 overflow-hidden py-6">
-        <div className="px-6 mb-4 flex items-center gap-3">
+      <div className="mb-16">
+        <div className="mb-4 flex items-center gap-3">
           <div className="h-px flex-1 bg-white/10" />
           <span className="text-white/70 text-sm font-bold tracking-widest uppercase flex items-center gap-2">
             {icon} {title}
@@ -175,14 +170,14 @@ export default function Home() {
           <div className="flex justify-center py-8">
             <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : !showContent ? (
+        ) : brevets.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-white/40 text-sm">{emptyMsg}</p>
           </div>
         ) : (
-          <div className="w-full overflow-hidden">
-            <div className="flex gap-5 w-max px-6 animate-scroll-fast">
-              {doubled.map((b, idx) => {
+          <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-cyan-500/50 scrollbar-track-transparent">
+            <div className="flex gap-5" style={{ minWidth: 'max-content' }}>
+              {brevets.map((b) => {
                 const dateObj = b.date ? new Date(b.date) : null;
                 const dayMonth = dateObj ? dateObj.toLocaleDateString('el-GR', { day: 'numeric', month: 'short' }) : '';
                 const hours = (b.startTime || '07:00').split(':')[0];
@@ -191,7 +186,7 @@ export default function Home() {
 
                 return (
                   <a
-                    key={`${b.id}-${idx}`}
+                    key={b.id}
                     href={`/brevets/${b.id}`}
                     className="relative flex-shrink-0 w-64 h-36 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 group"
                   >
@@ -245,10 +240,10 @@ export default function Home() {
     );
   };
 
-  // ── RENDER ΣΕΛΙΔΑΣ (hero ίδιο) ──
+  // ── RENDER ΣΕΛΙΔΑΣ (ίδιο hero + νέα sections) ──
   return (
     <div className="min-h-screen bg-[#0A1628] font-sans">
-      {/* HERO (ακριβώς ίδιο) */}
+      {/* HERO (παραμένει ίδιο) */}
       <section className="relative w-full h-screen flex items-center justify-center overflow-hidden">
         <video autoPlay muted loop playsInline poster="/hero-poster.jpg" className="absolute inset-0 w-full h-full object-cover">
           <source src="/hero.webm" type="video/webm" />
@@ -272,7 +267,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ΝΕΕΣ ΕΝΟΤΗΤΕΣ (πάντα ορατές, είτε άδειες είτε γεμάτες) */}
+      {/* LIVE & UPCOMING SECTIONS (χωρίς διπλά) */}
       <div className="max-w-6xl mx-auto px-6 pt-12">
         <ScrollSection
           title="LIVE τώρα"
@@ -289,7 +284,7 @@ export default function Home() {
         />
       </div>
 
-      {/* FEATURES & STATS (ίδια) */}
+      {/* FEATURES & STATS (παραμένουν ίδια) */}
       <section className="max-w-5xl mx-auto px-6 py-16">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <a href="/brevets" className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/40 transition-colors"><div className="text-3xl mb-4">📅</div><h3 className="text-white font-bold text-lg mb-2">Ημερολόγιο Brevet</h3><p className="text-white/50 text-sm leading-relaxed">Όλα τα προγραμματισμένα brevets σε ένα μέρος. Εγγραφή με ένα κλικ.</p><div className="mt-4 text-cyan-400 text-xs font-bold tracking-wider">Δες εδώ →</div></a>
@@ -308,19 +303,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <style>{`
-        @keyframes scrollAnimation {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-scroll-fast {
-          animation: scrollAnimation 20s linear infinite;
-        }
-        .group:hover .animate-scroll-fast {
-          animation-play-state: paused;
-        }
-      `}</style>
     </div>
   );
 }
