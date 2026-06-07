@@ -241,12 +241,13 @@ function DarkTooltip({ active, payload, label, fmt }: { active?: boolean; payloa
   );
 }
 
+// Μειωμένα HeroStat για καλύτερο χώρο
 function HeroStat({ target, label, suffix = '', color, enabled }: { target: number; label: string; suffix?: string; color: string; enabled: boolean; }) {
   const v = useCountUp(target, 1800, enabled);
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex flex-col gap-1.5">
-      <div className="text-2xl sm:text-3xl font-bold tabular-nums" style={{ color }}>{v.toLocaleString('el-GR')}{suffix}</div>
-      <div className="text-white/45 text-xs sm:text-sm leading-snug">{label}</div>
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col gap-1">
+      <div className="text-xl sm:text-2xl font-bold tabular-nums" style={{ color }}>{v.toLocaleString('el-GR')}{suffix}</div>
+      <div className="text-white/45 text-[10px] sm:text-xs leading-snug">{label}</div>
     </div>
   );
 }
@@ -260,14 +261,15 @@ function MiniStat({ label, value, color }: { label: string; value: string; color
   );
 }
 
+// Μειωμένα κουμπιά φίλτρων
 function ChartBtn({ icon, label, color, active, onClick }: { icon: string; label: string; color: string; active: boolean; onClick: () => void; }) {
   return (
     <button onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-2 rounded-2xl p-3 sm:p-5 border transition-all duration-200 text-center w-full
+      className={`flex flex-col items-center justify-center gap-1.5 rounded-2xl p-2 sm:p-3 border transition-all duration-200 text-center w-full
         ${active ? 'scale-[1.03] text-white' : 'bg-white/5 border-white/10 hover:bg-white/8 hover:border-white/20 text-white/60 hover:text-white'}`}
       style={active ? { backgroundColor: `${color}1a`, borderColor: `${color}55`, boxShadow: `0 0 28px ${color}18` } : {}}>
-      <span className="text-2xl sm:text-3xl leading-none">{icon}</span>
-      <span className="text-[10px] sm:text-xs font-semibold leading-tight whitespace-pre-line">{label}</span>
+      <span className="text-xl sm:text-2xl leading-none">{icon}</span>
+      <span className="text-[9px] sm:text-[10px] font-semibold leading-tight whitespace-pre-line">{label}</span>
     </button>
   );
 }
@@ -627,13 +629,11 @@ export default function StatisticsPage() {
     }
   }, []);
 
-  // Close drill-down when switching main chart
   const switchChart = useCallback((id: ChartId) => {
     if (dd) closeDD();
     setActiveChart(id);
   }, [dd, closeDD]);
 
-  // Guards (all hooks above)
   if (status === 'loading' || enabled === null) return (
     <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
@@ -646,7 +646,7 @@ export default function StatisticsPage() {
   const meta = CHARTS.find(c => c.id === activeChart)!;
 
   return (
-    <div className="min-h-screen bg-[#0A1628] px-5 py-12">
+    <div className="min-h-screen bg-[#0A1628] px-4 py-10">
       {/* Ghost GRC watermark */}
       <div className="pointer-events-none fixed inset-0 flex items-center justify-center z-0 select-none">
         <img src="/grc-logo.png" alt="" className="w-[640px] h-[640px] object-contain" style={{ opacity: 0.045 }} />
@@ -655,18 +655,18 @@ export default function StatisticsPage() {
       <div className="max-w-4xl mx-auto relative z-10">
 
         {/* Header */}
-        <div className="mb-10">
+        <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Στατιστικά Κοινότητας</h1>
           <p className="text-white/40 text-sm">Συγκεντρωτικά δεδομένα από δημόσια προφίλ αναβατών</p>
         </div>
 
         {/* Hero numbers */}
         {loading || !at ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
-            {[...Array(4)].map((_,i) => <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5 h-24 animate-pulse" />)}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-8">
+            {[...Array(4)].map((_,i) => <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-3 h-20 animate-pulse" />)}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-8">
             <HeroStat target={at.uniqueRiders}                    label="Αναβάτες"                 color={C.cyan}   enabled={ready} />
             <HeroStat target={at.totalCompletions}                label="Ολοκληρώσεις"              color={C.blue}   enabled={ready} />
             <HeroStat target={at.totalKm}                         label="Χιλιόμετρα κοινότητας" suffix=" km" color={C.purple} enabled={ready} />
@@ -676,8 +676,8 @@ export default function StatisticsPage() {
 
         {/* Chart buttons */}
         <div className="mb-5">
-          <p className="text-white/30 text-[11px] uppercase tracking-widest mb-4">Αναλυτικά</p>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
+          <p className="text-white/30 text-[11px] uppercase tracking-widest mb-3">Αναλυτικά</p>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2">
             {CHARTS.map(c => (
               <ChartBtn key={c.id} icon={c.icon} label={c.label} color={c.color}
                 active={activeChart === c.id} onClick={() => switchChart(c.id)} />
@@ -719,24 +719,21 @@ export default function StatisticsPage() {
                 transition: 'opacity 0.33s ease, transform 0.33s ease',
               }}
             >
-              {/* Floating club logo (organizer drill-down only) */}
               {orgLogoId && (
                 <div className="flex justify-center relative z-10">
                   <img
                     src={`/logos/${orgLogoId}.png`}
                     alt={dd.type === 'organizer' ? dd.org : ''}
-                    className="w-28 h-28 object-contain rounded-full border-2 border-white/10 bg-[#0c1a30] drop-shadow-2xl"
-                    style={{ marginBottom: '-52px' }}
+                    className="w-24 h-24 object-contain rounded-full border-2 border-white/10 bg-[#0c1a30] drop-shadow-2xl"
+                    style={{ marginBottom: '-48px' }}
                     onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                   />
                 </div>
               )}
 
-              {/* Panel */}
               <div className="rounded-2xl border border-white/10 overflow-hidden">
-                {/* Header */}
                 <div className={`flex items-center gap-3 px-5 bg-white/[0.04] border-b border-white/10
-                  ${orgLogoId ? 'pt-16 pb-4' : 'py-4'}`}>
+                  ${orgLogoId ? 'pt-14 pb-4' : 'py-4'}`}>
                   <button onClick={closeDD}
                     className="flex items-center gap-1.5 text-white/40 hover:text-white text-sm transition-colors shrink-0">
                     ← Πίσω
@@ -744,7 +741,6 @@ export default function StatisticsPage() {
                   <span className="text-white/15 shrink-0">|</span>
                   <span className="text-white/75 text-sm font-semibold truncate">{getDDTitle(dd)}</span>
                 </div>
-                {/* Content */}
                 <div className="p-5 sm:p-6 bg-[#0A1628]">
                   {stats && renderDrillChart(dd, stats)}
                 </div>
