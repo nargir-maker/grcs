@@ -4,62 +4,70 @@ import { useEffect, useState } from 'react';
 import { db } from '@/app/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
-// ── Types (ίδια με τη σελίδα brevets) ──────────────────────────
+// ── TYPES ──────────────────────────────────────────────────────
 interface Brevet {
   id: string;
   title: string;
   distance: number;
-  date: string;       // ISO string
+  startDateTime: Date;      // πλήρες αντικείμενο Date με ώρα Ελλάδας
+  endDateTime: Date;        // ώρα λήξης (έναρξη + όριο)
   organizer: string;
   organizerId: string;
   organizerLogo: string;
-  start: string;
+  start: string;            // πόλη εκκίνησης
   imageUrl: string;
 }
 
-// ── Cache για brevets (ίδια λογική) ────────────────────────────
+// ── Βοηθητικές συναρτήσεις ─────────────────────────────────────
+function getTimeLimitHours(distanceKm: number): number {
+  if (distanceKm <= 200) return 13.5;
+  if (distanceKm <= 300) return 20;
+  if (distanceKm <= 400) return 27;
+  if (distanceKm <= 600) return 40;
+  if (distanceKm <= 1000) return 75;
+  // Για μεγαλύτερες αποστάσεις (π.χ. 1200km) προεκτείνουμε γραμμικά
+  return 75 + (distanceKm - 1000) / 1000 * 75;
+}
+
+function parseGreekDateTime(dateStr: string, timeStr: string): Date | null {
+  if (!dateStr || !timeStr) return null;
+  // Ημερομηνία σε μορφή YYYY-MM-DD
+  const [year, month, day] = dateStr.split('-').map(Number);
+  // Ώρα σε μορφή HH:MM
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hours) || isNaN(minutes)) return null;
+  // Δημιουργούμε Date με τοπική ζώνη (αυτόματα χειρίζεται DST)
+  return new Date(year, month - 1, day, hours, minutes);
+}
+
+function isLiveNow(start: Date, end: Date, now: Date): boolean {
+  return now >= start && now <= end;
+}
+
+// ── CACHE (ίδια λογική) ────────────────────────────────────────
 let cachedBrevets: Brevet[] = [];
 let cachedClubs: Record<string, string> = {};
 let cachedLogos: Record<string, string> = {};
 let cacheTimestamp = 0;
-const CACHE_TTL = 10 * 60 * 1000;
+const CACHE_TTL = 10 * 60 * 1000; // 10 λεπτά
 
-// ── Βοηθητικές ─────────────────────────────────────────────────
-function getTodayDateStr(): string {
-  const d = new Date();
-  return d.toISOString().split('T')[0]; // YYYY-MM-DD
-}
-
-function getUpcomingDateRange(): { start: string; end: string } {
-  const today = new Date();
-  const start = new Date(today);
-  start.setDate(today.getDate() + 1);               // αύριο
-  const end = new Date(today);
-  end.setDate(today.getDate() + 7);                 // +7 ημέρες
-  return {
-    start: start.toISOString().split('T')[0],
-    end: end.toISOString().split('T')[0],
-  };
-}
-
-// ── Κύρια συνιστώσα Home ───────────────────────────────────────
+// ── ΚΥΡΙΑ ΣΕΛΙΔΑ ───────────────────────────────────────────────
 export default function Home() {
   const [liveBrevets, setLiveBrevets] = useState<Brevet[]>([]);
   const [upcomingBrevets, setUpcomingBrevets] = useState<Brevet[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Φόρτωση brevets από Firestore (όπως στη σελίδα /brevets)
   useEffect(() => {
     async function fetchBrevets() {
       try {
-        // Αν έχουμε cache και είναι φρέσκια
+        // Cache check
         if (cachedBrevets.length && Date.now() - cacheTimestamp < CACHE_TTL) {
-          filterAndSetBrevets(cachedBrevets);
+          filterBrevets(cachedBrevets);
           setLoading(false);
           return;
         }
 
-        // Φόρτωση clubs (για ονόματα & λογότυπα)
+        // Φόρτωση clubs (ονόματα & λογότυπα)
         if (Object.keys(cachedClubs).length === 0) {
           const clubsSnap = await getDocs(collection(db, 'clubs'));
           clubsSnap.forEach(doc => {
@@ -69,7 +77,7 @@ export default function Home() {
           });
         }
 
-        // Παίρνουμε brevets μόνο του τρέχοντος έτους (για απόδοση)
+        // Φόρτωση brevets τρέχοντος έτους
         const currentYear = new Date().getFullYear();
         const q = query(
           collection(db, 'all_brevets'),
@@ -81,23 +89,27 @@ export default function Home() {
 
         snapshot.forEach(doc => {
           const d = doc.data();
-          const info  = d.info || {};
+          const info = d.info || {};
           const route = d.route || {};
           const extra = d.extra || {};
 
-          let parsedDate = '';
-          try {
-            const dateStr = info.date?.toString() ?? '';
-            const d2 = new Date(dateStr.split('+')[0]);
-            if (!isNaN(d2.getTime())) parsedDate = d2.toISOString();
-          } catch { /* ignore */ }
+          const distance = parseInt(info.distance?.toString() ?? '0') || 0;
+          const dateStr = info.date?.toString() ?? '';
+          const startTimeStr = info.startTime?.toString() ?? '07:00'; // default 7πμ αν δεν υπάρχει
+
+          const startDateTime = parseGreekDateTime(dateStr, startTimeStr);
+          if (!startDateTime) return; // αγνοούμε αν δεν έχουμε έγκυρη ημερομηνία
+
+          const timeLimit = getTimeLimitHours(distance);
+          const endDateTime = new Date(startDateTime.getTime() + timeLimit * 60 * 60 * 1000);
 
           const orgId = info.organizerId?.toString() ?? '';
           data.push({
             id: doc.id,
             title: info.title?.toString() ?? doc.id,
-            distance: parseInt(info.distance?.toString() ?? '0') || 0,
-            date: parsedDate,
+            distance,
+            startDateTime,
+            endDateTime,
             organizer: cachedClubs[orgId] ?? '',
             organizerId: orgId,
             organizerLogo: cachedLogos[orgId] ?? '/logos/000000.png',
@@ -106,51 +118,42 @@ export default function Home() {
           });
         });
 
-        // Ταξινόμηση κατά ημερομηνία
-        data.sort((a, b) => {
-          if (!a.date) return 1;
-          if (!b.date) return -1;
-          return new Date(a.date).getTime() - new Date(b.date).getTime();
-        });
+        // Ταξινόμηση κατά ώρα έναρξης
+        data.sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
 
         cachedBrevets = data;
         cacheTimestamp = Date.now();
-        filterAndSetBrevets(data);
+        filterBrevets(data);
       } catch (err) {
-        console.error('Error fetching brevets for home:', err);
-      } finally {
+        console.error('Error fetching brevets:', err);
         setLoading(false);
       }
     }
 
-    function filterAndSetBrevets(brevets: Brevet[]) {
-      const todayStr = getTodayDateStr();
-      const { start: upcomingStart, end: upcomingEnd } = getUpcomingDateRange();
+    function filterBrevets(brevets: Brevet[]) {
+      const now = new Date(); // τοπική ώρα του χρήστη (ίδια με Ελλάδα αν το site είναι εκεί)
+      const tomorrow = new Date(now);
+      tomorrow.setDate(now.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      const nextWeek = new Date(now);
+      nextWeek.setDate(now.getDate() + 7);
+      nextWeek.setHours(23, 59, 59, 999);
 
-      const live = brevets.filter(b => {
-        if (!b.date) return false;
-        const brevetDate = b.date.split('T')[0]; // μόνο ημερομηνία
-        return brevetDate === todayStr;
-      });
-
-      const upcoming = brevets.filter(b => {
-        if (!b.date) return false;
-        const brevetDate = b.date.split('T')[0];
-        return brevetDate >= upcomingStart && brevetDate <= upcomingEnd;
-      });
+      const live = brevets.filter(b => isLiveNow(b.startDateTime, b.endDateTime, now));
+      const upcoming = brevets.filter(b => b.startDateTime >= tomorrow && b.startDateTime <= nextWeek);
 
       setLiveBrevets(live);
       setUpcomingBrevets(upcoming);
+      setLoading(false);
     }
 
     fetchBrevets();
   }, []);
 
-  // ── Βοηθητική για εμφάνιση scroller ──────────────────────────
+  // ── COMPONENT ΓΙΑ SCROLLING CARDS ─────────────────────────────
   const ScrollSection = ({ title, icon, brevets, emptyMsg, liveMode = false }: 
     { title: string; icon: string; brevets: Brevet[]; emptyMsg: string; liveMode?: boolean }) => {
     if (brevets.length === 0 && !loading) return null;
-    // Για εφέ διπλασιασμού (ατέρμονο scroll)
     const doubled = [...brevets, ...brevets];
 
     return (
@@ -173,39 +176,32 @@ export default function Home() {
           </div>
         ) : (
           <div className="w-full overflow-hidden">
-            <div className="flex gap-5 w-max px-6 animate-[brevScroll_35s_linear_infinite] hover:animation-play-state-paused">
+            <div className="flex gap-5 w-max px-6 animate-scroll hover:animation-paused">
               {doubled.map((b, idx) => {
-                const dateObj = b.date ? new Date(b.date) : null;
-                const dayMonth = dateObj ? dateObj.toLocaleDateString('el-GR', { day: 'numeric', month: 'short' }) : '';
-                const isLiveToday = liveMode && (() => {
-                  if (!b.date) return false;
-                  return b.date.split('T')[0] === getTodayDateStr();
-                })();
+                const dayMonth = b.startDateTime.toLocaleDateString('el-GR', { day: 'numeric', month: 'short' });
+                const hours = b.startDateTime.getHours().toString().padStart(2,'0');
+                const minutes = b.startDateTime.getMinutes().toString().padStart(2,'0');
+                const startTimeStr = `${hours}:${minutes}`;
+                const isLiveNowFlag = liveMode && isLiveNow(b.startDateTime, b.endDateTime, new Date());
 
                 return (
                   <a
                     key={`${b.id}-${idx}`}
                     href={`/brevets/${b.id}`}
-                    className="relative flex-shrink-0 w-64 h-36 rounded-2xl overflow-hidden
-                      transition-all duration-300 hover:scale-105 group"
+                    className="relative flex-shrink-0 w-64 h-36 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 group"
                   >
-                    {/* Glow / Halo (ίδιο με τη σελίδα brevets) */}
                     <div className="absolute -inset-[2px] rounded-2xl opacity-70 group-hover:opacity-100 transition-opacity"
                          style={{ boxShadow: '0 0 15px 3px rgba(6,182,212,0.7)' }} />
-                    
-                    {/* Background image with overlay */}
                     <div className="absolute inset-0 rounded-2xl overflow-hidden">
                       {b.imageUrl ? (
-                        <div className="absolute inset-0 bg-cover bg-center"
-                             style={{ backgroundImage: `url(${b.imageUrl})` }} />
+                        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${b.imageUrl})` }} />
                       ) : (
                         <div className="absolute inset-0 bg-white/5" />
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-[#0A1628] via-[#0A1628]/60 to-transparent" />
                     </div>
 
-                    {/* LIVE badge (για live brevets) */}
-                    {isLiveToday && (
+                    {isLiveNowFlag && (
                       <div className="absolute top-2 left-2 z-10">
                         <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
                           LIVE
@@ -213,27 +209,24 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Απόσταση badge */}
                     <div className="absolute top-2 right-2 z-10">
                       <span className="bg-cyan-500/90 text-black text-xs font-black px-2 py-0.5 rounded-full">
                         {b.distance}km
                       </span>
                     </div>
 
-                    {/* Logo διοργανωτή */}
                     <div className="absolute top-2 left-2 z-10">
                       <img src={b.organizerLogo} alt={b.organizer}
                            className="w-7 h-7 object-contain rounded-full bg-black/30 backdrop-blur-sm"
                            onError={(e) => (e.currentTarget.src = '/logos/000000.png')} />
                     </div>
 
-                    {/* Text content */}
                     <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
                       <div className="text-white font-bold text-sm leading-tight truncate drop-shadow-md">
                         {b.title}
                       </div>
                       <div className="flex items-center justify-between mt-1">
-                        <span className="text-white/60 text-[11px]">{dayMonth}</span>
+                        <span className="text-white/60 text-[11px]">{dayMonth} {startTimeStr}</span>
                         <span className="text-white/40 text-[11px]">📍 {b.start}</span>
                       </div>
                     </div>
@@ -247,54 +240,34 @@ export default function Home() {
     );
   };
 
-  // ── Render της σελίδας (ίδιο hero + νέα sections) ────────────
+  // ── RENDER ΣΕΛΙΔΑΣ (το hero παραμένει ίδιο, αλλάζουν μόνο τα sections) ──
   return (
     <div className="min-h-screen bg-[#0A1628] font-sans">
-
-      {/* ── HERO — FULL SCREEN VIDEO (αμετάβλητο) ── */}
+      {/* HERO (ίδιο με πριν) */}
       <section className="relative w-full h-screen flex items-center justify-center overflow-hidden">
-        <video autoPlay muted loop playsInline poster="/hero-poster.jpg"
-               className="absolute inset-0 w-full h-full object-cover">
+        <video autoPlay muted loop playsInline poster="/hero-poster.jpg" className="absolute inset-0 w-full h-full object-cover">
           <source src="/hero.webm" type="video/webm" />
           <source src="/hero.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-gradient-to-b from-[#0A1628]/60 via-[#0A1628]/40 to-[#0A1628]" />
-        <div className="absolute inset-0 opacity-[0.03]"
-             style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-                     backgroundRepeat: 'repeat', backgroundSize: '128px' }} />
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`, backgroundRepeat: 'repeat', backgroundSize: '128px' }} />
         <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-          <div className="flex justify-center mb-8">
-            <img src="/grc-logo.png" alt="GRC Logo" className="w-64 h-64 object-contain drop-shadow-2xl" />
-          </div>
-          <div className="inline-block bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-bold px-4 py-2 rounded-full mb-8 tracking-widest backdrop-blur-sm">
-            ΕΛΛΗΝΙΚΟ RANDONNEURING — ΜΙΑ ΠΛΑΤΦΟΡΜΑ ΓΙΑ ΟΛΟΥΣ
-          </div>
-          <h2 className="text-4xl sm:text-6xl font-bold text-white leading-tight mb-6 drop-shadow-lg">
-            Όλα τα Brevets.<br />
-            <span className="text-cyan-400">Μια πλατφόρμα.</span>
-          </h2>
-          <p className="text-white/70 text-lg max-w-2xl mx-auto mb-12 leading-relaxed drop-shadow">
-            Εγγραφές, αποτελέσματα, live tracking και ιστορικό
-            για κάθε αναβάτη και διοργανωτή του ελληνικού randonneuring.
-          </p>
+          <div className="flex justify-center mb-8"><img src="/grc-logo.png" alt="GRC Logo" className="w-64 h-64 object-contain drop-shadow-2xl" /></div>
+          <div className="inline-block bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-bold px-4 py-2 rounded-full mb-8 tracking-widest backdrop-blur-sm">ΕΛΛΗΝΙΚΟ RANDONNEURING — ΜΙΑ ΠΛΑΤΦΟΡΜΑ ΓΙΑ ΟΛΟΥΣ</div>
+          <h2 className="text-4xl sm:text-6xl font-bold text-white leading-tight mb-6 drop-shadow-lg">Όλα τα Brevets.<br /><span className="text-cyan-400">Μια πλατφόρμα.</span></h2>
+          <p className="text-white/70 text-lg max-w-2xl mx-auto mb-12 leading-relaxed drop-shadow">Εγγραφές, αποτελέσματα, live tracking και ιστορικό για κάθε αναβάτη και διοργανωτή του ελληνικού randonneuring.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/brevets" className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-8 py-4 rounded-full text-base transition-colors shadow-lg shadow-cyan-500/25">
-              Δες τα Brevets →
-            </a>
-            <a href="/about" className="border border-white/30 hover:border-white/60 text-white px-8 py-4 rounded-full text-base transition-colors backdrop-blur-sm bg-white/5">
-              Μάθε περισσότερα
-            </a>
+            <a href="/brevets" className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-8 py-4 rounded-full text-base transition-colors shadow-lg shadow-cyan-500/25">Δες τα Brevets →</a>
+            <a href="/about" className="border border-white/30 hover:border-white/60 text-white px-8 py-4 rounded-full text-base transition-colors backdrop-blur-sm bg-white/5">Μάθε περισσότερα</a>
           </div>
         </div>
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/30 animate-bounce">
           <span className="text-xs tracking-widest">SCROLL</span>
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
         </div>
       </section>
 
-      {/* ⭐ ΝΕΟ: LIVE & UPCOMING BREVETS (εντυπωσιακή ένδειξη) */}
+      {/* ΝΕΑ ΕΝΟΤΗΤΑ LIVE & UPCOMING */}
       <div className="max-w-6xl mx-auto px-6 pt-12">
         <ScrollSection
           title="LIVE τώρα"
@@ -311,31 +284,15 @@ export default function Home() {
         />
       </div>
 
-      {/* ── FEATURES (αμετάβλητο) ── */}
+      {/* FEATURES & STATS (ίδια) */}
       <section className="max-w-5xl mx-auto px-6 py-16">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <a href="/brevets" className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/40 transition-colors">
-            <div className="text-3xl mb-4">📅</div>
-            <h3 className="text-white font-bold text-lg mb-2">Ημερολόγιο Brevet</h3>
-            <p className="text-white/50 text-sm leading-relaxed">Όλα τα προγραμματισμένα brevets σε ένα μέρος. Εγγραφή με ένα κλικ.</p>
-            <div className="mt-4 text-cyan-400 text-xs font-bold tracking-wider">Δες εδώ →</div>
-          </a>
-          <a href="/live" className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/40 transition-colors">
-            <div className="text-3xl mb-4">🗺️</div>
-            <h3 className="text-white font-bold text-lg mb-2">Live Tracking</h3>
-            <p className="text-white/50 text-sm leading-relaxed">Παρακολούθηση σε πραγματικό χρόνο. Για αναβάτες, διοργανωτές και θεατές.</p>
-            <div className="mt-4 text-cyan-400 text-xs font-bold tracking-wider">Δες εδώ →</div>
-          </a>
-          <a href="/members" className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/40 transition-colors">
-            <div className="text-3xl mb-4">🏆</div>
-            <h3 className="text-white font-bold text-lg mb-2">Ιστορικό & Στατιστικά</h3>
-            <p className="text-white/50 text-sm leading-relaxed">20+ χρόνια ιστορικού του ελληνικού randonneuring. Το προφίλ κάθε αναβάτη.</p>
-            <div className="mt-4 text-cyan-400 text-xs font-bold tracking-wider">ΣΎΝΤΟΜΑ →</div>
-          </a>
+          <a href="/brevets" className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/40 transition-colors"><div className="text-3xl mb-4">📅</div><h3 className="text-white font-bold text-lg mb-2">Ημερολόγιο Brevet</h3><p className="text-white/50 text-sm leading-relaxed">Όλα τα προγραμματισμένα brevets σε ένα μέρος. Εγγραφή με ένα κλικ.</p><div className="mt-4 text-cyan-400 text-xs font-bold tracking-wider">Δες εδώ →</div></a>
+          <a href="/live" className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/40 transition-colors"><div className="text-3xl mb-4">🗺️</div><h3 className="text-white font-bold text-lg mb-2">Live Tracking</h3><p className="text-white/50 text-sm leading-relaxed">Παρακολούθηση σε πραγματικό χρόνο. Για αναβάτες, διοργανωτές και θεατές.</p><div className="mt-4 text-cyan-400 text-xs font-bold tracking-wider">Δες εδώ →</div></a>
+          <a href="/members" className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-cyan-500/40 transition-colors"><div className="text-3xl mb-4">🏆</div><h3 className="text-white font-bold text-lg mb-2">Ιστορικό & Στατιστικά</h3><p className="text-white/50 text-sm leading-relaxed">20+ χρόνια ιστορικού του ελληνικού randonneuring. Το προφίλ κάθε αναβάτη.</p><div className="mt-4 text-cyan-400 text-xs font-bold tracking-wider">ΣΎΝΤΟΜΑ →</div></a>
         </div>
       </section>
 
-      {/* ── STATS BAR (αμετάβλητο) ── */}
       <section className="border-t border-white/10">
         <div className="max-w-5xl mx-auto px-6 py-12">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
@@ -347,15 +304,16 @@ export default function Home() {
         </div>
       </section>
 
-      <style jsx>{`
-        @keyframes brevScroll {
+      {/* Global styles for animation */}
+      <style>{`
+        @keyframes scrollAnimation {
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
-        .animate-\\[brevScroll_35s_linear_infinite\\] {
-          animation: brevScroll 35s linear infinite;
+        .animate-scroll {
+          animation: scrollAnimation 35s linear infinite;
         }
-        .hover\\:animation-play-state-paused:hover {
+        .hover\\:animation-paused:hover {
           animation-play-state: paused;
         }
       `}</style>
