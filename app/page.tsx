@@ -54,7 +54,7 @@ function isUpcoming(brevet: Brevet, now: Date): boolean {
   tomorrow.setDate(now.getDate() + 1);
   tomorrow.setHours(0, 0, 0, 0);
   const nextWeek = new Date(now);
-  nextWeek.setDate(now.getDate() + 7);
+  nextWeek.setDate(now.getDate() + 14);
   nextWeek.setHours(23, 59, 59, 999);
 
   return startDate >= tomorrow && startDate <= nextWeek;
