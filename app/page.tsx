@@ -277,10 +277,10 @@ export default function Home() {
           liveMode={true}
         />
         <ScrollSection
-          title="Επόμενα 7 ημέρες"
+          title="Επόμενα εντός 14 ημερών"
           icon="📅🔥"
           brevets={upcomingBrevets}
-          emptyMsg="Δεν υπάρχουν προγραμματισμένα brevets για τις επόμενες 7 ημέρες."
+          emptyMsg="Δεν υπάρχουν προγραμματισμένα brevets για τις επόμενες 14 ημέρες."
         />
       </div>
 
