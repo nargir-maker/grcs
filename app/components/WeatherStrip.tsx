@@ -19,6 +19,7 @@ interface WeatherPoint extends RoutePoint {
   etaTime: Date;
   loading: boolean;
   error: boolean;
+  source: 'metno' | 'openmeteo' | null;
 }
 
 interface ControlPoint {
@@ -134,15 +135,55 @@ function interpolate(
   return { lat: a.lat + t * (b.lat - a.lat), lng: a.lng + t * (b.lng - a.lng) };
 }
 
+const METNO_WINDOW_MS = 48 * 3600 * 1000;
+
 async function fetchWeather(
   lat: number,
   lng: number,
   date: Date
-): Promise<{ temp: number; windSpeed: number; windGusts: number; precipitation: number; weatherCode: number }> {
-  const url = `/api/weather/metno?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}&time=${encodeURIComponent(date.toISOString())}`;
-  const res  = await fetch(url);
-  if (!res.ok) throw new Error(`metno proxy ${res.status}`);
-  return res.json();
+): Promise<{ temp: number; windSpeed: number; windGusts: number; precipitation: number; weatherCode: number; source: 'metno' | 'openmeteo' }> {
+  const hoursFromNow = date.getTime() - Date.now();
+
+  if (hoursFromNow <= METNO_WINDOW_MS) {
+    // ── MET Norway — ωριαία δεδομένα εντός 48h ──────────────────────────
+    const url = `/api/weather/metno?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}&time=${encodeURIComponent(date.toISOString())}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`metno ${res.status}`);
+    const data = await res.json();
+    return { ...data, source: 'metno' as const };
+  }
+
+  // ── Open-Meteo best_match — ωριαία δεδομένα έως 16 μέρες ─────────────
+  const dateStr = date.toISOString().split('T')[0];
+  const endDate = new Date(date.getTime() + 86400000).toISOString().split('T')[0];
+  const url =
+    `https://api.open-meteo.com/v1/forecast?` +
+    `latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}` +
+    `&hourly=temperature_2m,precipitation,windspeed_10m,wind_gusts_10m,weathercode` +
+    `&start_date=${dateStr}&end_date=${endDate}` +
+    `&models=best_match&timezone=UTC`;
+  const res = await fetch(url);
+  const data = await res.json();
+  const targetHour = date.toISOString().slice(0, 13) + ':00';
+  const times: string[] = data.hourly?.time ?? [];
+  let idx = times.findIndex((t) => t === targetHour);
+  if (idx === -1) {
+    const targetMs = date.getTime();
+    let minDiff = Infinity;
+    times.forEach((t, i) => {
+      const diff = Math.abs(new Date(t + ':00Z').getTime() - targetMs);
+      if (diff < minDiff) { minDiff = diff; idx = i; }
+    });
+  }
+  if (idx === -1) idx = 0;
+  return {
+    temp:          Math.round(data.hourly.temperature_2m?.[idx] ?? 0),
+    windSpeed:     Math.round(data.hourly.windspeed_10m?.[idx] ?? 0),
+    windGusts:     Math.round(data.hourly.wind_gusts_10m?.[idx] ?? 0),
+    precipitation: Math.round((data.hourly.precipitation?.[idx] ?? 0) * 10) / 10,
+    weatherCode:   data.hourly.weathercode?.[idx] ?? 0,
+    source:        'openmeteo' as const,
+  };
 }
 
 export default function WeatherStrip({
@@ -227,6 +268,7 @@ export default function WeatherStrip({
           etaTime,
           loading: true,
           error: false,
+          source: null,
         };
       });
 
@@ -273,7 +315,7 @@ export default function WeatherStrip({
           🌦️ Καιρός Διαδρομής
           {!loading && !error && (
             <span className="text-white/30 text-xs font-normal ml-1">
-              ({points.length} σημεία · ECMWF)
+              ({points.length} σημεία)
             </span>
           )}
         </h2>
@@ -430,7 +472,6 @@ export default function WeatherStrip({
                 <span>🟢 Αφετηρία</span>
                 <span>🔵 Σημεία Ελέγχου</span>
                 <span>🟡 Τερματισμός</span>
-                <span>· Ώρα ETA με {avgSpeed}km/h μέσο όρο</span>
               </div>
 
               <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-sm">
@@ -440,9 +481,19 @@ export default function WeatherStrip({
                 <span style={{ color: '#F87171' }}>💨 &gt;50 Θυελλώδης</span>
               </div>
 
-              <p className="text-white/40 text-sm mt-3">
-                Πηγή: MET Norway (Yr.no) · Πρόγνωση με βάση τον εκτιμώμενο χρόνο άφιξης
-              </p>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/40">
+                {points.some(p => p.source === 'metno') && (
+                  <span className="bg-blue-500/10 border border-blue-500/20 rounded px-2 py-1">
+                    🇳🇴 MET Norway (Yr.no) — εντός 48h
+                  </span>
+                )}
+                {points.some(p => p.source === 'openmeteo') && (
+                  <span className="bg-cyan-500/10 border border-cyan-500/20 rounded px-2 py-1">
+                    🌐 Open-Meteo Best Match — πέρα από 48h
+                  </span>
+                )}
+                <span className="py-1">· ETA με {avgSpeed}km/h</span>
+              </div>
             </>
           )}
         </div>
