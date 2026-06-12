@@ -135,17 +135,15 @@ function interpolate(
   return { lat: a.lat + t * (b.lat - a.lat), lng: a.lng + t * (b.lng - a.lng) };
 }
 
-const METNO_WINDOW_MS = 48 * 3600 * 1000;
+type WeatherSource = 'metno' | 'openmeteo';
 
 async function fetchWeather(
   lat: number,
   lng: number,
-  date: Date
-): Promise<{ temp: number; windSpeed: number; windGusts: number; precipitation: number; weatherCode: number; source: 'metno' | 'openmeteo' }> {
-  const hoursFromNow = date.getTime() - Date.now();
-
-  if (hoursFromNow <= METNO_WINDOW_MS) {
-    // ── MET Norway — ωριαία δεδομένα εντός 48h ──────────────────────────
+  date: Date,
+  source: WeatherSource,
+): Promise<{ temp: number; windSpeed: number; windGusts: number; precipitation: number; weatherCode: number; source: WeatherSource }> {
+  if (source === 'metno') {
     const url = `/api/weather/metno?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}&time=${encodeURIComponent(date.toISOString())}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`metno ${res.status}`);
@@ -153,7 +151,6 @@ async function fetchWeather(
     return { ...data, source: 'metno' as const };
   }
 
-  // ── Open-Meteo best_match — ωριαία δεδομένα έως 16 μέρες ─────────────
   const dateStr = date.toISOString().split('T')[0];
   const endDate = new Date(date.getTime() + 86400000).toISOString().split('T')[0];
   const url =
@@ -197,15 +194,19 @@ export default function WeatherStrip({
   distanceKm: number;
   controls?: ControlPoint[];
 }) {
-  const [points, setPoints]     = useState<WeatherPoint[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
-  const [expanded, setExpanded] = useState(false);
-  const [avgSpeed, setAvgSpeed] = useState(() => defaultSpeed(distanceKm));
+  const [points, setPoints]         = useState<WeatherPoint[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
+  const [expanded, setExpanded]     = useState(false);
+  const [avgSpeed, setAvgSpeed]     = useState(() => defaultSpeed(distanceKm));
   const [sliderSpeed, setSliderSpeed] = useState(() => defaultSpeed(distanceKm));
+  const [weatherSource, setWeatherSource] = useState<WeatherSource>(() =>
+    startDate && (startDate.getTime() - Date.now()) <= 48 * 3600 * 1000
+      ? 'metno' : 'openmeteo'
+  );
   const abortRef = useRef<boolean>(false);
 
-  const load = useCallback(async (speed: number) => {
+  const load = useCallback(async (speed: number, source: WeatherSource) => {
     if (!gpxUrl || !startDate) return;
     abortRef.current = true;
     abortRef.current = false;
@@ -279,7 +280,7 @@ export default function WeatherStrip({
         if (abortRef.current) return;
         const pt = routePoints[i];
         try {
-          const w = await fetchWeather(pt.lat, pt.lng, pt.etaTime);
+          const w = await fetchWeather(pt.lat, pt.lng, pt.etaTime, source);
           setPoints((prev) =>
             prev.map((p, idx) => (idx === i ? { ...p, ...w, loading: false } : p))
           );
@@ -300,8 +301,8 @@ export default function WeatherStrip({
   }, [gpxUrl, startDate?.toISOString(), distanceKm]);
 
   useEffect(() => {
-    load(avgSpeed);
-  }, [load]);
+    load(avgSpeed, weatherSource);
+  }, [load, weatherSource]);
 
   const finishPoint = points.find(p => p.label === 'FINISH');
 
@@ -343,14 +344,40 @@ export default function WeatherStrip({
               step={1}
               value={sliderSpeed}
               onChange={(e) => setSliderSpeed(Number(e.target.value))}
-              onMouseUp={() => { setAvgSpeed(sliderSpeed); load(sliderSpeed); }}
-              onTouchEnd={() => { setAvgSpeed(sliderSpeed); load(sliderSpeed); }}
+              onMouseUp={() => { setAvgSpeed(sliderSpeed); load(sliderSpeed, weatherSource); }}
+              onTouchEnd={() => { setAvgSpeed(sliderSpeed); load(sliderSpeed, weatherSource); }}
               className="w-full accent-cyan-400"
             />
             <div className="flex justify-between text-white/30 text-xs mt-0.5">
               <span>12 km/h</span>
               <span>30 km/h</span>
             </div>
+          </div>
+
+          {/* Source toggle */}
+          <div className="flex gap-2 mb-5">
+            <button
+              onClick={() => setWeatherSource('metno')}
+              className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold border transition-all ${
+                weatherSource === 'metno'
+                  ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+                  : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
+              }`}
+            >
+              🇳🇴 MET Norway
+              <span className="block text-xs font-normal opacity-70">Yr.no · ωριαία έως 10 μέρες</span>
+            </button>
+            <button
+              onClick={() => setWeatherSource('openmeteo')}
+              className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold border transition-all ${
+                weatherSource === 'openmeteo'
+                  ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300'
+                  : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
+              }`}
+            >
+              🌐 Open-Meteo
+              <span className="block text-xs font-normal opacity-70">Best Match · ωριαία έως 16 μέρες</span>
+            </button>
           </div>
 
           {loading && (
@@ -481,19 +508,12 @@ export default function WeatherStrip({
                 <span style={{ color: '#F87171' }}>💨 &gt;50 Θυελλώδης</span>
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/40">
-                {points.some(p => p.source === 'metno') && (
-                  <span className="bg-blue-500/10 border border-blue-500/20 rounded px-2 py-1">
-                    🇳🇴 MET Norway (Yr.no) — εντός 48h
-                  </span>
-                )}
-                {points.some(p => p.source === 'openmeteo') && (
-                  <span className="bg-cyan-500/10 border border-cyan-500/20 rounded px-2 py-1">
-                    🌐 Open-Meteo Best Match — πέρα από 48h
-                  </span>
-                )}
-                <span className="py-1">· ETA με {avgSpeed}km/h</span>
-              </div>
+              <p className="text-white/30 text-xs mt-3">
+                {weatherSource === 'metno'
+                  ? '🇳🇴 MET Norway (Yr.no)'
+                  : '🌐 Open-Meteo · Best Match'
+                } · ETA με {avgSpeed}km/h
+              </p>
             </>
           )}
         </div>
