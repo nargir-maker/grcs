@@ -147,7 +147,7 @@ async function fetchWeather(
     `&hourly=temperature_2m,precipitation,windspeed_10m,wind_gusts_10m,weathercode` +
     `&start_date=${dateStr}&end_date=${endDate}` +
     `&models=ecmwf_ifs025` +
-    `&timezone=auto`;
+    `&timezone=UTC`;
   const res = await fetch(url);
   const data = await res.json();
   const targetHour = date.toISOString().slice(0, 13) + ':00';
@@ -157,7 +157,7 @@ async function fetchWeather(
     const targetMs = date.getTime();
     let minDiff = Infinity;
     times.forEach((t, i) => {
-      const diff = Math.abs(new Date(t).getTime() - targetMs);
+      const diff = Math.abs(new Date(t + ':00Z').getTime() - targetMs);
       if (diff < minDiff) {
         minDiff = diff;
         idx = i;
