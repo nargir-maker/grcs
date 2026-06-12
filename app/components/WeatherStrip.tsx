@@ -146,7 +146,7 @@ async function fetchWeather(
     `latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}` +
     `&hourly=temperature_2m,precipitation,windspeed_10m,wind_gusts_10m,weathercode` +
     `&start_date=${dateStr}&end_date=${endDate}` +
-    `&models=ecmwf_ifs025` +
+    `&models=best_match` +
     `&timezone=UTC`;
   const res = await fetch(url);
   const data = await res.json();
