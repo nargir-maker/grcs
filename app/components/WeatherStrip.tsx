@@ -139,39 +139,10 @@ async function fetchWeather(
   lng: number,
   date: Date
 ): Promise<{ temp: number; windSpeed: number; windGusts: number; precipitation: number; weatherCode: number }> {
-  const dateStr = date.toISOString().split('T')[0];
-  const endDate = new Date(date.getTime() + 86400000).toISOString().split('T')[0];
-  const url =
-    `https://api.open-meteo.com/v1/forecast?` +
-    `latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}` +
-    `&hourly=temperature_2m,precipitation,windspeed_10m,wind_gusts_10m,weathercode` +
-    `&start_date=${dateStr}&end_date=${endDate}` +
-    `&models=best_match` +
-    `&timezone=UTC`;
-  const res = await fetch(url);
-  const data = await res.json();
-  const targetHour = date.toISOString().slice(0, 13) + ':00';
-  const times: string[] = data.hourly?.time ?? [];
-  let idx = times.findIndex((t) => t === targetHour);
-  if (idx === -1) {
-    const targetMs = date.getTime();
-    let minDiff = Infinity;
-    times.forEach((t, i) => {
-      const diff = Math.abs(new Date(t + ':00Z').getTime() - targetMs);
-      if (diff < minDiff) {
-        minDiff = diff;
-        idx = i;
-      }
-    });
-  }
-  if (idx === -1) idx = 0;
-  return {
-    temp:       Math.round(data.hourly.temperature_2m?.[idx] ?? 0),
-    windSpeed:  Math.round(data.hourly.windspeed_10m?.[idx] ?? 0),
-    windGusts:  Math.round(data.hourly.wind_gusts_10m?.[idx] ?? 0),
-    precipitation: Math.round((data.hourly.precipitation?.[idx] ?? 0) * 10) / 10,
-    weatherCode: data.hourly.weathercode?.[idx] ?? 0,
-  };
+  const url = `/api/weather/metno?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}&time=${encodeURIComponent(date.toISOString())}`;
+  const res  = await fetch(url);
+  if (!res.ok) throw new Error(`metno proxy ${res.status}`);
+  return res.json();
 }
 
 export default function WeatherStrip({
@@ -195,8 +166,7 @@ export default function WeatherStrip({
 
   const load = useCallback(async (speed: number) => {
     if (!gpxUrl || !startDate) return;
-    abortRef.current = true; // cancel any in-progress fetch
-    const myAbort = {};
+    abortRef.current = true;
     abortRef.current = false;
 
     try {
@@ -471,7 +441,7 @@ export default function WeatherStrip({
               </div>
 
               <p className="text-white/40 text-sm mt-3">
-                Πηγή: Open-Meteo · Best Match · Πρόγνωση με βάση τον εκτιμώμενο χρόνο άφιξης
+                Πηγή: MET Norway (Yr.no) · Πρόγνωση με βάση τον εκτιμώμενο χρόνο άφιξης
               </p>
             </>
           )}
