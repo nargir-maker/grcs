@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 
 interface RoutePoint {
   lat: number;
@@ -13,6 +13,7 @@ interface RoutePoint {
 interface WeatherPoint extends RoutePoint {
   temp: number;
   windSpeed: number;
+  windGusts: number;
   precipitation: number;
   weatherCode: number;
   etaTime: Date;
@@ -52,6 +53,25 @@ function windColor(kmh: number): string {
   if (kmh < 35) return '#FCD34D';
   if (kmh < 50) return '#FB923C';
   return '#F87171';
+}
+
+function defaultSpeed(distKm: number): number {
+  if (distKm <= 200) return 20;
+  if (distKm <= 300) return 18;
+  if (distKm <= 400) return 17;
+  if (distKm <= 600) return 16;
+  return 14;
+}
+
+function finishTimeLabel(startDate: Date, finishEta: Date): string {
+  const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const finishDay = new Date(finishEta.getFullYear(), finishEta.getMonth(), finishEta.getDate());
+  const diffDays = Math.round((finishDay.getTime() - startDay.getTime()) / 86400000);
+  const timeStr = finishEta.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
+  if (diffDays <= 0) return timeStr;
+  const days = ['Κυρ', 'Δευ', 'Τρι', 'Τετ', 'Πεμ', 'Παρ', 'Σαβ'];
+  const dateStr = finishEta.toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit' });
+  return `${timeStr} (${days[finishEta.getDay()]} ${dateStr})`;
 }
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -118,14 +138,15 @@ async function fetchWeather(
   lat: number,
   lng: number,
   date: Date
-): Promise<{ temp: number; windSpeed: number; precipitation: number; weatherCode: number }> {
+): Promise<{ temp: number; windSpeed: number; windGusts: number; precipitation: number; weatherCode: number }> {
   const dateStr = date.toISOString().split('T')[0];
   const endDate = new Date(date.getTime() + 86400000).toISOString().split('T')[0];
   const url =
     `https://api.open-meteo.com/v1/forecast?` +
     `latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}` +
-    `&hourly=temperature_2m,precipitation,windspeed_10m,weathercode` +
+    `&hourly=temperature_2m,precipitation,windspeed_10m,wind_gusts_10m,weathercode` +
     `&start_date=${dateStr}&end_date=${endDate}` +
+    `&models=ecmwf_ifs025` +
     `&timezone=auto`;
   const res = await fetch(url);
   const data = await res.json();
@@ -145,8 +166,9 @@ async function fetchWeather(
   }
   if (idx === -1) idx = 0;
   return {
-    temp: Math.round(data.hourly.temperature_2m?.[idx] ?? 0),
-    windSpeed: Math.round(data.hourly.windspeed_10m?.[idx] ?? 0),
+    temp:       Math.round(data.hourly.temperature_2m?.[idx] ?? 0),
+    windSpeed:  Math.round(data.hourly.windspeed_10m?.[idx] ?? 0),
+    windGusts:  Math.round(data.hourly.wind_gusts_10m?.[idx] ?? 0),
     precipitation: Math.round((data.hourly.precipitation?.[idx] ?? 0) * 10) / 10,
     weatherCode: data.hourly.weathercode?.[idx] ?? 0,
   };
@@ -163,102 +185,113 @@ export default function WeatherStrip({
   distanceKm: number;
   controls?: ControlPoint[];
 }) {
-  const [points, setPoints] = useState<WeatherPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [points, setPoints]     = useState<WeatherPoint[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState('');
   const [expanded, setExpanded] = useState(false);
-  const avgSpeed = 15;
+  const [avgSpeed, setAvgSpeed] = useState(() => defaultSpeed(distanceKm));
+  const [sliderSpeed, setSliderSpeed] = useState(() => defaultSpeed(distanceKm));
+  const abortRef = useRef<boolean>(false);
+
+  const load = useCallback(async (speed: number) => {
+    if (!gpxUrl || !startDate) return;
+    abortRef.current = true; // cancel any in-progress fetch
+    const myAbort = {};
+    abortRef.current = false;
+
+    try {
+      setLoading(true);
+      setError('');
+      setPoints([]);
+
+      const coords = await parseGpxPoints(gpxUrl);
+      if (coords.length === 0) {
+        setError('Αδυναμία φόρτωσης GPX');
+        setLoading(false);
+        return;
+      }
+
+      const totalKm = coords[coords.length - 1].distKm;
+      const sampleKms = new Map<number, string>();
+
+      sampleKms.set(0, 'START');
+
+      const NUM_SAMPLES = 8;
+      for (let i = 1; i < NUM_SAMPLES; i++) {
+        const km = Math.round((totalKm / NUM_SAMPLES) * i);
+        if (!sampleKms.has(km)) sampleKms.set(km, `km ${km}`);
+      }
+
+      controls.forEach((cp, i) => {
+        if (cp.km > 0 && cp.km < distanceKm) {
+          let found = false;
+          sampleKms.forEach((_, k) => {
+            if (Math.abs(k - cp.km) < 5) {
+              sampleKms.set(k, `CP${i + 1}`);
+              found = true;
+            }
+          });
+          if (!found) sampleKms.set(cp.km, `CP${i + 1}: ${cp.name}`);
+        }
+      });
+
+      sampleKms.set(Math.round(totalKm), 'FINISH');
+
+      const sortedKms = Array.from(sampleKms.entries()).sort((a, b) => a[0] - b[0]);
+
+      const routePoints: WeatherPoint[] = sortedKms.map(([km, label]) => {
+        const pos = interpolate(coords, km);
+        const hoursFromStart = km / speed;
+        const etaTime = new Date(startDate.getTime() + hoursFromStart * 3600000);
+        return {
+          lat: pos.lat,
+          lng: pos.lng,
+          distKm: km,
+          label,
+          isCp: controls.some((cp) => Math.abs(cp.km - km) < 5),
+          temp: 0,
+          windSpeed: 0,
+          windGusts: 0,
+          precipitation: 0,
+          weatherCode: 0,
+          etaTime,
+          loading: true,
+          error: false,
+        };
+      });
+
+      setPoints(routePoints);
+      setLoading(false);
+
+      for (let i = 0; i < routePoints.length; i++) {
+        if (abortRef.current) return;
+        const pt = routePoints[i];
+        try {
+          const w = await fetchWeather(pt.lat, pt.lng, pt.etaTime);
+          setPoints((prev) =>
+            prev.map((p, idx) => (idx === i ? { ...p, ...w, loading: false } : p))
+          );
+        } catch {
+          setPoints((prev) =>
+            prev.map((p, idx) => (idx === i ? { ...p, loading: false, error: true } : p))
+          );
+        }
+        if (i < routePoints.length - 1) {
+          await new Promise((r) => setTimeout(r, 200));
+        }
+      }
+    } catch (e) {
+      console.error('WeatherStrip error:', e);
+      setError('Αδυναμία φόρτωσης καιρού');
+      setLoading(false);
+    }
+  }, [gpxUrl, startDate?.toISOString(), distanceKm]);
 
   useEffect(() => {
-    if (!gpxUrl || !startDate) return;
+    load(avgSpeed);
+  }, [load]);
 
-    async function load() {
-      try {
-        setLoading(true);
-        setError('');
-
-        const coords = await parseGpxPoints(gpxUrl);
-        if (coords.length === 0) {
-          setError('Αδυναμία φόρτωσης GPX');
-          return;
-        }
-
-        const totalKm = coords[coords.length - 1].distKm;
-        const sampleKms = new Map<number, string>();
-
-        sampleKms.set(0, 'START');
-
-        const NUM_SAMPLES = 8;
-        for (let i = 1; i < NUM_SAMPLES; i++) {
-          const km = Math.round((totalKm / NUM_SAMPLES) * i);
-          if (!sampleKms.has(km)) sampleKms.set(km, `km ${km}`);
-        }
-
-        controls.forEach((cp, i) => {
-          if (cp.km > 0 && cp.km < distanceKm) {
-            let found = false;
-            sampleKms.forEach((_, k) => {
-              if (Math.abs(k - cp.km) < 5) {
-                sampleKms.set(k, `CP${i + 1}`);
-                found = true;
-              }
-            });
-            if (!found) sampleKms.set(cp.km, `CP${i + 1}: ${cp.name}`);
-          }
-        });
-
-        sampleKms.set(Math.round(totalKm), 'FINISH');
-
-        const sortedKms = Array.from(sampleKms.entries()).sort((a, b) => a[0] - b[0]);
-
-        const routePoints: WeatherPoint[] = sortedKms.map(([km, label]) => {
-          const pos = interpolate(coords, km);
-          const hoursFromStart = km / avgSpeed;
-          const etaTime = new Date(startDate.getTime() + hoursFromStart * 3600000);
-          return {
-            lat: pos.lat,
-            lng: pos.lng,
-            distKm: km,
-            label,
-            isCp: controls.some((cp) => Math.abs(cp.km - km) < 5),
-            temp: 0,
-            windSpeed: 0,
-            precipitation: 0,
-            weatherCode: 0,
-            etaTime,
-            loading: true,
-            error: false,
-          };
-        });
-
-        setPoints(routePoints);
-        setLoading(false);
-
-        for (let i = 0; i < routePoints.length; i++) {
-          const pt = routePoints[i];
-          try {
-            const w = await fetchWeather(pt.lat, pt.lng, pt.etaTime);
-            setPoints((prev) =>
-              prev.map((p, idx) => (idx === i ? { ...p, ...w, loading: false } : p))
-            );
-          } catch {
-            setPoints((prev) =>
-              prev.map((p, idx) => (idx === i ? { ...p, loading: false, error: true } : p))
-            );
-          }
-          if (i < routePoints.length - 1) {
-            await new Promise((r) => setTimeout(r, 200));
-          }
-        }
-      } catch (e) {
-        console.error('WeatherStrip error:', e);
-        setError('Αδυναμία φόρτωσης καιρού');
-        setLoading(false);
-      }
-    }
-
-    load();
-  }, [gpxUrl, startDate?.toISOString(), distanceKm]);
+  const finishPoint = points.find(p => p.label === 'FINISH');
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
@@ -270,7 +303,7 @@ export default function WeatherStrip({
           🌦️ Καιρός Διαδρομής
           {!loading && !error && (
             <span className="text-white/30 text-xs font-normal ml-1">
-              ({points.length} σημεία · ~15km/h)
+              ({points.length} σημεία · ECMWF)
             </span>
           )}
         </h2>
@@ -279,6 +312,35 @@ export default function WeatherStrip({
 
       {expanded && (
         <div className="mt-5">
+
+          {/* Speed slider */}
+          <div className="bg-white/5 rounded-xl px-4 py-3 mb-5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-white/50 text-sm">Μέση ταχύτητα:</span>
+              <span className="text-white font-bold text-base">{sliderSpeed} km/h</span>
+            </div>
+            {finishPoint && !loading && (
+              <p className="text-orange-400 text-sm font-semibold mb-2">
+                Τερματισμός: {finishTimeLabel(startDate, finishPoint.etaTime)}
+              </p>
+            )}
+            <input
+              type="range"
+              min={12}
+              max={30}
+              step={1}
+              value={sliderSpeed}
+              onChange={(e) => setSliderSpeed(Number(e.target.value))}
+              onMouseUp={() => { setAvgSpeed(sliderSpeed); load(sliderSpeed); }}
+              onTouchEnd={() => { setAvgSpeed(sliderSpeed); load(sliderSpeed); }}
+              className="w-full accent-cyan-400"
+            />
+            <div className="flex justify-between text-white/30 text-xs mt-0.5">
+              <span>12 km/h</span>
+              <span>30 km/h</span>
+            </div>
+          </div>
+
           {loading && (
             <div className="flex items-center gap-3 py-4 text-white/40 text-sm">
               <div className="w-4 h-4 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
@@ -293,10 +355,11 @@ export default function WeatherStrip({
               <div className="overflow-x-auto pb-2">
                 <div className="flex gap-3 min-w-max">
                   {points.map((pt, i) => {
-                    const { emoji, color } = weatherInfo(pt.weatherCode);
-                    const isStart = pt.label === 'START';
+                    const { emoji } = weatherInfo(pt.weatherCode);
+                    const isStart  = pt.label === 'START';
                     const isFinish = pt.label === 'FINISH';
-                    const isCp = pt.isCp || pt.label.startsWith('CP');
+                    const isCp     = pt.isCp || pt.label.startsWith('CP');
+                    const hasGusts = pt.windGusts > pt.windSpeed + 10;
 
                     return (
                       <div
@@ -361,8 +424,17 @@ export default function WeatherStrip({
                               className="text-sm"
                               style={{ color: windColor(pt.windSpeed) }}
                             >
-                              {pt.windSpeed}km/h
+                              {pt.windSpeed} km/h
                             </span>
+
+                            {hasGusts && (
+                              <span
+                                className="text-xs mt-0.5 font-semibold"
+                                style={{ color: windColor(pt.windGusts) }}
+                              >
+                                ριπές {pt.windGusts} km/h
+                              </span>
+                            )}
 
                             {pt.precipitation > 0 && (
                               <span className="text-base text-blue-300 mt-0.5">
@@ -388,7 +460,7 @@ export default function WeatherStrip({
                 <span>🟢 Αφετηρία</span>
                 <span>🔵 Σημεία Ελέγχου</span>
                 <span>🟡 Τερματισμός</span>
-                <span>· Ώρα ETA με ~15km/h μέσο όρο</span>
+                <span>· Ώρα ETA με {avgSpeed}km/h μέσο όρο</span>
               </div>
 
               <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-sm">
@@ -399,7 +471,7 @@ export default function WeatherStrip({
               </div>
 
               <p className="text-white/40 text-sm mt-3">
-                Πηγή: Open-Meteo · Πρόγνωση με βάση τον εκτιμώμενο χρόνο άφιξης
+                Πηγή: Open-Meteo ECMWF · Πρόγνωση με βάση τον εκτιμώμενο χρόνο άφιξης
               </p>
             </>
           )}
