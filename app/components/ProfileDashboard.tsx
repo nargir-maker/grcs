@@ -262,19 +262,20 @@ function KpiRow({ emoji, title, badge, color, value, sub, progress }: {
 }
 
 // ── Distance Profile Card ─────────────────────────────────────────────────────
-function DistanceProfileCard({ b200, b34, b6, b10, total }: {
-  b200: number; b34: number; b6: number; b10: number; total: number;
+// Buckets and type names match Flutter _buildActivityCardiograph exactly:
+//   ≤250 → Voyager, ≤350 → Cruiser, ≤450 → Nightrider, <1000 → Hardcore, ≥1000 → Legendary
+function DistanceProfileCard({ b200, b300, b400, b6, b10, total }: {
+  b200: number; b300: number; b400: number; b6: number; b10: number; total: number;
 }) {
   if (total === 0) return null;
-  const shell = '#90a4ae';
   const buckets = [
-    { n: b200, color: '#1565c0', label: '200' },
-    { n: b34,  color: '#2e7d32', label: '300–400' },
-    { n: b6,   color: '#e65100', label: '600' },
-    { n: b10,  color: '#6a1b9a', label: '1000+' },
+    { n: b200, color: '#90CAF9', label: '200',   type: 'Voyager' },
+    { n: b300, color: '#66BB6A', label: '300',   type: 'Cruiser' },
+    { n: b400, color: '#7986CB', label: '400',   type: 'Nightrider' },
+    { n: b6,   color: '#FF7043', label: '600+',  type: 'Hardcore' },
+    { n: b10,  color: '#CE93D8', label: '1000+', type: 'Legendary' },
   ];
   const top = buckets.reduce((t, b) => b.n > t.n ? b : t, buckets[0]);
-  const typeMap: Record<string, string> = { '200': 'Sprinter', '300–400': 'Cruiser', '600': 'Hardcore', '1000+': 'Legendary' };
   const active = buckets.filter(b => b.n > 0);
 
   return (
@@ -284,8 +285,8 @@ function DistanceProfileCard({ b200, b34, b6, b10, total }: {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 11 }}>
         <span style={{ fontSize: 17 }}>🛣️</span>
-        <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: shell }}>Προφίλ απόστασης</span>
-        <span style={{ padding: '3px 12px', borderRadius: 20, border: `1px solid ${shell}99`, background: `${shell}18`, fontSize: 12, fontWeight: 700, color: shell }}>{typeMap[top.label]}</span>
+        <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: top.color }}>Προφίλ απόστασης</span>
+        <span style={{ padding: '3px 12px', borderRadius: 20, border: `1px solid ${top.color}99`, background: `${top.color}18`, fontSize: 12, fontWeight: 700, color: top.color }}>{top.type}</span>
       </div>
       {/* Proportional band bar */}
       <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', height: 12, marginBottom: 11, gap: 2 }}>
@@ -382,13 +383,18 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
            ds.some(d=>d>=400&&d<600) && ds.some(d=>d>=600);
   }).length;
 
-  // Distance profile buckets
-  let b200 = 0, b34 = 0, b6 = 0, b10 = 0;
+  // Distance profile buckets — matches Flutter thresholds exactly
+  let b200 = 0, b300 = 0, b400 = 0, b6 = 0, b10 = 0;
   Object.values(history).forEach(y => y.events.forEach(e => {
     const d = parseFloat(String(e.d));
-    if (d >= 1000) b10++; else if (d >= 600) b6++; else if (d >= 300) b34++; else if (d >= 200) b200++;
+    if (d <= 0)        return;
+    if (d <= 250)      b200++;
+    else if (d <= 350) b300++;
+    else if (d <= 450) b400++;
+    else if (d < 1000) b6++;
+    else               b10++;
   }));
-  const distTotal = b200 + b34 + b6 + b10;
+  const distTotal = b200 + b300 + b400 + b6 + b10;
 
   const CHART_H  = 160;
   const PAD_L    = 32;
@@ -600,7 +606,7 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
           sub={`${activeYrs} / ${yearsInSport} έτη · σερί ${streak} 🔥`}
           progress={consistency / 100}
         />
-        <DistanceProfileCard b200={b200} b34={b34} b6={b6} b10={b10} total={distTotal} />
+        <DistanceProfileCard b200={b200} b300={b300} b400={b400} b6={b6} b10={b10} total={distTotal} />
         <KpiRow
           emoji="🏆"
           title="Super Randonneur"
