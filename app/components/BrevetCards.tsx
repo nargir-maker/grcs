@@ -1111,18 +1111,41 @@ function EventsScrollRail({ events }: { events: BrevetEvent[] }) {
 export function YearCard({ year, data }: { year: string; data: YearData }) {
   const [open, setOpen] = useState(false);
 
-  const has200 = data.events.some(e => e.d >= 200 && e.d < 300);
-  const has300 = data.events.some(e => e.d >= 300 && e.d < 400);
-  const has400 = data.events.some(e => e.d >= 400 && e.d < 600);
-  const has600 = data.events.some(e => e.d >= 600);
-  const isSR    = has200 && has300 && has400 && has600;
+  // SR·ACP: 200+300+400+600 all with acp non-empty (exact distance match, like Flutter)
+  const acpHas200 = data.events.some(e => e.d === 200 && !isEmpty(e.acp));
+  const acpHas300 = data.events.some(e => e.d === 300 && !isEmpty(e.acp));
+  const acpHas400 = data.events.some(e => e.d === 400 && !isEmpty(e.acp));
+  const acpHas600 = data.events.some(e => e.d === 600 && !isEmpty(e.acp));
+  const isSrAcp   = acpHas200 && acpHas300 && acpHas400 && acpHas600;
+
+  // SR·HAR: same for har
+  const harHas200 = data.events.some(e => e.d === 200 && !isEmpty(e.har));
+  const harHas300 = data.events.some(e => e.d === 300 && !isEmpty(e.har));
+  const harHas400 = data.events.some(e => e.d === 400 && !isEmpty(e.har));
+  const harHas600 = data.events.some(e => e.d === 600 && !isEmpty(e.har));
+  const isSrHar   = harHas200 && harHas300 && harHas400 && harHas600;
+
+  // Plain SR shown only when no per-club SR
+  const showPlainSr = data.events.some(e => e.d === 200) &&
+                      data.events.some(e => e.d === 300) &&
+                      data.events.some(e => e.d === 400) &&
+                      data.events.some(e => e.d === 600) &&
+                      !isSrAcp && !isSrHar;
+
+  // 100YEARS distances completed this year
+  const has200Y = data.events.some(e => e.d === 200 && e.t?.toUpperCase() === 'BRM-100YEARS');
+  const has300Y = data.events.some(e => e.d === 300 && e.t?.toUpperCase() === 'BRM-100YEARS');
+  const has400Y = data.events.some(e => e.d === 400 && e.t?.toUpperCase() === 'BRM-100YEARS');
+  const has600Y = data.events.some(e => e.d === 600 && e.t?.toUpperCase() === 'BRM-100YEARS');
+  const years100Dists = [has200Y && '200', has300Y && '300', has400Y && '400', has600Y && '600']
+    .filter(Boolean).join('·');
+
   const isPBP   = data.events.some(e => e.t?.toUpperCase() === 'PBP');
   const isFLC   = data.events.some(e =>
     e.t?.toUpperCase() === 'FLC' || e.n?.toUpperCase().includes('FLECHE')
   );
   const isLRM   = data.events.some(e => e.t?.toUpperCase() === 'LRM');
   const isSRe   = data.events.some(e => e.t?.toUpperCase() === 'SRE');
-  const is100   = data.events.some(e => e.t?.toUpperCase() === 'BRM-100YEARS');
   const hasDual = data.events.some(e => {
     const acpOk = e.acp && e.acp !== 'null' && e.acp !== '---' && e.acp.trim() !== '';
     const harOk = e.har && e.har !== 'null' && e.har !== '---' && e.har.trim() !== '';
@@ -1163,12 +1186,14 @@ export function YearCard({ year, data }: { year: string; data: YearData }) {
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap', justifyContent:'flex-end', maxWidth:220 }}>
-          {isSR    && <span style={{ fontSize:10, background:'rgba(239,68,68,0.2)',   color:'#f87171', border:'1px solid rgba(239,68,68,0.3)',   padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>SR</span>}
+          {showPlainSr && <span style={{ fontSize:10, background:'rgba(239,68,68,0.2)',   color:'#f87171', border:'1px solid rgba(239,68,68,0.3)',   padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>SR</span>}
+          {isSrAcp     && <span style={{ fontSize:10, background:'rgba(26,35,126,0.3)',  color:'#90caf9', border:'1px solid rgba(26,35,126,0.5)',   padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>SR·ACP</span>}
+          {isSrHar     && <span style={{ fontSize:10, background:'rgba(74,20,140,0.3)',  color:'#ce93d8', border:'1px solid rgba(74,20,140,0.5)',   padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>SR·HAR</span>}
           {isPBP   && <span style={{ fontSize:10, background:'rgba(249,115,22,0.2)', color:'#fb923c', border:'1px solid rgba(249,115,22,0.3)', padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>PBP</span>}
           {isFLC   && <span style={{ fontSize:10, background:'rgba(234,179,8,0.2)',  color:'#facc15', border:'1px solid rgba(234,179,8,0.3)',  padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>FLÈCHE</span>}
           {isLRM   && <span style={{ fontSize:10, background:'rgba(168,85,247,0.2)', color:'#c084fc', border:'1px solid rgba(168,85,247,0.3)', padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>LRM</span>}
           {isSRe   && <span style={{ fontSize:10, background:'rgba(217,70,239,0.2)', color:'#e879f9', border:'1px solid rgba(217,70,239,0.3)', padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>SRe</span>}
-          {is100   && <span style={{ fontSize:10, background:'rgba(180,150,100,0.2)',color:'#d4a96a', border:'1px solid rgba(180,150,100,0.3)',padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>100Y</span>}
+          {years100Dists && <span style={{ fontSize:10, background:'rgba(245,127,23,0.2)', color:'#fbbf24', border:'1px solid rgba(245,127,23,0.4)', padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>100Y {years100Dists}</span>}
           {hasDual && <span style={{ fontSize:10, background:'rgba(6,182,212,0.15)', color:'#67e8f9', border:'1px solid rgba(6,182,212,0.3)',  padding:'2px 7px', borderRadius:999, fontWeight:700, whiteSpace:'nowrap' }}>ACP+HAR</span>}
           <span style={{
             color:'rgba(255,255,255,0.3)', fontSize:18,

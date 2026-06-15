@@ -532,6 +532,41 @@ export default function ProfilePage() {
     if (has200 && has300 && has400 && has600) srCount++;
   });
 
+  // Rider Tier + Fond de Culotte (mirrors Flutter _computeBaptism exactly)
+  let b200 = 0, b300r = 0, b400r = 0, b6r = 0, b10r = 0, fdcHours = 0;
+  Object.values(member.history).forEach(y => y.events.forEach(e => {
+    const d = e.d;
+    if (d <= 0) return;
+    if (d <= 250)      b200++;
+    else if (d <= 350) b300r++;
+    else if (d <= 450) b400r++;
+    else if (d < 1000) b6r++;
+    else               b10r++;
+    const rt = e.rt?.trim() ?? '';
+    if (rt && rt.includes(':')) {
+      const [h, m] = rt.split(':');
+      fdcHours += (parseFloat(h) || 0) + (parseFloat(m) || 0) / 60;
+    } else if (d > 0) {
+      fdcHours += d / 15;
+    }
+  }));
+  const isFemale = member.gender === 'F';
+  let tier = 'VOYAGER';
+  let tierColor = '#90CAF9';
+  let tierNickname = isFemale ? 'Η Ταξιδεύτρια' : 'Ο Ταξιδευτής';
+  let maxBucket = b200;
+  if (b300r > maxBucket) { maxBucket = b300r; tier = 'CRUISER';    tierColor = '#66BB6A'; tierNickname = isFemale ? 'Η Χιλιομετροφάγος' : 'Ο Χιλιομετραφάγος'; }
+  if (b400r > maxBucket) { maxBucket = b400r; tier = 'NIGHTRIDER'; tierColor = '#7986CB'; tierNickname = isFemale ? 'Η Νυχτερινή'        : 'Ο Νυχτερινός'; }
+  if (b6r   > maxBucket) { maxBucket = b6r;   tier = 'HARDCORE';   tierColor = '#FF7043'; tierNickname = isFemale ? 'Η Αλύγιστη'         : 'Ο Αλύγιστος'; }
+  if (b10r  > maxBucket) {                     tier = 'LEGENDARY';  tierColor = '#CE93D8'; tierNickname = isFemale ? 'Η Μυθική'           : 'Ο Μυθικός'; }
+  const fdcLabel = fdcHours < 20 ? 'Ακόμα Νωπό'
+    : fdcHours < 80   ? 'Σε Διαμόρφωση'
+    : fdcHours < 200  ? 'Δουλεμένο'
+    : fdcHours < 500  ? 'Γαλλικής Κοπής'
+    : fdcHours < 750  ? 'Ατσάλινο'
+    : fdcHours < 1000 ? 'Σφυρήλατο'
+    : 'Αδιαπέραστο';
+
   return (
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
       <div className="max-w-3xl mx-auto">
@@ -588,6 +623,23 @@ export default function ProfilePage() {
     {member.fatherNameEl && (
       <p className="text-white/40 text-sm mt-1">του {member.fatherNameEl}</p>
     )}
+
+    {/* Rider Tier + Fond de Culotte */}
+    <div style={{ marginTop: 10, marginBottom: 2 }}>
+      <span style={{
+        color: tierColor, fontWeight: 800, fontSize: 12, letterSpacing: 2,
+        textShadow: `0 0 12px ${tierColor}66`,
+      }}>{tier}</span>
+      <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, margin: '0 6px' }}>·</span>
+      <span style={{ color: tierColor, fontSize: 13, fontStyle: 'italic', opacity: 0.9 }}>{tierNickname}</span>
+    </div>
+    <div style={{ marginBottom: 6 }}>
+      <span style={{
+        color: '#CE93D8', fontSize: 10, letterSpacing: 1.5, opacity: 0.7,
+        fontVariant: 'small-caps',
+      }}>Fond de Culotte · </span>
+      <span style={{ color: '#CE93D8', fontSize: 10, opacity: 0.85, fontWeight: 600 }}>{fdcLabel}</span>
+    </div>
 
     {/* Badges row */}
     <div className="flex justify-center gap-3 mt-4 flex-wrap">

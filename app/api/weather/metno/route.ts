@@ -61,8 +61,13 @@ export async function GET(req: NextRequest) {
     ?? next6h?.details?.precipitation_amount ?? 0;
 
   // met.no returns m/s — convert to km/h
-  const windSpeed  = Math.round((instant.wind_speed         ?? 0) * 3.6);
-  const windGusts  = Math.round((instant.wind_speed_of_gust ?? 0) * 3.6);
+  // wind_speed_of_gust can be in instant.details OR next_1h/next_6h details
+  const windSpeed = Math.round((instant.wind_speed ?? 0) * 3.6);
+  const gustRaw =
+    instant.wind_speed_of_gust ??
+    next1h?.details?.wind_speed_of_gust ??
+    next6h?.details?.wind_speed_of_gust ?? 0;
+  const windGusts = Math.round(gustRaw * 3.6);
 
   return NextResponse.json({
     temp:          Math.round(instant.air_temperature ?? 0),
