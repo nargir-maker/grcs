@@ -529,3 +529,162 @@ export function Epiteugmata({ member }: { member: MemberProfile }) {
     </SectionCard>
   );
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 4. FOND DE CULOTTE
+// Mirrors Flutter _scene6/_scene7/_scene8/_scene9 in a single static card.
+// IMPORTANT: always uses ALL history — never filtered by club (Flutter does the same).
+// ══════════════════════════════════════════════════════════════════════════════
+export function FondDeCulotteCard({ member }: { member: MemberProfile }) {
+  // Compute from ALL history (not club-filtered)
+  let fdcHours = 0, fdcKm = 0, fdcElevation = 0;
+  Object.values(member.history).forEach(y => y.events.forEach(e => {
+    const d   = parseFloat(String(e.d))  || 0;
+    const asc = parseFloat(String(e.as)) || 0;
+    const rt  = (e.rt ?? '').trim();
+    if (rt && rt.includes(':')) {
+      const [h, m] = rt.split(':');
+      fdcHours += (parseFloat(h) || 0) + (parseFloat(m) || 0) / 60;
+    } else if (d > 0) {
+      fdcHours += d / 15;
+    }
+    fdcKm       += d;
+    fdcElevation += asc;
+  }));
+
+  // Level thresholds — mirrors Flutter _scene9 exactly
+  let emoji    = '🌱',  label = 'Ακόμα Νωπό',     desc = 'Μόλις ξεκινάς να το νιώθεις';
+  let color    = '#4CAF50', progress = fdcHours / 20;
+  if (fdcHours >= 1000) {
+    emoji = '💎'; label = 'Αδιαπέραστο';    desc = 'Θρυλική κατάσταση — κανείς δεν ρωτάει πια';
+    color = '#FFD700'; progress = 1;
+  } else if (fdcHours >= 750) {
+    emoji = '🔥'; label = 'Σφυρήλατο';      desc = 'Πλαστήκηκε από τα χιλιόμετρα — ο πόνος έγινε δύναμη';
+    color = '#FF6D00'; progress = (fdcHours - 750) / 250;
+  } else if (fdcHours >= 500) {
+    emoji = '⚡'; label = 'Ατσάλινο';       desc = 'Εντυπωσιακό ακόμα και για παλιούς λύκους';
+    color = '#00BCD4'; progress = (fdcHours - 500) / 250;
+  } else if (fdcHours >= 200) {
+    emoji = '🪨'; label = 'Γαλλικής Κοπής'; desc = 'Αναγνωρίσιμο fond de culotte — οι Γάλλοι θα σε σέβονταν';
+    color = '#9C27B0'; progress = (fdcHours - 200) / 300;
+  } else if (fdcHours >= 80) {
+    emoji = '💪'; label = 'Δουλεμένο';      desc = 'Σοβαρές ώρες στη σέλα — το σώμα θυμάται';
+    color = '#1976D2'; progress = (fdcHours - 80) / 120;
+  } else if (fdcHours >= 20) {
+    emoji = '🔸'; label = 'Σε Διαμόρφωση';  desc = 'Το σώμα αρχίζει να καταλαβαίνει';
+    color = '#FF9800'; progress = (fdcHours - 20) / 60;
+  }
+  progress = Math.min(1, Math.max(0, progress));
+
+  const R = 44;
+  const STROKE = 10;
+  const CIRC = 2 * Math.PI * R;
+  const dash = progress * CIRC;
+
+  const remaining    = Math.max(0, Math.ceil(1000 - fdcHours));
+  const earthTimes   = fdcKm / 40075;
+  const everestTimes = fdcElevation / 8849;
+
+  function statTile(icon: string, value: string, unit: string, sub: string, tileColor: string) {
+    return (
+      <div style={{
+        flex: 1, background: `${tileColor}12`,
+        border: `1px solid ${tileColor}30`, borderRadius: 12,
+        padding: '12px 10px', textAlign: 'center',
+      }}>
+        <div style={{ fontSize: 24, marginBottom: 4 }}>{icon}</div>
+        <div style={{
+          color: tileColor, fontWeight: 800, fontSize: 19,
+          fontFamily: 'Courier New, monospace', lineHeight: 1,
+        }}>{value}</div>
+        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 3 }}>{unit}</div>
+        {sub && <div style={{ color: tileColor, fontSize: 10, marginTop: 4, opacity: 0.75 }}>{sub}</div>}
+      </div>
+    );
+  }
+
+  return (
+    <SectionCard title="Fond de Culotte" icon="⏱️" headerColor="rgba(103,58,183,0.85)">
+
+      {/* Top row: ring + label/desc */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 18 }}>
+
+        {/* SVG ring */}
+        <div style={{ position: 'relative', width: 108, height: 108, flexShrink: 0 }}>
+          <svg width={108} height={108} style={{ position: 'absolute', top: 0, left: 0 }}>
+            {/* Track */}
+            <circle cx={54} cy={54} r={R} fill="none"
+              stroke="rgba(255,255,255,0.1)" strokeWidth={STROKE} />
+            {/* Progress arc */}
+            <circle cx={54} cy={54} r={R} fill="none"
+              stroke={color} strokeWidth={STROKE} strokeLinecap="round"
+              strokeDasharray={`${dash} ${CIRC}`}
+              transform="rotate(-90 54 54)"
+              style={{ filter: `drop-shadow(0 0 8px ${color}88)`, transition: 'stroke-dasharray 0.6s ease' }}
+            />
+          </svg>
+          {/* Center content — plain HTML so emoji renders reliably */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: 1,
+          }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{emoji}</span>
+            <span style={{
+              color, fontWeight: 800, fontSize: 15, lineHeight: 1,
+              textShadow: `0 0 10px ${color}`,
+            }}>{Math.round(fdcHours)}</span>
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, letterSpacing: 0.5 }}>ώρες</span>
+          </div>
+        </div>
+
+        {/* Label + desc */}
+        <div style={{ flex: 1 }}>
+          <div style={{
+            color, fontWeight: 800, fontSize: 20, marginBottom: 5,
+            textShadow: `0 0 12px ${color}66`,
+          }}>{label}</div>
+          <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, lineHeight: 1.55, marginBottom: 10 }}>
+            {desc}
+          </div>
+          {fdcHours < 1000 ? (
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+              Απομένουν{' '}
+              <span style={{ color, fontWeight: 700 }}>{remaining.toLocaleString('el-GR')}</span>
+              {' '}ώρες για 💎 Αδιαπέραστο
+            </div>
+          ) : (
+            <div style={{ color: '#FFD700', fontSize: 13, fontWeight: 700 }}>
+              Το κορυφαίο επίπεδο! 🎉 Συγχαρητήρια!
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stats row: hours / km / elevation */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        {statTile(
+          '⏱️',
+          Math.round(fdcHours).toLocaleString('el-GR'),
+          'ώρες στη σέλα',
+          '',
+          '#CE93D8',
+        )}
+        {statTile(
+          '🛣️',
+          Math.round(fdcKm).toLocaleString('el-GR'),
+          'km',
+          earthTimes >= 0.1 ? `${earthTimes.toFixed(1)}× 🌍` : '',
+          '#80DEEA',
+        )}
+        {statTile(
+          '⛰️',
+          Math.round(fdcElevation).toLocaleString('el-GR'),
+          'm υψομετρικά',
+          everestTimes >= 0.1 ? `${everestTimes.toFixed(1)}× 🏔️` : '',
+          '#80CBC4',
+        )}
+      </div>
+    </SectionCard>
+  );
+}

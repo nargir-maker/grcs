@@ -29,7 +29,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { YearCard, ClubsProvider } from './BrevetCards';
-import { OrosimaDiadomon, TaksidiXrono, Epiteugmata } from './ProfileSections';
+import { OrosimaDiadomon, TaksidiXrono, Epiteugmata, FondDeCulotteCard } from './ProfileSections';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface BrevetEvent {
@@ -965,6 +965,9 @@ export function FilteredProfile({ member }: { member: MemberProfile }) {
 
       {/* Cardiograph — filtered */}
       <ActivityCardiograph history={filtered} />
+
+      {/* Fond de Culotte — always uses full unfiltered history (same as Flutter) */}
+      <FondDeCulotteCard member={member} />
 
       {/* History analysis chart — filtered */}
       <HistoryAnalysis history={filtered} />
