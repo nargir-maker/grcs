@@ -398,7 +398,7 @@ export default function WeatherStrip({
                     const isStart  = pt.label === 'START';
                     const isFinish = pt.label === 'FINISH';
                     const isCp     = pt.isCp || pt.label.startsWith('CP');
-                    const hasGusts = pt.windGusts > pt.windSpeed + 10;
+                    const hasGusts = pt.windGusts > 0;
 
                     return (
                       <div
