@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import { adminDb } from '@/app/lib/firebaseAdmin';
 
-export const revalidate = 3600;
+// Prevent Next.js from prerendering this route at build time
+export const dynamic = 'force-dynamic';
 
 function parseMonth(dt: string): number | null {
   if (dt.length >= 7 && dt[4] === '-') {
@@ -16,8 +18,19 @@ function parseMonth(dt: string): number | null {
   return null;
 }
 
-export async function GET() {
-  if (!adminDb) return NextResponse.json({ error: 'Server not configured' }, { status: 503 });
+function resolveLastBrevet(hist: Record<string, any>): { name: string; year: string } {
+  const sortedYrs = Object.keys(hist).sort((a, b) => b.localeCompare(a));
+  for (const y of sortedYrs) {
+    const evs = hist[y]?.events;
+    if (Array.isArray(evs) && evs.length > 0) {
+      return { name: evs[evs.length - 1].n?.toString() ?? '', year: y };
+    }
+  }
+  return { name: '', year: '' };
+}
+
+async function computeStats() {
+  if (!adminDb) throw new Error('adminDb not configured');
 
   const snap = await adminDb.collection('members').get();
 
@@ -146,17 +159,6 @@ export async function GET() {
     }
   }
 
-  // Resolve first-pioneer last brevet
-  function resolveLastBrevet(hist: Record<string, any>): { name: string; year: string } {
-    const sortedYrs = Object.keys(hist).sort((a, b) => b.localeCompare(a));
-    for (const y of sortedYrs) {
-      const evs = hist[y]?.events;
-      if (Array.isArray(evs) && evs.length > 0) {
-        return { name: evs[evs.length - 1].n?.toString() ?? '', year: y };
-      }
-    }
-    return { name: '', year: '' };
-  }
   if (firstWomanHistory) {
     const lb = resolveLastBrevet(firstWomanHistory);
     firstWomanLastBrevetName = lb.name; firstWomanLastBrevetYear = lb.year;
@@ -166,7 +168,6 @@ export async function GET() {
     firstManLastBrevetName = lb.name; firstManLastBrevetYear = lb.year;
   }
 
-  // byDistance
   const byDistance: Record<number, { women: number; men: number }> = {};
   for (const d of [200, 300, 400, 600, 1200]) {
     const w = womenPerDist[d]?.size ?? 0;
@@ -174,7 +175,6 @@ export async function GET() {
     if (w + m > 0) byDistance[d] = { women: w, men: m };
   }
 
-  // Top events
   const allEvts = Object.entries(eventMap).map(([key, val]) => {
     const i = key.indexOf('__');
     return { name: i >= 0 ? key.substring(0, i) : key, date: val.date, og: val.og, women: val.women, men: val.total - val.women, total: val.total };
@@ -187,14 +187,12 @@ export async function GET() {
   const menTopByCount = menEvts.slice(0, 5);
   const menTopByPct   = [...menEvts].filter(e => e.total >= 4).sort((a, b) => (b.men / b.total) - (a.men / a.total)).slice(0, 5);
 
-  // Yearly totals
   const womenByYear: Record<string, number> = {};
   const totalByYear: Record<string, number> = {};
   for (const [y, s] of Object.entries(womenYearSets)) womenByYear[y] = s.size;
   for (const [y, s] of Object.entries(totalYearSets)) totalByYear[y] = s.size;
   const sortedYears = Object.keys(totalByYear).sort();
 
-  // Streaks
   const streakBuckets: Record<number, number> = {};
   let globalMaxStreak = 0, globalMaxStreakName = '';
   for (const [uid, yearSet] of Object.entries(memberYearSets)) {
@@ -212,7 +210,6 @@ export async function GET() {
     }
   }
 
-  // SR lists
   const womenWithSR = Object.entries(womenSrByUid)
     .map(([uid, srCount]) => ({ name: memberNames[uid] ?? '', srCount }))
     .sort((a, b) => a.name.localeCompare(b.name, 'el'));
@@ -220,7 +217,6 @@ export async function GET() {
     .map(([uid, srCount]) => ({ name: memberNames[uid] ?? '', srCount }))
     .sort((a, b) => a.name.localeCompare(b.name, 'el'));
 
-  // Milestones
   const milestoneCounts: Record<string, number> = { '10': 0, '25': 0, '50': 0, '100': 0, '200': 0 };
   for (const count of Object.values(memberEventCounts)) {
     if (count >= 10)  milestoneCounts['10']++;
@@ -231,7 +227,7 @@ export async function GET() {
   }
 
   const total = totalWomen + totalMen;
-  return NextResponse.json({
+  return {
     totalWomen, totalMen,
     womenPct: total > 0 ? Math.round((totalWomen / total) * 1000) / 10 : 0,
     byDistance,
@@ -250,5 +246,16 @@ export async function GET() {
     eventsByMonth, eventsByMonthWomen,
     streakBuckets, globalMaxStreak, globalMaxStreakName,
     milestoneCounts,
-  });
+  };
+}
+
+const getCachedStats = unstable_cache(computeStats, ['community-stats'], { revalidate: 3600 });
+
+export async function GET() {
+  try {
+    const data = await getCachedStats();
+    return NextResponse.json(data);
+  } catch {
+    return NextResponse.json({ error: 'Server not configured' }, { status: 503 });
+  }
 }

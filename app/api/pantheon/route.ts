@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import { adminDb } from '@/app/lib/firebaseAdmin';
 
-export const revalidate = 3600;
+// Prevent Next.js from prerendering this route at build time
+export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  if (!adminDb) return NextResponse.json({ error: 'Server not configured' }, { status: 503 });
+async function computeStats() {
+  if (!adminDb) throw new Error('adminDb not configured');
 
   const snap = await adminDb.collection('members').get();
 
@@ -67,13 +69,11 @@ export async function GET() {
     members.push({ uid, name: displayName, totalKm: km, totalBrevets: brevets, lepoteId, harId });
   }
 
-  // Busiest year
   let busiestYear = '', busiestYearCount = 0;
   for (const [y, c] of Object.entries(ridersByYear)) {
     if (c > busiestYearCount) { busiestYearCount = c; busiestYear = y; }
   }
 
-  // Streak record
   let streakHolderName = '', streakRecordYears = 0;
   const nameMap: Record<string, string> = Object.fromEntries(members.map(m => [m.uid, m.name]));
   for (const [uid, yearSet] of Object.entries(memberYearSets)) {
@@ -90,25 +90,21 @@ export async function GET() {
     }
   }
 
-  // SR ranking
   const srRanking = members
     .filter(m => (srCounts[m.uid] ?? 0) > 0)
     .map(m => ({ name: m.name, lepoteId: m.lepoteId, harId: m.harId, srCount: srCounts[m.uid] }))
     .sort((a, b) => b.srCount - a.srCount);
-  const mostSrName  = srRanking[0]?.name  ?? '';
+  const mostSrName  = srRanking[0]?.name   ?? '';
   const mostSrCount = srRanking[0]?.srCount ?? 0;
 
-  // Km ranking
   const kmRanking = [...members]
     .sort((a, b) => b.totalKm - a.totalKm)
     .map(m => ({ name: m.name, totalKm: m.totalKm, lepoteId: m.lepoteId, harId: m.harId }));
 
-  // Brevets ranking
   const brevetsRanking = [...members]
     .sort((a, b) => b.totalBrevets - a.totalBrevets)
     .map(m => ({ name: m.name, totalBrevets: m.totalBrevets, lepoteId: m.lepoteId, harId: m.harId }));
 
-  // Milestone lists (top 50 per threshold for manageable payload)
   const milestoneLists: Record<number, Array<{ name: string; count: number }>> = {};
   for (const t of [10, 25, 50, 100, 200]) {
     milestoneLists[t] = members
@@ -117,7 +113,7 @@ export async function GET() {
       .sort((a, b) => b.count - a.count);
   }
 
-  return NextResponse.json({
+  return {
     totalRiders,
     totalKm:    Math.round(totalKm),
     totalBrevets,
@@ -126,5 +122,16 @@ export async function GET() {
     mostSrName, mostSrCount,
     kmRanking, brevetsRanking, srRanking,
     milestoneLists,
-  });
+  };
+}
+
+const getCachedStats = unstable_cache(computeStats, ['pantheon-stats'], { revalidate: 3600 });
+
+export async function GET() {
+  try {
+    const data = await getCachedStats();
+    return NextResponse.json(data);
+  } catch {
+    return NextResponse.json({ error: 'Server not configured' }, { status: 503 });
+  }
 }
