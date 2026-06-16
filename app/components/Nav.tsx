@@ -41,6 +41,12 @@ if (isOrganizer && organizer) {
           <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors">
             Στατιστικά
           </Link>
+          <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors">
+            Κοινότητα
+          </Link>
+          <Link href="/pantheon" className="text-white/60 hover:text-white text-sm transition-colors">
+            Πάνθεον
+          </Link>
           <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors">
             Αναβάτες
           </Link>
@@ -106,6 +112,10 @@ if (isOrganizer && organizer) {
             onClick={() => setMenuOpen(false)}>Live</Link>
           <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>Στατιστικά</Link>
+          <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors"
+            onClick={() => setMenuOpen(false)}>Κοινότητα</Link>
+          <Link href="/pantheon" className="text-white/60 hover:text-white text-sm transition-colors"
+            onClick={() => setMenuOpen(false)}>Πάνθεον</Link>
           <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>Αναβάτες</Link>
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors"
@@ -152,6 +162,12 @@ if (isOrganizer && organizer) {
           </Link>
           <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors">
             Στατιστικά
+          </Link>
+          <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors">
+            Κοινότητα
+          </Link>
+          <Link href="/pantheon" className="text-white/60 hover:text-white text-sm transition-colors">
+            Πάνθεον
           </Link>
           <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors">
             Αναβάτες
@@ -265,6 +281,16 @@ if (isOrganizer && organizer) {
             className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>
             Στατιστικά
+          </Link>
+          <Link href="/community"
+            className="text-white/60 hover:text-white text-sm transition-colors"
+            onClick={() => setMenuOpen(false)}>
+            Κοινότητα
+          </Link>
+          <Link href="/pantheon"
+            className="text-white/60 hover:text-white text-sm transition-colors"
+            onClick={() => setMenuOpen(false)}>
+            Πάνθεον
           </Link>
           <Link href="/members"
             className="text-white/60 hover:text-white text-sm transition-colors"
