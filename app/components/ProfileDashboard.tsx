@@ -56,6 +56,16 @@ type Club = 'ALL' | 'ACP' | 'HAR';
 function fmtNum(n: number) {
   return n.toLocaleString('el-GR');
 }
+function fmtDate(dt: string): string {
+  if (!dt || dt === 'null') return '';
+  try { const d = new Date(dt); if (!isNaN(d.getTime())) return d.toLocaleDateString('el-GR',{day:'2-digit',month:'2-digit',year:'numeric'}); } catch {}
+  const mmap: Record<string,string> = {'Ιαν':'01','Φεβ':'02','Μαρ':'03','Απρ':'04','Μαΐ':'05','Μαϊ':'05','Μάϊ':'05','Μάι':'05','Μαι':'05','Ιουν':'06','Ιουλ':'07','Αυγ':'08','Σεπ':'09','Οκτ':'10','Νοε':'11','Δεκ':'12'};
+  let m = '??';
+  for (const [k, v] of Object.entries(mmap)) { if (dt.includes(k)) { m = v; break; } }
+  const yr = (dt.match(/\d{4}/) || ['????'])[0];
+  const day = [...dt.matchAll(/(?<!\d)(\d{1,2})(?!\d)/g)].map(x=>parseInt(x[0])).find(v=>v>=1&&v<=31) ?? 0;
+  return `${String(day).padStart(2,'0')}/${m}/${yr}`;
+}
 
 // Filter history by club, same logic as Flutter _filteredHistory
 function filterHistory(history: Record<string, YearData>, club: Club): Record<string, YearData> {
@@ -396,6 +406,37 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
   }));
   const distTotal = b200 + b300 + b400 + b6 + b10;
 
+  // Per-club SR (exact distances 200/300/400/600, same logic as YearCard / Flutter)
+  const ok = (s: string) => !!s && s !== 'null' && s !== '---' && s.trim() !== '';
+  const acpSrYears = Object.values(history).filter(y => {
+    const e = y.events;
+    return e.some(x => String(x.d) === '200' && ok(x.acp)) &&
+           e.some(x => String(x.d) === '300' && ok(x.acp)) &&
+           e.some(x => String(x.d) === '400' && ok(x.acp)) &&
+           e.some(x => String(x.d) === '600' && ok(x.acp));
+  }).length;
+  const harSrYears = Object.values(history).filter(y => {
+    const e = y.events;
+    return e.some(x => String(x.d) === '200' && ok(x.har)) &&
+           e.some(x => String(x.d) === '300' && ok(x.har)) &&
+           e.some(x => String(x.d) === '400' && ok(x.har)) &&
+           e.some(x => String(x.d) === '600' && ok(x.har));
+  }).length;
+
+  // Most recent brevet in the last active year, sorted by full date
+  const lastBrevetInfo = (() => {
+    const yr = history[String(lastActiveYear)];
+    if (!yr?.events.length) return null;
+    const mIdx: Record<string,number> = {'Ιαν':1,'Φεβ':2,'Μαρ':3,'Απρ':4,'Μαΐ':5,'Μαϊ':5,'Μάϊ':5,'Μάι':5,'Μαι':5,'Ιουν':6,'Ιουλ':7,'Αυγ':8,'Σεπ':9,'Οκτ':10,'Νοε':11,'Δεκ':12};
+    const dv = (dt: string) => {
+      const mon = Object.entries(mIdx).find(([k]) => dt.includes(k))?.[1] ?? 0;
+      const day = [...dt.matchAll(/(?<!\d)(\d{1,2})(?!\d)/g)].map(x=>parseInt(x[0])).find(v=>v>=1&&v<=31)??0;
+      return mon*100+day;
+    };
+    return yr.events.reduce<BrevetEvent|null>((best, e) =>
+      e.dt && (!best || dv(e.dt) > dv(best.dt)) ? e : best, null);
+  })();
+
   const CHART_H  = 160;
   const PAD_L    = 32;
   const PAD_R    = 16;
@@ -613,7 +654,9 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
           badge={srYears > 0 ? `×${srYears}` : '—'}
           color="#f59e0b"
           value={`${srYears} / ${activeYrs}`}
-          sub="έτη με πλήρη σειρά SR"
+          sub={acpSrYears > 0 && harSrYears > 0
+            ? `ACP: ${acpSrYears} · HAR: ${harSrYears} · έτη πλήρους σειράς`
+            : 'έτη με πλήρη σειρά SR'}
           progress={activeYrs > 0 ? srYears / activeYrs : 0}
         />
       </div>
@@ -652,18 +695,25 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
       <div style={{
         margin: '0 12px 14px', border: '1px solid rgba(255,255,255,0.1)',
         borderRadius: 8, padding: '8px 12px', background: 'rgba(255,255,255,0.04)',
-        display: 'flex', alignItems: 'center', gap: 8,
       }}>
-        <div style={{
-          width: 8, height: 8, borderRadius: '50%',
-          background: lastActiveYear >= nowYear - 1 ? '#4ade80' : '#fb923c',
-          flexShrink: 0,
-        }} />
-        <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.65)' }}>
-          {lastActiveYear >= nowYear - 1
-            ? `Ενεργός — τελευταία δραστηριότητα ${lastActiveYear} (${lastActiveCount} brevets)`
-            : `Τελευταία δραστηριότητα: ${lastActiveYear} — ${nowYear - lastActiveYear} χρόνια αδράνειας`}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: lastActiveYear >= nowYear - 1 ? '#4ade80' : '#fb923c',
+            flexShrink: 0,
+          }} />
+          <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.65)' }}>
+            {lastActiveYear >= nowYear - 1
+              ? `Ενεργός — τελευταία δραστηριότητα ${lastActiveYear} (${lastActiveCount} brevets)`
+              : `Τελευταία δραστηριότητα: ${lastActiveYear} — ${nowYear - lastActiveYear} χρόνια αδράνειας`}
+          </span>
+        </div>
+        {lastBrevetInfo && (
+          <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+            🚴 <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>{lastBrevetInfo.n}</span>
+            {' · '}{fmtDate(lastBrevetInfo.dt)}{' · '}{lastBrevetInfo.d}km
+          </div>
+        )}
       </div>
     </div>
   );

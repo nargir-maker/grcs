@@ -1110,6 +1110,7 @@ function EventsScrollRail({ events }: { events: BrevetEvent[] }) {
 // ══════════════════════════════════════════════════════════════════════════════
 export function YearCard({ year, data }: { year: string; data: YearData }) {
   const [open, setOpen] = useState(false);
+  const yearlyElevation = data.events.reduce((s, e) => s + (parseFloat(String(e.as)) || 0), 0);
 
   // SR·ACP: 200+300+400+600 all with acp non-empty (exact distance match, like Flutter)
   const acpHas200 = data.events.some(e => e.d === 200 && !isEmpty(e.acp));
@@ -1182,6 +1183,9 @@ export function YearCard({ year, data }: { year: string; data: YearData }) {
           </div>
           <div style={{ textAlign:'left' }}>
             <div style={{ color:'#fff', fontWeight:700 }}>{data.km.toLocaleString('el-GR')}km</div>
+            {yearlyElevation > 0 && (
+              <div style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>⛰️ {Math.round(yearlyElevation).toLocaleString('el-GR')}m</div>
+            )}
             <div style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>{data.brevets} brevets</div>
           </div>
         </div>
