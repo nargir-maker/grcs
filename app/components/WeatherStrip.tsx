@@ -14,6 +14,8 @@ interface WeatherPoint extends RoutePoint {
   temp: number;
   windSpeed: number;
   windGusts: number;
+  windDirection: number;
+  routeBearing: number;
   precipitation: number;
   weatherCode: number;
   etaTime: Date;
@@ -73,6 +75,22 @@ function finishTimeLabel(startDate: Date, finishEta: Date): string {
   const days = ['Κυρ', 'Δευ', 'Τρι', 'Τετ', 'Πεμ', 'Παρ', 'Σαβ'];
   const dateStr = finishEta.toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit' });
   return `${timeStr} (${days[finishEta.getDay()]} ${dateStr})`;
+}
+
+function bearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const d2r = Math.PI / 180;
+  const dLng = (lng2 - lng1) * d2r;
+  const la1 = lat1 * d2r, la2 = lat2 * d2r;
+  const y = Math.sin(dLng) * Math.cos(la2);
+  const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dLng);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+function toBeaufort(kmh: number): number {
+  if (kmh < 1)  return 0; if (kmh < 6)  return 1; if (kmh < 12) return 2;
+  if (kmh < 20) return 3; if (kmh < 29) return 4; if (kmh < 39) return 5;
+  if (kmh < 50) return 6; if (kmh < 62) return 7; if (kmh < 75) return 8;
+  return 9;
 }
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -142,7 +160,7 @@ async function fetchWeather(
   lng: number,
   date: Date,
   source: WeatherSource,
-): Promise<{ temp: number; windSpeed: number; windGusts: number; precipitation: number; weatherCode: number; source: WeatherSource }> {
+): Promise<{ temp: number; windSpeed: number; windGusts: number; windDirection: number; precipitation: number; weatherCode: number; source: WeatherSource }> {
   if (source === 'metno') {
     const url = `/api/weather/metno?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}&time=${encodeURIComponent(date.toISOString())}`;
     const res = await fetch(url);
@@ -156,7 +174,7 @@ async function fetchWeather(
   const url =
     `https://api.open-meteo.com/v1/forecast?` +
     `latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}` +
-    `&hourly=temperature_2m,precipitation,windspeed_10m,wind_gusts_10m,weathercode` +
+    `&hourly=temperature_2m,precipitation,windspeed_10m,wind_gusts_10m,winddirection_10m,weathercode` +
     `&start_date=${dateStr}&end_date=${endDate}` +
     `&models=best_match&timezone=UTC`;
   const res = await fetch(url);
@@ -177,6 +195,7 @@ async function fetchWeather(
     temp:          Math.round(data.hourly.temperature_2m?.[idx] ?? 0),
     windSpeed:     Math.round(data.hourly.windspeed_10m?.[idx] ?? 0),
     windGusts:     Math.round(data.hourly.wind_gusts_10m?.[idx] ?? 0),
+    windDirection: Math.round(data.hourly.winddirection_10m?.[idx] ?? 0),
     precipitation: Math.round((data.hourly.precipitation?.[idx] ?? 0) * 10) / 10,
     weatherCode:   data.hourly.weathercode?.[idx] ?? 0,
     source:        'openmeteo' as const,
@@ -251,10 +270,15 @@ export default function WeatherStrip({
 
       const sortedKms = Array.from(sampleKms.entries()).sort((a, b) => a[0] - b[0]);
 
-      const routePoints: WeatherPoint[] = sortedKms.map(([km, label]) => {
-        const pos = interpolate(coords, km);
+      const positions = sortedKms.map(([km]) => interpolate(coords, km));
+
+      const routePoints: WeatherPoint[] = sortedKms.map(([km, label], i) => {
+        const pos = positions[i];
         const hoursFromStart = km / speed;
         const etaTime = new Date(startDate.getTime() + hoursFromStart * 3600000);
+        const a = positions[Math.max(0, i - 1)];
+        const b = positions[Math.min(positions.length - 1, i + 1)];
+        const routeBearing = bearing(a.lat, a.lng, b.lat, b.lng);
         return {
           lat: pos.lat,
           lng: pos.lng,
@@ -264,6 +288,8 @@ export default function WeatherStrip({
           temp: 0,
           windSpeed: 0,
           windGusts: 0,
+          windDirection: 0,
+          routeBearing,
           precipitation: 0,
           weatherCode: 0,
           etaTime,
@@ -465,6 +491,30 @@ export default function WeatherStrip({
                             >
                               {pt.windSpeed} km/h
                             </span>
+
+                            {pt.windDirection > 0 && (() => {
+                              const rel = (pt.windDirection - pt.routeBearing + 360) % 360;
+                              const isHead = rel <= 45 || rel >= 315;
+                              const isTail = rel >= 135 && rel <= 225;
+                              const arrowColor = isHead ? '#EF4444' : isTail ? '#22C55E' : '#FB923C';
+                              const arrowLabel = isHead ? 'Αντίθετος' : isTail ? 'Ευνοϊκός' : 'Πλαϊνός';
+                              const arrowRot = (pt.windDirection + 180 - pt.routeBearing + 360) % 360;
+                              const bf = toBeaufort(pt.windSpeed);
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 8, gap: 2 }}>
+                                  <div style={{
+                                    width: 36, height: 36, borderRadius: '50%',
+                                    background: arrowColor + '22',
+                                    border: `2px solid ${arrowColor}`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 18, transform: `rotate(${arrowRot}deg)`,
+                                    transition: 'transform 0.3s',
+                                  }}>↑</div>
+                                  <span style={{ fontSize: 11, color: arrowColor, fontWeight: 700 }}>{bf} Bf</span>
+                                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{arrowLabel}</span>
+                                </div>
+                              );
+                            })()}
 
                             {hasGusts && (
                               <span

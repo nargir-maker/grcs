@@ -8,6 +8,102 @@ const ElevationChart = dynamic(() => import('./ElevationChart'), { ssr: false })
 // ── Thunderforest API key ──────────────────────────────────────────────────────
 const TF = process.env.NEXT_PUBLIC_THUNDERFOREST_KEY;
 
+// ── Wind arrow helpers ────────────────────────────────────────────────────────
+function windBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const d2r = Math.PI / 180;
+  const dLng = (lng2 - lng1) * d2r;
+  const la1 = lat1 * d2r, la2 = lat2 * d2r;
+  const y = Math.sin(dLng) * Math.cos(la2);
+  const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dLng);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+function windToBf(kmh: number): number {
+  if (kmh < 1)  return 0; if (kmh < 6)  return 1; if (kmh < 12) return 2;
+  if (kmh < 20) return 3; if (kmh < 29) return 4; if (kmh < 39) return 5;
+  if (kmh < 50) return 6; if (kmh < 62) return 7; if (kmh < 75) return 8;
+  return 9;
+}
+
+async function addWindArrows(
+  map: any, L: any,
+  coords: { lat: number; lng: number; distKm: number }[],
+  startDate: Date,
+  aborted: { current: boolean },
+) {
+  if (coords.length === 0) return;
+  const totalKm = coords[coords.length - 1].distKm;
+  const AVG_SPEED = 18;
+  const NUM = 7;
+
+  for (let i = 1; i < NUM; i++) {
+    if (aborted.current) return;
+    const km = (totalKm / NUM) * i;
+
+    // Interpolate position
+    let lo = 0, hi = coords.length - 1;
+    while (lo < hi - 1) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (coords[mid].distKm <= km) lo = mid; else hi = mid;
+    }
+    const a = coords[lo], b = coords[hi];
+    const t = (b.distKm - a.distKm) === 0 ? 0 : (km - a.distKm) / (b.distKm - a.distKm);
+    const lat = a.lat + t * (b.lat - a.lat);
+    const lng = a.lng + t * (b.lng - a.lng);
+
+    // Route bearing between neighboring sample points
+    const step = totalKm / NUM;
+    const kmPrev = Math.max(0, km - step / 2);
+    const kmNext = Math.min(totalKm, km + step / 2);
+    const getPos = (k: number) => {
+      let l = 0, h = coords.length - 1;
+      while (l < h - 1) { const m = Math.floor((l + h) / 2); if (coords[m].distKm <= k) l = m; else h = m; }
+      const aa = coords[l], bb = coords[h];
+      const tt = (bb.distKm - aa.distKm) === 0 ? 0 : (k - aa.distKm) / (bb.distKm - aa.distKm);
+      return { lat: aa.lat + tt * (bb.lat - aa.lat), lng: aa.lng + tt * (bb.lng - aa.lng) };
+    };
+    const prev = getPos(kmPrev), next = getPos(kmNext);
+    const routeBrg = windBearing(prev.lat, prev.lng, next.lat, next.lng);
+
+    const eta = new Date(startDate.getTime() + (km / AVG_SPEED) * 3600000);
+    try {
+      const res = await fetch(`/api/weather/metno?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}&time=${encodeURIComponent(eta.toISOString())}`);
+      if (!res.ok || aborted.current) continue;
+      const w = await res.json();
+      if (aborted.current) return;
+
+      const windDir: number = w.windDirection ?? 0;
+      const windSpd: number = w.windSpeed ?? 0;
+      if (!windDir && !windSpd) continue;
+
+      const rel = (windDir - routeBrg + 360) % 360;
+      const isHead = rel <= 45 || rel >= 315;
+      const isTail = rel >= 135 && rel <= 225;
+      const color = isHead ? '#EF4444' : isTail ? '#22C55E' : '#FB923C';
+      const label = isHead ? 'Αντίθετος' : isTail ? 'Ευνοϊκός' : 'Πλαϊνός';
+      const arrowRot = (windDir + 180 - routeBrg + 360) % 360;
+      const bf = windToBf(windSpd);
+
+      const html = `<div style="
+        width:42px;height:42px;border-radius:50%;
+        background:${color}33;border:2px solid ${color};
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        box-shadow:0 2px 8px rgba(0,0,0,.6);">
+        <span style="transform:rotate(${arrowRot}deg);font-size:17px;line-height:1;
+          text-shadow:0 1px 2px rgba(0,0,0,.8)">↑</span>
+        <span style="font-size:9px;font-weight:800;color:${color};font-family:sans-serif;line-height:1">${bf}Bf</span>
+      </div>`;
+
+      const icon = L.divIcon({ html, className: '', iconSize: [42, 42], iconAnchor: [21, 21] });
+      L.marker([lat, lng], { icon, zIndexOffset: 500 })
+        .bindTooltip(`💨 ${windSpd} km/h · ${label}<br/>km ${Math.round(km)} · ETA ${eta.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}`)
+        .addTo(map);
+    } catch { /* skip this point */ }
+
+    if (i < NUM - 1) await new Promise(r => setTimeout(r, 200));
+  }
+}
+
 // ── Tile styles — shared between inline map and fullscreen ────────────────────
 const TILE_STYLES = [
   {
@@ -44,6 +140,7 @@ interface BrevetMapProps {
   finishCoords?: string;
   controls?: { km: number; name: string; lat: number; lng: number }[];
   scrubberKm?: number | null;
+  startDate?: Date;
 }
 
 interface ParsedCoord {
@@ -433,7 +530,7 @@ function FullscreenMap({
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function BrevetMap({
-  gpxUrl, startCoords, finishCoords, controls = [], scrubberKm,
+  gpxUrl, startCoords, finishCoords, controls = [], scrubberKm, startDate,
 }: BrevetMapProps) {
   const mapRef         = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -442,10 +539,12 @@ export default function BrevetMap({
   const kmLayerRef     = useRef<any[]>([]);
   const tileLayerRef   = useRef<any>(null);
   const LRef           = useRef<any>(null);
+  const windAbortRef   = useRef(false);
 
   const [parsedCoords, setParsedCoords] = useState<ParsedCoord[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeStyle,  setActiveStyle]  = useState<string>(DEFAULT_STYLE);
+  const [mapReady,     setMapReady]     = useState(false);
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(f => !f), []);
 
@@ -461,15 +560,27 @@ export default function BrevetMap({
       mapInstanceRef.current = map;
       dotMarkerRef.current   = markerRef.current;
       LRef.current = (await import('leaflet')).default;
+      setMapReady(true);
     });
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
         initializedRef.current = false;
+        setMapReady(false);
       }
     };
   }, [gpxUrl]);
+
+  useEffect(() => {
+    if (!mapReady || !startDate || parsedCoords.length === 0) return;
+    const map = mapInstanceRef.current;
+    const L   = LRef.current;
+    if (!map || !L) return;
+    windAbortRef.current = false;
+    addWindArrows(map, L, parsedCoords, startDate, windAbortRef);
+    return () => { windAbortRef.current = true; };
+  }, [mapReady, startDate, parsedCoords]);
 
   useEffect(() => {
     const marker = dotMarkerRef.current;

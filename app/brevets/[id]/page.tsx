@@ -617,7 +617,8 @@ export default function BrevetDetailPage() {
           {brevet.gpxUrl && (
             <div className="mt-6">
               <BrevetMap gpxUrl={brevet.gpxUrl} startCoords={brevet.startCoords}
-                finishCoords={brevet.finishCoords} controls={brevet.controls} scrubberKm={scrubberKm} />
+                finishCoords={brevet.finishCoords} controls={brevet.controls}
+                scrubberKm={scrubberKm} startDate={startDate ?? undefined} />
             </div>
           )}
           <div className="flex gap-3 mt-6">

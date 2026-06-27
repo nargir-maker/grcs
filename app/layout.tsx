@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Nav from './components/Nav';
+import WhatsNew from './components/WhatsNew';
 import { AuthProvider } from './lib/AuthContext';
 import { SessionProviderWrapper } from './lib/SessionProviderWrapper';
 import { Analytics } from "@vercel/analytics/next"
@@ -41,6 +42,7 @@ export default function RootLayout({
         <SessionProviderWrapper>
           <AuthProvider>
             <Nav />
+            <WhatsNew />
             <main className="flex-1">
               {children}
             </main>
