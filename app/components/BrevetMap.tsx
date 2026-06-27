@@ -9,7 +9,7 @@ const ElevationChart = dynamic(() => import('./ElevationChart'), { ssr: false })
 const TF = process.env.NEXT_PUBLIC_THUNDERFOREST_KEY;
 
 // ── Wind arrow helpers ────────────────────────────────────────────────────────
-function windBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
+function geobrg(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const d2r = Math.PI / 180;
   const dLng = (lng2 - lng1) * d2r;
   const la1 = lat1 * d2r, la2 = lat2 * d2r;
@@ -23,6 +23,34 @@ function windToBf(kmh: number): number {
   if (kmh < 20) return 3; if (kmh < 29) return 4; if (kmh < 39) return 5;
   if (kmh < 50) return 6; if (kmh < 62) return 7; if (kmh < 75) return 8;
   return 9;
+}
+
+function windIntensityColor(kmh: number): string {
+  if (kmh < 20) return '#6EE7B7';
+  if (kmh < 35) return '#FCD34D';
+  if (kmh < 50) return '#FB923C';
+  return '#F87171';
+}
+
+// returns true = clockwise, false = counter-clockwise, null = open route
+export function detectClockwise(coords: { lat: number; lng: number }[]): boolean | null {
+  if (coords.length < 3) return null;
+  const first = coords[0], last = coords[coords.length - 1];
+  const dLat = Math.abs(last.lat - first.lat), dLng = Math.abs(last.lng - first.lng);
+  if (dLat > 0.08 || dLng > 0.08) return null; // open route (~8km threshold)
+  let sum = 0;
+  for (let i = 0; i < coords.length - 1; i++) {
+    sum += (coords[i + 1].lng - coords[i].lng) * (coords[i + 1].lat + coords[i].lat);
+  }
+  return sum < 0; // lat/lng: negative shoelace = clockwise
+}
+
+function interp(coords: { lat: number; lng: number; distKm: number }[], km: number) {
+  let lo = 0, hi = coords.length - 1;
+  while (lo < hi - 1) { const m = Math.floor((lo + hi) / 2); if (coords[m].distKm <= km) lo = m; else hi = m; }
+  const a = coords[lo], b = coords[hi];
+  const t = (b.distKm - a.distKm) === 0 ? 0 : (km - a.distKm) / (b.distKm - a.distKm);
+  return { lat: a.lat + t * (b.lat - a.lat), lng: a.lng + t * (b.lng - a.lng) };
 }
 
 async function addWindArrows(
@@ -39,31 +67,13 @@ async function addWindArrows(
   for (let i = 1; i < NUM; i++) {
     if (aborted.current) return;
     const km = (totalKm / NUM) * i;
+    const { lat, lng } = interp(coords, km);
 
-    // Interpolate position
-    let lo = 0, hi = coords.length - 1;
-    while (lo < hi - 1) {
-      const mid = Math.floor((lo + hi) / 2);
-      if (coords[mid].distKm <= km) lo = mid; else hi = mid;
-    }
-    const a = coords[lo], b = coords[hi];
-    const t = (b.distKm - a.distKm) === 0 ? 0 : (km - a.distKm) / (b.distKm - a.distKm);
-    const lat = a.lat + t * (b.lat - a.lat);
-    const lng = a.lng + t * (b.lng - a.lng);
-
-    // Route bearing between neighboring sample points
+    // Route bearing from prev to next sample
     const step = totalKm / NUM;
-    const kmPrev = Math.max(0, km - step / 2);
-    const kmNext = Math.min(totalKm, km + step / 2);
-    const getPos = (k: number) => {
-      let l = 0, h = coords.length - 1;
-      while (l < h - 1) { const m = Math.floor((l + h) / 2); if (coords[m].distKm <= k) l = m; else h = m; }
-      const aa = coords[l], bb = coords[h];
-      const tt = (bb.distKm - aa.distKm) === 0 ? 0 : (k - aa.distKm) / (bb.distKm - aa.distKm);
-      return { lat: aa.lat + tt * (bb.lat - aa.lat), lng: aa.lng + tt * (bb.lng - aa.lng) };
-    };
-    const prev = getPos(kmPrev), next = getPos(kmNext);
-    const routeBrg = windBearing(prev.lat, prev.lng, next.lat, next.lng);
+    const prev = interp(coords, Math.max(0, km - step / 2));
+    const next = interp(coords, Math.min(totalKm, km + step / 2));
+    const routeBrg = geobrg(prev.lat, prev.lng, next.lat, next.lng);
 
     const eta = new Date(startDate.getTime() + (km / AVG_SPEED) * 3600000);
     try {
@@ -74,29 +84,32 @@ async function addWindArrows(
 
       const windDir: number = w.windDirection ?? 0;
       const windSpd: number = w.windSpeed ?? 0;
-      if (!windDir && !windSpd) continue;
 
-      const rel = (windDir - routeBrg + 360) % 360;
-      const isHead = rel <= 45 || rel >= 315;
-      const isTail = rel >= 135 && rel <= 225;
-      const color = isHead ? '#EF4444' : isTail ? '#22C55E' : '#FB923C';
-      const label = isHead ? 'Αντίθετος' : isTail ? 'Ευνοϊκός' : 'Πλαϊνός';
-      const arrowRot = (windDir + 180 - routeBrg + 360) % 360;
+      // Arrow points where wind GOES, absolute map direction
+      const arrowRot = (windDir + 180) % 360;
+      const color = windIntensityColor(windSpd);
       const bf = windToBf(windSpd);
 
-      const html = `<div style="
-        width:42px;height:42px;border-radius:50%;
-        background:${color}33;border:2px solid ${color};
-        display:flex;flex-direction:column;align-items:center;justify-content:center;
-        box-shadow:0 2px 8px rgba(0,0,0,.6);">
-        <span style="transform:rotate(${arrowRot}deg);font-size:17px;line-height:1;
-          text-shadow:0 1px 2px rgba(0,0,0,.8)">↑</span>
-        <span style="font-size:9px;font-weight:800;color:${color};font-family:sans-serif;line-height:1">${bf}Bf</span>
+      // Relative for tooltip label only
+      const rel = (windDir - routeBrg + 360) % 360;
+      const impact = (rel <= 45 || rel >= 315) ? 'Αντίθετος' : (rel >= 135 && rel <= 225) ? 'Ευνοϊκός' : 'Πλαϊνός';
+
+      const html = `<div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
+        <svg width="22" height="32" viewBox="0 0 22 32" xmlns="http://www.w3.org/2000/svg"
+          style="transform:rotate(${arrowRot}deg);filter:drop-shadow(0 0 2px rgba(0,0,0,.9));overflow:visible">
+          <path d="M11 1 L20 11 L16 11 L16 31 L6 31 L6 11 L2 11 Z"
+            fill="${color}" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+        <div style="background:white;border:1.5px solid black;border-radius:6px;
+          padding:1px 4px;font-size:10px;font-weight:800;color:black;
+          font-family:Arial,sans-serif;white-space:nowrap;margin-top:2px;line-height:1.4">
+          ${bf}Bf
+        </div>
       </div>`;
 
-      const icon = L.divIcon({ html, className: '', iconSize: [42, 42], iconAnchor: [21, 21] });
+      const icon = L.divIcon({ html, className: '', iconSize: [30, 52], iconAnchor: [15, 16] });
       L.marker([lat, lng], { icon, zIndexOffset: 500 })
-        .bindTooltip(`💨 ${windSpd} km/h · ${label}<br/>km ${Math.round(km)} · ETA ${eta.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}`)
+        .bindTooltip(`💨 ${windSpd} km/h · ${impact}<br/>km ${Math.round(km)} · ETA ${eta.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}`)
         .addTo(map);
     } catch { /* skip this point */ }
 
@@ -397,7 +410,7 @@ function TileSwitcher({
 
 // ── Fullscreen modal ──────────────────────────────────────────────────────────
 function FullscreenMap({
-  gpxUrl, controls, onClose, climbProfile, storedAscent, initialStyle,
+  gpxUrl, controls, onClose, climbProfile, storedAscent, initialStyle, startDate,
 }: {
   gpxUrl:        string;
   controls:      { km: number; name: string; lat: number; lng: number }[];
@@ -405,6 +418,7 @@ function FullscreenMap({
   climbProfile?: any[];
   storedAscent?: number;
   initialStyle?: string;
+  startDate?:    Date;
 }) {
   const modalMapRef         = useRef<HTMLDivElement>(null);
   const modalMapInstanceRef = useRef<any>(null);
@@ -421,9 +435,11 @@ function FullscreenMap({
   useEffect(() => {
     if (!modalMapRef.current) return;
     let destroyed = false;
+    const windAborted = { current: false };
+    let capturedCoords: ParsedCoord[] = [];
     initLeafletMap(
       modalMapRef.current, gpxUrl, controls, true, fsActiveStyle,
-      coords => { if (!destroyed) setModalCoords(coords); },
+      coords => { capturedCoords = coords; if (!destroyed) setModalCoords(coords); },
       kmLayerRef, undefined,
       tile => { fsTileLayerRef.current = tile; },
     ).then(async ({ map, markerRef }) => {
@@ -431,9 +447,13 @@ function FullscreenMap({
       modalMapInstanceRef.current = map;
       modalDotMarkerRef.current   = markerRef.current;
       fsLRef.current = (await import('leaflet')).default;
+      if (startDate && capturedCoords.length > 0 && !destroyed) {
+        addWindArrows(map, fsLRef.current, capturedCoords, startDate, windAborted);
+      }
     });
     return () => {
       destroyed = true;
+      windAborted.current = true;
       if (modalMapInstanceRef.current) {
         modalMapInstanceRef.current.remove();
         modalMapInstanceRef.current = null;
@@ -545,6 +565,7 @@ export default function BrevetMap({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeStyle,  setActiveStyle]  = useState<string>(DEFAULT_STYLE);
   const [mapReady,     setMapReady]     = useState(false);
+  const [clockwise,    setClockwise]    = useState<boolean | null>(null);
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(f => !f), []);
 
@@ -553,7 +574,7 @@ export default function BrevetMap({
     initializedRef.current = true;
     initLeafletMap(
       mapRef.current, gpxUrl, controls, false, DEFAULT_STYLE,
-      coords => setParsedCoords(coords),
+      coords => { setParsedCoords(coords); setClockwise(detectClockwise(coords)); },
       kmLayerRef, undefined,
       tile => { tileLayerRef.current = tile; },
     ).then(async ({ map, markerRef }) => {
@@ -603,6 +624,7 @@ export default function BrevetMap({
           controls={controls}
           onClose={toggleFullscreen}
           initialStyle={activeStyle}
+          startDate={startDate}
         />
       )}
 
@@ -633,7 +655,37 @@ export default function BrevetMap({
           </svg>
           Πλήρης οθόνη
         </button>
-        <p className="text-white/20 text-xs text-right mt-1">© OpenStreetMap contributors</p>
+        {/* Wind legend + route direction */}
+        {startDate && (
+          <div className="flex flex-wrap items-center justify-between gap-y-1 mt-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
+              <span className="text-white/30 font-semibold">🌬️ Άνεμος:</span>
+              {([
+                { color: '#6EE7B7', label: '< 20 Αύρα' },
+                { color: '#FCD34D', label: '20–35 Μέτριος' },
+                { color: '#FB923C', label: '35–50 Δυνατός' },
+                { color: '#F87171', label: '> 50 Θυελλώδης' },
+              ] as const).map(({ color, label }) => (
+                <span key={label} className="flex items-center gap-1">
+                  <svg width="10" height="14" viewBox="0 0 22 32">
+                    <path d="M11 1 L20 11 L16 11 L16 31 L6 31 L6 11 L2 11 Z"
+                      fill={color} stroke="black" strokeWidth="2" strokeLinejoin="round"/>
+                  </svg>
+                  {label}
+                </span>
+              ))}
+              {clockwise !== null && (
+                <span className="ml-1 px-2 py-0.5 rounded-full border border-white/20 text-white/60 font-medium">
+                  {clockwise ? '↻ Δεξιόστροφη' : '↺ Αριστερόστροφη'}
+                </span>
+              )}
+            </div>
+            <p className="text-white/20 text-xs">© OpenStreetMap contributors</p>
+          </div>
+        )}
+        {!startDate && (
+          <p className="text-white/20 text-xs text-right mt-1">© OpenStreetMap contributors</p>
+        )}
       </div>
     </>
   );
