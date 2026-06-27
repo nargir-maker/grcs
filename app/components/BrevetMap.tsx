@@ -362,23 +362,84 @@ async function initLeafletMap(
   return { map, markerRef };
 }
 
-// ── Tile switcher buttons — reusable ─────────────────────────────────────────
+// ── Wind legend ───────────────────────────────────────────────────────────────
+const WIND_LEGEND_ITEMS = [
+  { color: '#6EE7B7', label: '< 20 Αύρα' },
+  { color: '#FCD34D', label: '20–35 Μέτριος' },
+  { color: '#FB923C', label: '35–50 Δυνατός' },
+  { color: '#F87171', label: '> 50 Θυελλώδης' },
+] as const;
+
+// full = below inline map; compact = overlay inside fullscreen
+function WindLegend({
+  clockwise, showLegend, compact = false,
+}: { clockwise?: boolean | null; showLegend: boolean; compact?: boolean }) {
+  if (compact) {
+    if (!showLegend && clockwise == null) return null;
+    return (
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        {showLegend && WIND_LEGEND_ITEMS.map(({ color, label }) => (
+          <span key={label} className="flex items-center gap-1 text-white/70 text-xs">
+            <svg width="8" height="12" viewBox="0 0 22 32">
+              <path d="M11 1 L20 11 L16 11 L16 31 L6 31 L6 11 L2 11 Z"
+                fill={color} stroke="black" strokeWidth="2" strokeLinejoin="round"/>
+            </svg>
+            {label}
+          </span>
+        ))}
+        {clockwise != null && (
+          <span className="px-2 py-0.5 rounded-full border border-white/25 text-white/70 text-xs font-medium"
+            style={{ background: 'rgba(10,22,40,0.75)' }}>
+            {clockwise ? '↻ Δεξιόστροφη' : '↺ Αριστερόστροφη'}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {showLegend && (
+        <div className="flex flex-wrap items-center justify-between gap-y-1 mt-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
+            <span className="text-white/30 font-semibold">🌬️ Άνεμος:</span>
+            {WIND_LEGEND_ITEMS.map(({ color, label }) => (
+              <span key={label} className="flex items-center gap-1">
+                <svg width="10" height="14" viewBox="0 0 22 32">
+                  <path d="M11 1 L20 11 L16 11 L16 31 L6 31 L6 11 L2 11 Z"
+                    fill={color} stroke="black" strokeWidth="2" strokeLinejoin="round"/>
+                </svg>
+                {label}
+              </span>
+            ))}
+            {clockwise != null && (
+              <span className="ml-1 px-2 py-0.5 rounded-full border border-white/20 text-white/60 font-medium">
+                {clockwise ? '↻ Δεξιόστροφη' : '↺ Αριστερόστροφη'}
+              </span>
+            )}
+          </div>
+          <p className="text-white/20 text-xs">© OpenStreetMap contributors</p>
+        </div>
+      )}
+      {!showLegend && (
+        <p className="text-white/20 text-xs text-right mt-1">© OpenStreetMap contributors</p>
+      )}
+    </>
+  );
+}
+
+// ── Tile switcher buttons — reusable (no absolute positioning; caller positions it) ──
 function TileSwitcher({
-  activeId, mapInstanceRef, tileLayerRef, LRef, onSwitch, position = 'bottom-left',
+  activeId, mapInstanceRef, tileLayerRef, LRef, onSwitch,
 }: {
   activeId:       string;
   mapInstanceRef: React.MutableRefObject<any>;
   tileLayerRef:   React.MutableRefObject<any>;
   LRef:           React.MutableRefObject<any>;
   onSwitch:       (id: string) => void;
-  position?:      'bottom-left' | 'bottom-left-fs';
 }) {
-  const cls = position === 'bottom-left-fs'
-    ? 'absolute bottom-4 left-4 z-[1001] flex gap-1.5'
-    : 'absolute bottom-10 left-3 z-[1000] flex gap-1.5';
-
   return (
-    <div className={cls}>
+    <div className="flex gap-1.5">
       {TILE_STYLES.map(style => (
         <button
           key={style.id}
@@ -513,15 +574,21 @@ function FullscreenMap({
         {/* Map */}
         <div ref={modalMapRef} style={{ position: 'absolute', inset: 0 }} />
 
-        {/* Tile switcher */}
-        <TileSwitcher
-          activeId={fsActiveStyle}
-          mapInstanceRef={modalMapInstanceRef}
-          tileLayerRef={fsTileLayerRef}
-          LRef={fsLRef}
-          onSwitch={setFsActiveStyle}
-          position="bottom-left-fs"
-        />
+        {/* Tile switcher + wind legend row */}
+        <div className="absolute bottom-4 left-4 z-[1001] flex flex-wrap items-center gap-3">
+          <TileSwitcher
+            activeId={fsActiveStyle}
+            mapInstanceRef={modalMapInstanceRef}
+            tileLayerRef={fsTileLayerRef}
+            LRef={fsLRef}
+            onSwitch={setFsActiveStyle}
+          />
+          <WindLegend
+            compact
+            showLegend={!!startDate}
+            clockwise={startDate ? detectClockwise(modalCoords) : undefined}
+          />
+        </div>
 
         {/* Elevation panel */}
         {showChart && (
@@ -628,6 +695,7 @@ export default function BrevetMap({
         />
       )}
 
+      {/* Map — relative div contains only the map + absolutely-positioned overlays */}
       <div className="relative" style={{ visibility: isFullscreen ? 'hidden' : 'visible' }}>
         <div
           ref={mapRef}
@@ -635,14 +703,15 @@ export default function BrevetMap({
           className="rounded-xl overflow-hidden border border-white/10"
         />
 
-        <TileSwitcher
-          activeId={activeStyle}
-          mapInstanceRef={mapInstanceRef}
-          tileLayerRef={tileLayerRef}
-          LRef={LRef}
-          onSwitch={setActiveStyle}
-          position="bottom-left"
-        />
+        <div className="absolute bottom-3 left-3 z-[1000]">
+          <TileSwitcher
+            activeId={activeStyle}
+            mapInstanceRef={mapInstanceRef}
+            tileLayerRef={tileLayerRef}
+            LRef={LRef}
+            onSwitch={setActiveStyle}
+          />
+        </div>
 
         <button onClick={toggleFullscreen} title="Πλήρης οθόνη"
           className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5
@@ -655,38 +724,10 @@ export default function BrevetMap({
           </svg>
           Πλήρης οθόνη
         </button>
-        {/* Wind legend + route direction */}
-        {startDate && (
-          <div className="flex flex-wrap items-center justify-between gap-y-1 mt-2">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
-              <span className="text-white/30 font-semibold">🌬️ Άνεμος:</span>
-              {([
-                { color: '#6EE7B7', label: '< 20 Αύρα' },
-                { color: '#FCD34D', label: '20–35 Μέτριος' },
-                { color: '#FB923C', label: '35–50 Δυνατός' },
-                { color: '#F87171', label: '> 50 Θυελλώδης' },
-              ] as const).map(({ color, label }) => (
-                <span key={label} className="flex items-center gap-1">
-                  <svg width="10" height="14" viewBox="0 0 22 32">
-                    <path d="M11 1 L20 11 L16 11 L16 31 L6 31 L6 11 L2 11 Z"
-                      fill={color} stroke="black" strokeWidth="2" strokeLinejoin="round"/>
-                  </svg>
-                  {label}
-                </span>
-              ))}
-              {clockwise !== null && (
-                <span className="ml-1 px-2 py-0.5 rounded-full border border-white/20 text-white/60 font-medium">
-                  {clockwise ? '↻ Δεξιόστροφη' : '↺ Αριστερόστροφη'}
-                </span>
-              )}
-            </div>
-            <p className="text-white/20 text-xs">© OpenStreetMap contributors</p>
-          </div>
-        )}
-        {!startDate && (
-          <p className="text-white/20 text-xs text-right mt-1">© OpenStreetMap contributors</p>
-        )}
       </div>
+
+      {/* Legend + attribution — outside the relative div so it never shifts tile buttons */}
+      <WindLegend clockwise={startDate ? clockwise : undefined} showLegend={!!startDate} />
     </>
   );
 }
