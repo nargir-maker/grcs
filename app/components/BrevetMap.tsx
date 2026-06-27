@@ -377,9 +377,12 @@ function WindLegend({
   if (compact) {
     if (!showLegend && clockwise == null) return null;
     return (
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <div className="flex flex-wrap items-center gap-1.5">
         {showLegend && WIND_LEGEND_ITEMS.map(({ color, label }) => (
-          <span key={label} className="flex items-center gap-1 text-white/70 text-xs">
+          <span key={label}
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold
+              border backdrop-blur-md"
+            style={{ background: 'rgba(10,22,40,0.80)', borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.75)' }}>
             <svg width="8" height="12" viewBox="0 0 22 32">
               <path d="M11 1 L20 11 L16 11 L16 31 L6 31 L6 11 L2 11 Z"
                 fill={color} stroke="black" strokeWidth="2" strokeLinejoin="round"/>
@@ -388,8 +391,8 @@ function WindLegend({
           </span>
         ))}
         {clockwise != null && (
-          <span className="px-2 py-0.5 rounded-full border border-white/25 text-white/70 text-xs font-medium"
-            style={{ background: 'rgba(10,22,40,0.75)' }}>
+          <span className="flex items-center px-2 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-md"
+            style={{ background: 'rgba(10,22,40,0.80)', borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.75)' }}>
             {clockwise ? '↻ Δεξιόστροφη' : '↺ Αριστερόστροφη'}
           </span>
         )}
