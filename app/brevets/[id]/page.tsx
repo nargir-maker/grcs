@@ -57,6 +57,7 @@ interface BrevetDetail {
   controls: ControlPoint[]; difficultyLabel: string; difficultyColor: string;
   difficultyEmoji: string; wcs: number; climbCount: number; duration: string;
   organizerLogo: string; climbProfile: ClimbSegment[];
+  externalRegistration: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -485,6 +486,7 @@ export default function BrevetDetailPage() {
           ascent, certification: info.certification?.toString() ?? '',
           type: info.type?.toString() ?? 'BRM',
           gpxUrl: route.gpxUrl?.toString() ?? '', mapUrl: route.mapUrl?.toString() ?? '',
+          externalRegistration: extra.registration?.toString() ?? '',
           description: extra.description?.toString() ?? '',
           imageUrl: extra.imageUrl?.toString() ?? '',
           startCoords: route.startCoords?.toString() ?? '',
@@ -628,10 +630,17 @@ export default function BrevetDetailPage() {
                 📥 GPX
               </a>
             )}
-            <button onClick={() => { document.getElementById('registration-section')?.scrollIntoView({ behavior: 'smooth' }); }}
-              className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-black text-sm font-bold py-3 rounded-xl text-center transition-colors">
-              🚴 Εγγραφή →
-            </button>
+            {brevet.externalRegistration ? (
+              <a href={brevet.externalRegistration} target="_blank" rel="noopener noreferrer"
+                className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-black text-sm font-bold py-3 rounded-xl text-center transition-colors">
+                🚴 Εγγραφή →
+              </a>
+            ) : (
+              <button onClick={() => { document.getElementById('registration-section')?.scrollIntoView({ behavior: 'smooth' }); }}
+                className="flex-1 bg-cyan-500/30 text-cyan-300/60 text-sm font-bold py-3 rounded-xl text-center cursor-default">
+                🚴 Εγγραφή
+              </button>
+            )}
           </div>
         </div>
 
@@ -749,26 +758,32 @@ export default function BrevetDetailPage() {
         )}
 
         {/* ── REGISTRATION ── */}
+        {/* TODO: Υλοποίηση εσωτερικής εγγραφής στο site (φόρμα, αποθήκευση στη Firestore,
+            email επιβεβαίωσης, λίστα συμμετεχόντων για διοργανωτή). Προς το παρόν χρησιμοποιείται
+            εξωτερικός σύνδεσμος εγγραφής (extra.registration στη Firebase). */}
         <div id="registration-section" className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
-          <h2 className="text-white font-bold text-lg mb-2">🚴 Εγγραφή στο Brevet</h2>
-          {!session ? (
-            <div className="text-center py-6">
-              <p className="text-white/50 text-sm mb-4">Συνδέσου για να εγγραφείς στο brevet</p>
-              <button onClick={() => signIn('google')}
-                className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-6 py-3 rounded-full text-sm transition-colors">
-                Σύνδεση με Google
-              </button>
-            </div>
-          ) : !showForm ? (
-            <div className="flex items-center justify-between">
-              <p className="text-white/50 text-sm">Συνδεδεμένος ως {session.user?.name}</p>
-              <button onClick={() => setShowForm(true)}
-                className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-6 py-3 rounded-full text-sm transition-colors">
-                Εγγραφή →
-              </button>
+          <h2 className="text-white font-bold text-lg mb-4">🚴 Εγγραφή στο Brevet</h2>
+          {brevet.externalRegistration ? (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-white/60 text-sm">
+                Η εγγραφή γίνεται μέσω της πλατφόρμας του διοργανωτή.
+              </p>
+              <a
+                href={brevet.externalRegistration}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-8 py-3 rounded-full text-sm transition-colors whitespace-nowrap"
+              >
+                Εγγραφή → (εξωτερικός σύνδεσμος)
+              </a>
             </div>
           ) : (
-            <RegistrationForm brevet={brevet} session={session} onClose={() => setShowForm(false)} />
+            <div className="text-center py-4">
+              <p className="text-white/40 text-sm">
+                Η εγγραφή γίνεται απευθείας μέσω του διοργανωτή.
+                Επικοινωνήστε με τον σύλλογο για λεπτομέρειες εγγραφής.
+              </p>
+            </div>
           )}
         </div>
 

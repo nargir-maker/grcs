@@ -219,8 +219,9 @@ interface FormState {
   postrideDate:   string;
   postrideTime:   string;
   // status
-  active:           boolean;
-  registrationOpen: boolean;
+  active:                boolean;
+  registrationOpen:      boolean;
+  externalRegistration:  string;
   // route
   start:        string;
   startCoords:  string;
@@ -249,7 +250,7 @@ const EMPTY: FormState = {
   date:'', startTime:'07:00', durationHours:'13.5',
   allowPreride:false, prerideDate:'', prerideTime:'07:00',
   allowPostride:false, postrideDate:'', postrideTime:'07:00',
-  active:true, registrationOpen:false,
+  active:true, registrationOpen:false, externalRegistration:'',
   start:'', startCoords:'', finish:'', finishCoords:'', viaCities:'',
   ascent:'', descent:'', realKm:'', wcs:'',
   gpxUrl:'', mapUrl:'',
@@ -482,11 +483,12 @@ export default function NewBrevetPage() {
         descent:        String(route.descent ?? ''),
         wcs:            String(route.wcs     ?? ''),
         mapUrl:         route.mapUrl       ?? '',
-        description:    extra.description  ?? '',
-        hasMedal:       extra.hasMedal     ?? false,
-        medalCost:      String(extra.medalCost ?? ''),
-        entryCost:      String(extra.entryCost ?? ''),
-        flecheData:     extra.flecheData   ?? '',
+        description:          extra.description  ?? '',
+        hasMedal:             extra.hasMedal     ?? false,
+        medalCost:            String(extra.medalCost ?? ''),
+        entryCost:            String(extra.entryCost ?? ''),
+        flecheData:           extra.flecheData   ?? '',
+        externalRegistration: extra.registration ?? '',
         controls:       ctrls,
         date:'', gpxUrl:'', realKm:'', active:true, registrationOpen:false,
         allowPreride:  info.allowPreride  ?? false,
@@ -562,7 +564,7 @@ export default function NewBrevetPage() {
           medalCost:    form.hasMedal ? (parseFloat(form.medalCost) || 0) : 0,
           entryCost:    parseFloat(form.entryCost) || 0,
           flecheData:   form.flecheData,
-          registration: '',
+          registration: form.externalRegistration?.trim() ?? '',
           imageUrl:     '',
           closeTimeIso: endDt?.toISOString() ?? '',
         },
@@ -757,6 +759,18 @@ export default function NewBrevetPage() {
               label="Ενεργό (εμφανίζεται στους αναβάτες)" />
             <Toggle value={form.registrationOpen} onChange={v => set('registrationOpen', v)}
               label="Ανοιχτές εγγραφές" />
+            <Field label="Σύνδεσμος εξωτερικής εγγραφής (URL)"
+              hint="αν έχει, το κουμπί Εγγραφή θα ανοίγει αυτό τον σύνδεσμο">
+              <input
+                type="url"
+                placeholder="https://..."
+                value={form.externalRegistration ?? ''}
+                onChange={e => set('externalRegistration', e.target.value)}
+                className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3
+                  text-white text-sm placeholder:text-white/25 focus:outline-none
+                  focus:border-cyan-500/60 transition-colors"
+              />
+            </Field>
           </div>
         </Section>
 
