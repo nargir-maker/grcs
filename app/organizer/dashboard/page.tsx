@@ -314,14 +314,12 @@ function BrevetCard({
     brevet.status === 'upcoming' ? 'Επερχόμενο' :
                                    'Ολοκληρώθηκε';
 
-  // ── Key change: pass from=organizer AND clubId so detail
-  //    page knows where to send the back button
-  const href = `/brevets/${brevet.id}?from=organizer&clubId=${clubId}`;
+  const detailHref = `/brevets/${brevet.id}?from=organizer&clubId=${clubId}`;
+  const editHref   = `/organizer/brevet/${brevet.id}/edit`;
 
   return (
-    <a
-      href={href}
-      className={`flex items-center gap-4 p-4 rounded-xl border transition-all no-underline
+    <div
+      className={`flex items-center gap-4 p-4 rounded-xl border transition-all
         ${past
           ? 'bg-white/3 border-white/8 opacity-70'
           : 'bg-white/7 border-white/15 hover:bg-white/10 hover:border-white/25'
@@ -371,8 +369,19 @@ function BrevetCard({
             👥 {brevet.registrations}
           </span>
         )}
+        <div className="flex items-center gap-2 mt-0.5">
+          <a href={editHref}
+            onClick={e => e.stopPropagation()}
+            className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors font-medium">
+            ✏️ Επεξεργασία
+          </a>
+          <a href={detailHref}
+            className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+            Προβολή →
+          </a>
+        </div>
       </div>
-    </a>
+    </div>
   );
 }
 

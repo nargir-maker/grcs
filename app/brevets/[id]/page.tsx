@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { db } from '../../lib/firebase';
 import { useParams } from 'next/navigation';
-import { doc, getDoc, getDocFromCache } from 'firebase/firestore';
+import { doc, getDoc, getDocFromCache, getDocs, collection, query, where } from 'firebase/firestore';
 import dynamic from 'next/dynamic';
 import { useSession, signIn } from 'next-auth/react';
 import RegistrationForm from '@/app/components/RegistrationForm';
@@ -428,9 +428,25 @@ export default function BrevetDetailPage() {
   const [brevet, setBrevet] = useState<BrevetDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
+  const [isAdmin, setIsAdmin] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [scrubberKm, setScrubberKm] = useState<number | null>(null);
   const handleScrub = useCallback((km: number | null) => setScrubberKm(km), []);
+
+  useEffect(() => {
+    const email = session?.user?.email;
+    if (!email) return;
+    (async () => {
+      try {
+        const usersSnap = await getDocs(query(collection(db, 'users'), where('email', '==', email)));
+        if (usersSnap.empty) return;
+        const linkedId = usersSnap.docs[0].data().linkedLegacyMemberId?.toString() ?? '';
+        if (!linkedId) return;
+        const memberSnap = await getDoc(doc(db, 'members', linkedId));
+        if (memberSnap.exists() && memberSnap.data().account_type === 'admin') setIsAdmin(true);
+      } catch { /* skip */ }
+    })();
+  }, [session]);
 
   useEffect(() => {
     async function fetchBrevet() {
@@ -543,7 +559,17 @@ export default function BrevetDetailPage() {
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
       <div className="max-w-3xl mx-auto">
 
-        <BackButton />
+        <div className="flex items-center justify-between mb-2">
+          <BackButton />
+          {isAdmin && (
+            <a href={`/organizer/brevet/${id}/edit`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold
+                border border-amber-400/40 bg-amber-500/10 text-amber-300
+                hover:bg-amber-500/20 transition-all">
+              ✏️ Επεξεργασία (Admin)
+            </a>
+          )}
+        </div>
 
         {/* ── HERO ── */}
         <div className="relative mb-8">
