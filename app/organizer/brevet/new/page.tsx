@@ -933,12 +933,12 @@ export default function NewBrevetPage() {
 
         {/* ── SECTION 6: Λεπτομέρειες ── */}
         <Section title="💬 Λεπτομέρειες">
-          <Field label="Περιγραφή" hint="(μέχρι 300 χαρακτήρες)">
+          <Field label="Περιγραφή" hint="(μέχρι 1000 χαρακτήρες)">
             <textarea className={`${inp} resize-none`} rows={3}
-              maxLength={300} value={form.description}
+              maxLength={1000} value={form.description}
               onChange={e => set('description', e.target.value)}
               placeholder="Σύντομη περιγραφή..." />
-            <p className="text-white/25 text-xs mt-1 text-right">{form.description.length}/300</p>
+            <p className="text-white/25 text-xs mt-1 text-right">{form.description.length}/1000</p>
           </Field>
 
           <div className="grid grid-cols-2 gap-4">
