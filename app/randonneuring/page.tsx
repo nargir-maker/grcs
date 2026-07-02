@@ -414,28 +414,133 @@ export default function RandonneuringPage() {
 
           </div>
 
-          {/* Hierarchy diagram */}
-          <div className="mt-6 bg-white/3 border border-white/8 rounded-2xl p-5">
-            <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-4">Ιεραρχία</p>
-            <div className="font-mono text-xs text-white/50 leading-loose overflow-x-auto">
-              <pre>{`               [ ACP — Audax Club Parisien ]
-                           |
-          ┌────────────────┴───────────────────┐
-          │                                    │
-  [ BRM (200-1000 χλμ.) ]          [ Paris-Brest-Paris (PBP) ]
-          │
-          ▼
-  [ LRM — Les Randonneurs Mondiaux ]
-          │
-          ▼
-  [ Super Brevets (1200 χλμ.+) ]      [ Provence Randonneurs ]
-   π.χ. London–Edinburgh–London                │
-                                               ▼
-                                   [ Super Randonnées SR600 ]
-                                    (600 χλμ. / 10.000+ μ. ↑)
+          {/* Hierarchy diagram — SVG */}
+          <div className="mt-6 overflow-x-auto">
+            <svg viewBox="0 0 720 522" className="w-full min-w-[480px]"
+              xmlns="http://www.w3.org/2000/svg" style={{ maxHeight: 522 }}>
 
-  [ UAF — Union des Audax Français ] ── αυτόνομη σειρά Audax (ομαδικό στυλ)`}</pre>
-            </div>
+              {/* ── Connectors ── */}
+              {/* ACP → fork */}
+              <line x1="360" y1="84" x2="360" y2="106" stroke="rgba(6,182,212,0.35)" strokeWidth="1.5"/>
+              {/* Horizontal fork */}
+              <line x1="180" y1="106" x2="540" y2="106" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"/>
+              {/* Left drop → BRM */}
+              <line x1="180" y1="106" x2="180" y2="120" stroke="rgba(6,182,212,0.35)" strokeWidth="1.5"/>
+              {/* Right drop → PBP */}
+              <line x1="540" y1="106" x2="540" y2="120" stroke="rgba(251,191,36,0.4)" strokeWidth="1.5"/>
+              {/* BRM → LRM */}
+              <line x1="180" y1="184" x2="180" y2="228" stroke="rgba(168,85,247,0.4)" strokeWidth="1.5"/>
+              {/* LRM → Super Brevets */}
+              <line x1="180" y1="292" x2="180" y2="336" stroke="rgba(168,85,247,0.3)" strokeWidth="1.5"/>
+              {/* Provence → SR600 */}
+              <line x1="540" y1="292" x2="540" y2="336" stroke="rgba(52,211,153,0.4)" strokeWidth="1.5"/>
+
+              {/* ── ACP ── */}
+              <rect x="160" y="20" width="400" height="64" rx="14"
+                fill="rgba(6,182,212,0.12)" stroke="rgba(6,182,212,0.55)" strokeWidth="1.5"/>
+              <text x="360" y="47" textAnchor="middle" fill="white"
+                fontSize="13" fontWeight="700" fontFamily="system-ui,sans-serif">
+                Audax Club Parisien (ACP)
+              </text>
+              <text x="360" y="68" textAnchor="middle" fill="rgba(6,182,212,0.85)"
+                fontSize="11" fontFamily="system-ui,sans-serif">
+                ιδρ. 1904 · Παρίσι, Γαλλία
+              </text>
+
+              {/* ── BRM ── */}
+              <rect x="55" y="120" width="250" height="64" rx="12"
+                fill="rgba(6,182,212,0.07)" stroke="rgba(6,182,212,0.3)" strokeWidth="1.5"/>
+              <text x="180" y="147" textAnchor="middle" fill="white"
+                fontSize="12" fontWeight="600" fontFamily="system-ui,sans-serif">
+                BRM 200 – 1000 χλμ.
+              </text>
+              <text x="180" y="167" textAnchor="middle" fill="rgba(255,255,255,0.4)"
+                fontSize="10" fontFamily="system-ui,sans-serif">
+                Κλασική σειρά brevets
+              </text>
+
+              {/* ── PBP ── */}
+              <rect x="415" y="120" width="250" height="64" rx="12"
+                fill="rgba(251,191,36,0.09)" stroke="rgba(251,191,36,0.45)" strokeWidth="1.5"/>
+              <text x="540" y="147" textAnchor="middle" fill="white"
+                fontSize="12" fontWeight="600" fontFamily="system-ui,sans-serif">
+                Paris-Brest-Paris (PBP)
+              </text>
+              <text x="540" y="167" textAnchor="middle" fill="rgba(251,191,36,0.8)"
+                fontSize="10" fontFamily="system-ui,sans-serif">
+                Το κορυφαίο event παγκοσμίως
+              </text>
+
+              {/* ── LRM ── */}
+              <rect x="55" y="228" width="250" height="64" rx="12"
+                fill="rgba(168,85,247,0.1)" stroke="rgba(168,85,247,0.45)" strokeWidth="1.5"/>
+              <text x="180" y="255" textAnchor="middle" fill="white"
+                fontSize="12" fontWeight="600" fontFamily="system-ui,sans-serif">
+                Les Randonneurs Mondiaux
+              </text>
+              <text x="180" y="275" textAnchor="middle" fill="rgba(168,85,247,0.85)"
+                fontSize="10" fontFamily="system-ui,sans-serif">
+                LRM · ιδρ. 1983
+              </text>
+
+              {/* ── Provence Randonneurs ── */}
+              <rect x="415" y="228" width="250" height="64" rx="12"
+                fill="rgba(52,211,153,0.1)" stroke="rgba(52,211,153,0.45)" strokeWidth="1.5"/>
+              <text x="540" y="255" textAnchor="middle" fill="white"
+                fontSize="12" fontWeight="600" fontFamily="system-ui,sans-serif">
+                Provence Randonneurs
+              </text>
+              <text x="540" y="275" textAnchor="middle" fill="rgba(52,211,153,0.85)"
+                fontSize="10" fontFamily="system-ui,sans-serif">
+                ιδρ. 2011 · Sophie Matter
+              </text>
+
+              {/* ── Super Brevets ── */}
+              <rect x="30" y="336" width="300" height="64" rx="12"
+                fill="rgba(168,85,247,0.06)" stroke="rgba(168,85,247,0.25)" strokeWidth="1.5"/>
+              <text x="180" y="362" textAnchor="middle" fill="white"
+                fontSize="12" fontWeight="500" fontFamily="system-ui,sans-serif">
+                Super Brevets 1200+ χλμ.
+              </text>
+              <text x="180" y="381" textAnchor="middle" fill="rgba(255,255,255,0.38)"
+                fontSize="10" fontFamily="system-ui,sans-serif">
+                π.χ. London–Edinburgh–London
+              </text>
+
+              {/* ── SR600 ── */}
+              <rect x="415" y="336" width="250" height="64" rx="12"
+                fill="rgba(52,211,153,0.06)" stroke="rgba(52,211,153,0.25)" strokeWidth="1.5"/>
+              <text x="540" y="362" textAnchor="middle" fill="white"
+                fontSize="12" fontWeight="500" fontFamily="system-ui,sans-serif">
+                Super Randonnées SR600
+              </text>
+              <text x="540" y="381" textAnchor="middle" fill="rgba(255,255,255,0.38)"
+                fontSize="10" fontFamily="system-ui,sans-serif">
+                600 χλμ. / 10.000+ μ. ↑
+              </text>
+
+              {/* ── UAF — αυτόνομος (dashed border) ── */}
+              <rect x="30" y="448" width="300" height="60" rx="12"
+                fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.22)"
+                strokeWidth="1.5" strokeDasharray="6,3"/>
+              <text x="180" y="473" textAnchor="middle" fill="white"
+                fontSize="12" fontWeight="600" fontFamily="system-ui,sans-serif">
+                Union des Audax Français (UAF)
+              </text>
+              <text x="180" y="492" textAnchor="middle" fill="rgba(255,255,255,0.35)"
+                fontSize="10" fontFamily="system-ui,sans-serif">
+                ιδρ. 1922 · αυτόνομος · ομαδικό στυλ 18 χλμ./ώρα
+              </text>
+
+              {/* UAF "αυτόνομος" pill label */}
+              <rect x="344" y="448" width="76" height="18" rx="9"
+                fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.15)" strokeWidth="1"/>
+              <text x="382" y="461" textAnchor="middle" fill="rgba(255,255,255,0.45)"
+                fontSize="9" fontFamily="system-ui,sans-serif">
+                αυτόνομος
+              </text>
+
+            </svg>
           </div>
         </section>
 
