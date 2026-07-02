@@ -83,9 +83,6 @@ if (isOrganizer && organizer) {
               </div>
             </div>
           </div>
-          <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
-            Σχετικά
-          </Link>
           {/* Randonneuring dropdown */}
           <div className="relative group">
             <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
@@ -107,6 +104,9 @@ if (isOrganizer && organizer) {
               </div>
             </div>
           </div>
+          <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
+            Σχετικά
+          </Link>
         </div>
 
         {/* Desktop right: organizer pill + dashboard + logout */}
@@ -182,8 +182,6 @@ if (isOrganizer && organizer) {
                 onClick={() => setMenuOpen(false)}>Κοινότητα</Link>
             </div>
           </div>
-          <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>Σχετικά</Link>
           <div className="flex flex-col gap-2">
             <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Randonneuring</span>
             <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
@@ -193,6 +191,8 @@ if (isOrganizer && organizer) {
                 onClick={() => setMenuOpen(false)}>Πρακτικός Οδηγός</Link>
             </div>
           </div>
+          <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors"
+            onClick={() => setMenuOpen(false)}>Σχετικά</Link>
 
           <div className="flex flex-col gap-3 pt-2 border-t border-white/10">
             <Link href="/organizer/dashboard"
@@ -278,9 +278,6 @@ if (isOrganizer && organizer) {
               </div>
             </div>
           </div>
-          <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
-            Σχετικά
-          </Link>
           {/* Randonneuring dropdown */}
           <div className="relative group">
             <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
