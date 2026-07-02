@@ -116,24 +116,24 @@ const CLUBS = [
   },
   {
     name:    'Hellenic Autonomous Randonneur (H.A.R.)',
-    site:    null,
-    href:    null,
+    site:    'hellenic-autonomous-randonneur.com',
+    href:    'https://www.hellenic-autonomous-randonneur.com',
     accent:  'border-white/10',
     dot:     'bg-white/40',
-    body:    'Δυναμική, πανελλαδική κοινότητα διοργανωτών και ποδηλατών μεγάλων αποστάσεων. Εστιάζει στην αυθεντική κουλτούρα της αυτονομίας, της εξερεύνησης νέων διαδρομών και της αγάπης για το ταξίδι.',
+    body:    'Νέα δυναμική, πανελλαδική κοινότητα διοργανωτών και ποδηλατών μεγάλων αποστάσεων. Εστιάζει στην αυθεντική κουλτούρα της αυτονομίας, της εξερεύνησης νέων διαδρομών και της αγάπης για το ταξίδι.',
   },
   {
     name:    'Ble Cycling Club',
-    site:    null,
-    href:    null,
+    site:    'blecyclingclub.gr',
+    href:    'https://www.blecyclingclub.gr',
     accent:  'border-blue-500/40',
     dot:     'bg-blue-400',
     body:    'Με έδρα την Αθήνα (ίδρυση 2012), μία από τις πιο ενεργές παρέες του χώρου. Εισήγαγαν τον θεσμό των Permanents (μόνιμες διαδρομές που τρέχεις οποιαδήποτε μέρα) και διοργανώνουν δημοφιλή brevets στην Αττική.',
   },
   {
     name:    'Π.Ε.Π.Α.',
-    site:    null,
-    href:    null,
+    site:    'pepa.gr',
+    href:    'https://www.pepa.gr',
     accent:  'border-white/10',
     dot:     'bg-white/40',
     body:    'Ποδηλατική Ένωση Παλαιμάχων Αθλητών. Διοργανώνει μερικά από τα πιο μαζικά, κλασικά και άρτια οργανωμένα brevets (κυρίως στην Αττική και την Πελοπόννησο), αποτελώντας ιδανική πύλη εισόδου για πολλούς νέους αναβάτες.',
@@ -427,9 +427,9 @@ export default function GuidePage() {
         <section className="mb-12">
           <SectionTitle emoji="🇬🇷">Η Κοινότητα στην Ελλάδα</SectionTitle>
           <p className="text-white/50 text-sm mb-5 leading-relaxed">
-            Το randonneuring στην Ελλάδα είναι εξαιρετικά αναπτυγμένο, με μια ζεστή κοινότητα
-            που αγκαλιάζει τους αρχάριους. Όλες οι επίσημες εκδηλώσεις πιστοποιούνται
-            διεθνώς από την <strong className="text-white">Audax Club Parisien</strong>.
+            Το randonneuring στην Ελλάδα είναι εξαιρετικά αναπτυγμένο.
+            Όλες οι επίσημες εκδηλώσεις πιστοποιούνται διεθνώς από την{' '}
+            <strong className="text-white">Audax Club Parisien</strong>.
           </p>
 
           <div className="space-y-3">
