@@ -54,18 +54,35 @@ if (isOrganizer && organizer) {
               </div>
             </div>
           </div>
-          <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors">
-            Στατιστικά
-          </Link>
-          <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors">
-            Κοινότητα
-          </Link>
-          <Link href="/pantheon" className="text-white/60 hover:text-white text-sm transition-colors">
-            Πάνθεον
-          </Link>
-          <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors">
-            Αναβάτες
-          </Link>
+          {/* Στατιστικά dropdown */}
+          <div className="relative group">
+            <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
+              Στατιστικά
+              <svg className="w-3 h-3 opacity-40 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <div className="absolute top-full left-0 hidden group-hover:block z-50 pt-2 min-w-[190px]">
+              <div className="bg-[#0d1f3c] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                <Link href="/results"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Αποτελέσματα
+                </Link>
+                <Link href="/members"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Αναβάτες
+                </Link>
+                <Link href="/pantheon"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Πάνθεον
+                </Link>
+                <Link href="/community"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  Κοινότητα
+                </Link>
+              </div>
+            </div>
+          </div>
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
             Σχετικά
           </Link>
@@ -152,14 +169,19 @@ if (isOrganizer && organizer) {
                 onClick={() => setMenuOpen(false)}>Live Tracking</Link>
             </div>
           </div>
-          <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>Στατιστικά</Link>
-          <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>Κοινότητα</Link>
-          <Link href="/pantheon" className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>Πάνθεον</Link>
-          <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>Αναβάτες</Link>
+          <div className="flex flex-col gap-2">
+            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Στατιστικά</span>
+            <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
+              <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Αποτελέσματα</Link>
+              <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Αναβάτες</Link>
+              <Link href="/pantheon" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Πάνθεον</Link>
+              <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Κοινότητα</Link>
+            </div>
+          </div>
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>Σχετικά</Link>
           <div className="flex flex-col gap-2">
@@ -227,18 +249,35 @@ if (isOrganizer && organizer) {
               </div>
             </div>
           </div>
-          <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors">
-            Στατιστικά
-          </Link>
-          <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors">
-            Κοινότητα
-          </Link>
-          <Link href="/pantheon" className="text-white/60 hover:text-white text-sm transition-colors">
-            Πάνθεον
-          </Link>
-          <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors">
-            Αναβάτες
-          </Link>
+          {/* Στατιστικά dropdown */}
+          <div className="relative group">
+            <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
+              Στατιστικά
+              <svg className="w-3 h-3 opacity-40 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <div className="absolute top-full left-0 hidden group-hover:block z-50 pt-2 min-w-[190px]">
+              <div className="bg-[#0d1f3c] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                <Link href="/results"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Αποτελέσματα
+                </Link>
+                <Link href="/members"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Αναβάτες
+                </Link>
+                <Link href="/pantheon"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Πάνθεον
+                </Link>
+                <Link href="/community"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  Κοινότητα
+                </Link>
+              </div>
+            </div>
+          </div>
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
             Σχετικά
           </Link>
@@ -361,26 +400,19 @@ if (isOrganizer && organizer) {
                 onClick={() => setMenuOpen(false)}>Live Tracking</Link>
             </div>
           </div>
-          <Link href="/results"
-            className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>
-            Στατιστικά
-          </Link>
-          <Link href="/community"
-            className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>
-            Κοινότητα
-          </Link>
-          <Link href="/pantheon"
-            className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>
-            Πάνθεον
-          </Link>
-          <Link href="/members"
-            className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>
-            Αναβάτες
-          </Link>
+          <div className="flex flex-col gap-2">
+            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Στατιστικά</span>
+            <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
+              <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Αποτελέσματα</Link>
+              <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Αναβάτες</Link>
+              <Link href="/pantheon" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Πάνθεον</Link>
+              <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Κοινότητα</Link>
+            </div>
+          </div>
           <Link href="/about"
             className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>
