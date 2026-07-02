@@ -53,6 +53,27 @@ if (isOrganizer && organizer) {
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
             Σχετικά
           </Link>
+          {/* Randonneuring dropdown */}
+          <div className="relative group">
+            <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
+              Randonneuring
+              <svg className="w-3 h-3 opacity-40 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <div className="absolute top-full left-0 hidden group-hover:block z-50 pt-2 min-w-[220px]">
+              <div className="bg-[#0d1f3c] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                <Link href="/randonneuring"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Ιστορία του Randonneuring
+                </Link>
+                <Link href="/randonneuring/guide"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  Πρακτικός Οδηγός
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Desktop right: organizer pill + dashboard + logout */}
@@ -120,8 +141,15 @@ if (isOrganizer && organizer) {
             onClick={() => setMenuOpen(false)}>Αναβάτες</Link>
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>Σχετικά</Link>
-          <Link href="/randonneuring" className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>Randonneuring</Link>
+          <div className="flex flex-col gap-2">
+            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Randonneuring</span>
+            <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
+              <Link href="/randonneuring" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Ιστορία</Link>
+              <Link href="/randonneuring/guide" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Πρακτικός Οδηγός</Link>
+            </div>
+          </div>
 
           <div className="flex flex-col gap-3 pt-2 border-t border-white/10">
             <Link href="/organizer/dashboard"
@@ -177,9 +205,27 @@ if (isOrganizer && organizer) {
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
             Σχετικά
           </Link>
-          <Link href="/randonneuring" className="text-white/60 hover:text-white text-sm transition-colors">
-            Randonneuring
-          </Link>
+          {/* Randonneuring dropdown */}
+          <div className="relative group">
+            <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
+              Randonneuring
+              <svg className="w-3 h-3 opacity-40 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <div className="absolute top-full left-0 hidden group-hover:block z-50 pt-2 min-w-[220px]">
+              <div className="bg-[#0d1f3c] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                <Link href="/randonneuring"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Ιστορία του Randonneuring
+                </Link>
+                <Link href="/randonneuring/guide"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  Πρακτικός Οδηγός
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Desktop auth */}
@@ -307,11 +353,21 @@ if (isOrganizer && organizer) {
             onClick={() => setMenuOpen(false)}>
             Σχετικά
           </Link>
-          <Link href="/randonneuring"
-            className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>
-            Randonneuring
-          </Link>
+          <div className="flex flex-col gap-2">
+            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Randonneuring</span>
+            <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
+              <Link href="/randonneuring"
+                className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>
+                Ιστορία
+              </Link>
+              <Link href="/randonneuring/guide"
+                className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>
+                Πρακτικός Οδηγός
+              </Link>
+            </div>
+          </div>
 
           {/* Mobile auth section */}
           <div className="flex flex-col gap-3 pt-2 border-t border-white/10">
