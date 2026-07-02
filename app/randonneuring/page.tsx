@@ -179,7 +179,7 @@ const TIMELINE: TimelineEvent[] = [
         βουνά της Νότιας Γαλλίας.
       </>
     ),
-    link: { href: 'https://www.provencerandonneurs.com', label: 'provencerandonneurs.com' },
+    link: { href: 'https://www.superrandonnees.org/welcome', label: 'superrandonnees.org' },
   },
   {
     year: '2021',
@@ -361,7 +361,7 @@ export default function RandonneuringPage() {
                     (σταθερά 18 χλμ./ώρα με αρχηγό δρόμου) — το πρωτότυπο format
                     που το ACP εγκατέλειψε το 1921.
                   </p>
-                  <ExternalLink href="https://www.audax.fr">audax.fr</ExternalLink>
+                  <ExternalLink href="https://www.audax-uaf.com">audax-uaf.com</ExternalLink>
                 </div>
               </div>
             </Card>
@@ -407,7 +407,7 @@ export default function RandonneuringPage() {
                     μόνιμες διαδρομές 600 χλμ. / 10.000+ μ. υψομετρικό, χωρίς
                     συγκεκριμένη ημερομηνία εκκίνησης.
                   </p>
-                  <ExternalLink href="https://www.provencerandonneurs.com">provencerandonneurs.com</ExternalLink>
+                  <ExternalLink href="https://www.superrandonnees.org/welcome">superrandonnees.org</ExternalLink>
                 </div>
               </div>
             </Card>
