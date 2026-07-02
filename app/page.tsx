@@ -252,7 +252,8 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-[#0A1628]/60 via-[#0A1628]/40 to-[#0A1628]" />
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`, backgroundRepeat: 'repeat', backgroundSize: '128px' }} />
         <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-          <div className="flex justify-center mb-8"><img src="/grc-logo.png" alt="GRC Logo" className="w-64 h-64 object-contain drop-shadow-2xl" /></div>
+          <div className="flex justify-center mb-8"><img src="/grc-logo.png" alt="GRC Logo" className="w-64 h-64 object-contain"
+                style={{ filter: 'drop-shadow(0 0 32px rgba(6,182,212,0.45)) drop-shadow(0 0 80px rgba(6,182,212,0.18))' }} /></div>
           <div className="inline-block bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-bold px-4 py-2 rounded-full mb-8 tracking-widest backdrop-blur-sm">ΕΛΛΗΝΙΚΟ RANDONNEURING — ΜΙΑ ΠΛΑΤΦΟΡΜΑ ΓΙΑ ΟΛΟΥΣ</div>
           <h2 className="text-4xl sm:text-6xl font-bold text-white leading-tight mb-6 drop-shadow-lg">Όλα τα Brevets.<br /><span className="text-cyan-400">Μια πλατφόρμα.</span></h2>
           <p className="text-white/70 text-lg max-w-2xl mx-auto mb-12 leading-relaxed drop-shadow">Εγγραφές, αποτελέσματα, live tracking και ιστορικό για κάθε αναβάτη και διοργανωτή του ελληνικού randonneuring.</p>
