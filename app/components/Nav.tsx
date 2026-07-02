@@ -29,15 +29,31 @@ if (isOrganizer && organizer) {
 
         {/* Desktop nav links — ίδια με αναβάτη */}
         <div className="hidden sm:flex items-center gap-8">
-          <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors">
-            Brevets
-          </Link>
-          <Link href="/history" className="text-white/60 hover:text-white text-sm transition-colors">
-            Ιστορικό
-          </Link>
-          <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors">
-            Live
-          </Link>
+          {/* Brevets dropdown */}
+          <div className="relative group">
+            <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
+              Brevets
+              <svg className="w-3 h-3 opacity-40 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <div className="absolute top-full left-0 hidden group-hover:block z-50 pt-2 min-w-[200px]">
+              <div className="bg-[#0d1f3c] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                <Link href="/brevets"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Πρόγραμμα Brevets
+                </Link>
+                <Link href="/history"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Ιστορικό
+                </Link>
+                <Link href="/live"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  Live Tracking
+                </Link>
+              </div>
+            </div>
+          </div>
           <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors">
             Στατιστικά
           </Link>
@@ -125,12 +141,17 @@ if (isOrganizer && organizer) {
       {/* Mobile organizer menu */}
       {menuOpen && (
         <div className="sm:hidden mt-4 pb-4 border-t border-white/10 pt-4 flex flex-col gap-4">
-          <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>Brevets</Link>
-          <Link href="/history" className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>Ιστορικό</Link>
-          <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>Live</Link>
+          <div className="flex flex-col gap-2">
+            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Brevets</span>
+            <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
+              <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Πρόγραμμα Brevets</Link>
+              <Link href="/history" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Ιστορικό</Link>
+              <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Live Tracking</Link>
+            </div>
+          </div>
           <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>Στατιστικά</Link>
           <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors"
@@ -181,15 +202,31 @@ if (isOrganizer && organizer) {
 
         {/* Desktop nav links */}
         <div className="hidden sm:flex items-center gap-8">
-          <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors">
-            Brevets
-          </Link>
-          <Link href="/history" className="text-white/60 hover:text-white text-sm transition-colors">
-            Ιστορικό
-          </Link>
-          <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors">
-            Live
-          </Link>
+          {/* Brevets dropdown */}
+          <div className="relative group">
+            <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
+              Brevets
+              <svg className="w-3 h-3 opacity-40 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <div className="absolute top-full left-0 hidden group-hover:block z-50 pt-2 min-w-[200px]">
+              <div className="bg-[#0d1f3c] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                <Link href="/brevets"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Πρόγραμμα Brevets
+                </Link>
+                <Link href="/history"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Ιστορικό
+                </Link>
+                <Link href="/live"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  Live Tracking
+                </Link>
+              </div>
+            </div>
+          </div>
           <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors">
             Στατιστικά
           </Link>
@@ -313,21 +350,17 @@ if (isOrganizer && organizer) {
       {/* Mobile cyclist menu */}
       {menuOpen && (
         <div className="sm:hidden mt-4 pb-4 border-t border-white/10 pt-4 flex flex-col gap-4">
-          <Link href="/brevets"
-            className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>
-            Brevets
-          </Link>
-          <Link href="/history"
-            className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>
-            Ιστορικό
-          </Link>
-          <Link href="/live"
-            className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>
-            Live
-          </Link>
+          <div className="flex flex-col gap-2">
+            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Brevets</span>
+            <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
+              <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Πρόγραμμα Brevets</Link>
+              <Link href="/history" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Ιστορικό</Link>
+              <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Live Tracking</Link>
+            </div>
+          </div>
           <Link href="/results"
             className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>

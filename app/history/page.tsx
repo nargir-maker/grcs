@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
 import { getPublicMembers } from '@/app/lib/publicMembersCache';
@@ -114,8 +112,6 @@ function CertBadge({ har, acp }: { har: string; acp: string }) {
 }
 
 export default function HistoryPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
   const enabled = usePageEnabled('history');
 
   const [events, setEvents]         = useState<BrevetEvent[]>([]);
@@ -134,12 +130,6 @@ export default function HistoryPage() {
   useEffect(() => { selRef.current = selected; }, [selected]);
 
   useEffect(() => {
-    if (status === 'loading') return;
-    if (!session) router.replace('/login');
-  }, [session, status, router]);
-
-  useEffect(() => {
-    if (!session) return;
     Promise.all([getPublicMembers(), getDocs(collection(db, 'clubs'))])
       .then(([docs, snap]) => {
         const nm: Record<string, string> = {};
@@ -155,7 +145,7 @@ export default function HistoryPage() {
         setLoading(false);
       })
       .catch(e => { console.error(e); setLoading(false); });
-  }, [session]);
+  }, []);
 
   const years = useMemo(() => {
     const s = new Set(events.map(e => e.year));
@@ -216,12 +206,11 @@ export default function HistoryPage() {
     setTimeout(() => setSelected(null), 330);
   }, []);
 
-  if (status === 'loading' || enabled === null) return (
+  if (enabled === null) return (
     <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
-  if (!session) return null;
   if (enabled === false) return <ComingSoon label="Ιστορικό Brevets" />;
 
   return (
