@@ -77,17 +77,10 @@ export default function AboutPage() {
           
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
             
-            {/* Image Box 02 */}
-            <div
-              className="rounded-xl border border-white/10 overflow-hidden mb-6"
-              style={{
-                backgroundImage: 'url(/bg10.png)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                backgroundColor: '#0A1628',
-                minHeight: '280px',
-              }}
+            <VideoOrImage
+              videoSrc="/grc_group.mp4"
+              imageSrc="/bg10.png"
+              minHeight={280}
             />
 
             <div className="space-y-4">
