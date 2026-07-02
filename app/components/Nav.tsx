@@ -53,9 +53,6 @@ if (isOrganizer && organizer) {
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
             Σχετικά
           </Link>
-          <Link href="/randonneuring/guide" className="text-white/60 hover:text-white text-sm transition-colors">
-            Οδηγός
-          </Link>
         </div>
 
         {/* Desktop right: organizer pill + dashboard + logout */}
@@ -125,8 +122,6 @@ if (isOrganizer && organizer) {
             onClick={() => setMenuOpen(false)}>Σχετικά</Link>
           <Link href="/randonneuring" className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>Randonneuring</Link>
-          <Link href="/randonneuring/guide" className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>Οδηγός</Link>
 
           <div className="flex flex-col gap-3 pt-2 border-t border-white/10">
             <Link href="/organizer/dashboard"
@@ -184,9 +179,6 @@ if (isOrganizer && organizer) {
           </Link>
           <Link href="/randonneuring" className="text-white/60 hover:text-white text-sm transition-colors">
             Randonneuring
-          </Link>
-          <Link href="/randonneuring/guide" className="text-white/60 hover:text-white text-sm transition-colors">
-            Οδηγός
           </Link>
         </div>
 
@@ -319,11 +311,6 @@ if (isOrganizer && organizer) {
             className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>
             Randonneuring
-          </Link>
-          <Link href="/randonneuring/guide"
-            className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>
-            Οδηγός
           </Link>
 
           {/* Mobile auth section */}
