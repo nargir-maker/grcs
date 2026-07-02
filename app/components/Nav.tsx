@@ -299,6 +299,9 @@ if (isOrganizer && organizer) {
               </div>
             </div>
           </div>
+          <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
+            Σχετικά
+          </Link>
         </div>
 
         {/* Desktop auth */}
