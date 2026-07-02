@@ -120,6 +120,8 @@ if (isOrganizer && organizer) {
             onClick={() => setMenuOpen(false)}>Αναβάτες</Link>
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>Σχετικά</Link>
+          <Link href="/randonneuring" className="text-white/60 hover:text-white text-sm transition-colors"
+            onClick={() => setMenuOpen(false)}>Randonneuring</Link>
 
           <div className="flex flex-col gap-3 pt-2 border-t border-white/10">
             <Link href="/organizer/dashboard"
@@ -174,6 +176,9 @@ if (isOrganizer && organizer) {
           </Link>
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
             Σχετικά
+          </Link>
+          <Link href="/randonneuring" className="text-white/60 hover:text-white text-sm transition-colors">
+            Randonneuring
           </Link>
         </div>
 
