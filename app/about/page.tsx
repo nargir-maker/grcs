@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import VideoOrImage from '../components/VideoOrImage';
 
 export const metadata: Metadata = {
   title: 'Σχετικά — GRC Platform',
@@ -31,17 +32,11 @@ export default function AboutPage() {
           {/* Outer card — ίδιο style με τα υπόλοιπα sections */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
 
-            {/* Coin image box — δικό του border/rounded container */}
-            <div
-              className="rounded-xl border border-white/10 overflow-hidden mb-6"
-              style={{
-                backgroundImage: 'url(/grc-coin.png)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                backgroundColor: '#0A1628',
-                minHeight: '260px',
-              }}
+            {/* Video που μετά το τέλος γίνεται εικόνα */}
+            <VideoOrImage
+              videoSrc="/grc_clip.mp4"
+              imageSrc="/grc-coin.png"
+              minHeight={260}
             />
 
             {/* Cards κάτω από την εικόνα */}
