@@ -576,6 +576,29 @@ export default function RandonneuringPage() {
           </div>
         </section>
 
+        {/* ── CTA → Guide ── */}
+        <section className="mb-8">
+          <Link href="/randonneuring/guide"
+            className="group flex items-center gap-5 bg-gradient-to-r from-cyan-500/10 to-purple-500/10
+              border border-white/10 hover:border-cyan-500/30 rounded-2xl p-6 transition-all">
+            <div className="text-4xl flex-shrink-0">🚴</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-cyan-400 text-xs font-bold uppercase tracking-widest mb-1">
+                Πρακτικός Οδηγός
+              </div>
+              <div className="text-white font-bold text-lg leading-tight mb-1 group-hover:text-cyan-100 transition-colors">
+                Από το Μηδέν στο Πρώτο σου 200άρι
+              </div>
+              <div className="text-white/40 text-sm">
+                Ποδήλατο, εξοπλισμός, προπόνηση, διατροφή, στρατηγική & η ελληνική κοινότητα
+              </div>
+            </div>
+            <div className="text-white/30 group-hover:text-cyan-400 text-xl transition-colors flex-shrink-0">
+              →
+            </div>
+          </Link>
+        </section>
+
         {/* Footer note */}
         <div className="text-white/20 text-xs text-center pb-4">
           Πηγές: ACP, LRM, Provence Randonneurs, Union des Audax Français
