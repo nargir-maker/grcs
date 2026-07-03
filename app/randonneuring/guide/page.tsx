@@ -1,6 +1,7 @@
 // app/randonneuring/guide/page.tsx
 // Practical beginner's guide to randonneuring — from zero to first 200 km brevet
 
+
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
