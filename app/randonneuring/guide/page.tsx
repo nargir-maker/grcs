@@ -195,10 +195,36 @@ export default function GuidePage() {
               },
             ]} />
 
+            <SubTitle>Bike Fit: το πιο κρίσιμο βήμα</SubTitle>
+            <p className="text-white/70 text-sm leading-relaxed mb-4">
+              Ένα σωστό ποδήλατο με λάθος ρύθμιση είναι χειρότερο από ένα μέτριο ποδήλατο
+              σωστά ρυθμισμένο. Αυτό το μαθαίνεις συνήθως μετά από κάποια χιλιόμετρα, πχ
+              στα 120, με πόνο που δεν υπήρχε εκεί στα 40.
+            </p>
+            <BulletList items={[
+              {
+                label: 'Σέλα πολύ χαμηλά:',
+                body: 'Βάζει πίεση στα γόνατα (μπροστινή επιφάνεια, επιγονατίδα). Επίσης προκαλεί «κουνιστή» οδήγηση που σπαταλάει ενέργεια.',
+              },
+              {
+                label: 'Σέλα πολύ ψηλά:',
+                body: 'Πόνος στο ισχίο ή πίσω μεριά του γονάτου. Σε μεγάλες αποστάσεις μπορεί να οδηγήσει σε τενοντίτιδα.',
+              },
+              {
+                label: 'Τιμόνι πολύ χαμηλά / πολύ μακριά:',
+                body: 'Ο λαιμός και οι ώμοι φορτώνονται. Στις 5–6 ώρες οδήγησης μετατρέπεται σε έντονο πόνο στον αυχένα.',
+              },
+              {
+                label: 'Λάθος θέση ποδιών στο πεντάλ (cleat position):',
+                body: 'Πόνος γονάτου λόγω επιβάρυνσης της λαγονοκνημιαίας ταινίας. Μη αναστρέψιμος χωρίς ρύθμιση του cleat ή/και πρόσθετους πάτους.',
+              },
+            ]} />
             <Tip>
-              <strong className="text-white/90">Bike Fit πριν από οτιδήποτε άλλο.</strong>{' '}
-              Μια αστοχία λίγων χιλιοστών στο ύψος της σέλας είναι αόρατη στα 30 χλμ,
-              αλλά στα 150 χλμ μπορεί να οδηγήσει σε έντονο πόνο ή τραυματισμό.
+              <strong className="text-white/90">Ζήτα bike fit από εξειδικευμένο κατάστημα.</strong>{' '}
+              Κοστίζει από 50–100€ και είναι η καλύτερη επένδυση που μπορείς να κάνεις —
+              πολύ πριν αγοράσεις ακριβά παπούτσια ή σέλα. Αν ψάχνεις να αγοράσεις
+              ποδήλατο, μην αγοράσεις τυχαία χωρίς να το δοκιμάσεις. Ένα λάθος μέγεθος
+              πλαισίου και γεωμετρίας θα σε αναγκάσει σε αγορά άλλου ποδηλάτου αργότερα.
             </Tip>
           </Card>
         </section>
@@ -259,7 +285,55 @@ export default function GuidePage() {
           </Card>
         </section>
 
-        {/* ── 3. Χρονοδιάγραμμα Αποστάσεων ── */}
+        {/* ── 3. Πώς να Ξεκινήσεις ── */}
+        <section className="mb-12">
+          <SectionTitle emoji="🛣️">Πώς να Ξεκινήσεις</SectionTitle>
+          <Card>
+            <p className="text-white/70 text-sm leading-relaxed mb-5">
+              Το randonneuring δεν απαιτεί «ταλέντο». Απαιτεί{' '}
+              <strong className="text-white">αντοχή, διαχείριση ενέργειας και οργάνωση</strong>{' '}
+              — τρία πράγματα που χτίζονται σταδιακά με χιλιόμετρα.
+            </p>
+
+            <SubTitle>Τι θέλει αυτό το είδος ποδηλασίας;</SubTitle>
+            <p className="text-white/70 text-sm leading-relaxed mb-5">
+              Δεν είναι τα πόδια μόνο. Είναι πνεύμονες (αερόβια ικανότητα), διαχείριση
+              ρυθμού (να μην καείς νωρίς), σωστή ενυδάτωση και τροφοδοσία, οργάνωση
+              στάσεων και ψυχολογική αντοχή όταν η κούραση έχει συσσωρευτεί. Ο πιο
+              γρήγορος δεν κερδίζει — κερδίζει αυτός που τελειώνει.
+            </p>
+
+            <SubTitle>Από πού ξεκινάς;</SubTitle>
+            <BulletList items={[
+              {
+                label: '20–30 χλμ:',
+                body: 'Πρώτες βόλτες — συνηθίζεις τη σέλα, τον εξοπλισμό, τον ρυθμό αναπνοής.',
+              },
+              {
+                label: '50 χλμ:',
+                body: 'Αρχίζεις να καταλαβαίνεις τη διαχείριση ενέργειας και ενυδάτωσης.',
+              },
+              {
+                label: '80–100 χλμ:',
+                body: 'Το πρώτο μεγάλο ψυχολογικό εμπόδιο. Αν το βγάλεις άνετα, είσαι στο σωστό δρόμο.',
+              },
+              {
+                label: '130–140 χλμ:',
+                body: 'Η «πρόβα τζενεράλε» για το πρώτο 200άρι. Αν το βγάλεις με καλή αίσθηση, είσαι έτοιμος.',
+              },
+            ]} />
+
+            <SubTitle>Χρειάζεσαι προπονητή;</SubTitle>
+            <p className="text-white/70 text-sm leading-relaxed">
+              Για το πρώτο 200άρι, όχι. Η βάση είναι απλή: συνέπεια στις εβδομαδιαίες
+              βόλτες και ένα μεγάλο ride το Σαββατοκύριακο που αυξάνεις σταδιακά. Ένας
+              προπονητής βοηθάει αν θέλεις να βελτιστοποιήσεις, αλλά δεν είναι
+              προαπαιτούμενο.
+            </p>
+          </Card>
+        </section>
+
+        {/* ── 4. Χρονοδιάγραμμα Αποστάσεων ── */}
         <section className="mb-12">
           <SectionTitle emoji="📈">Χρονοδιάγραμμα Αποστάσεων</SectionTitle>
           <p className="text-white/50 text-sm mb-5 leading-relaxed">
@@ -333,6 +407,27 @@ export default function GuidePage() {
               Προπονήσου σε παρατεταμένες ανηφόρες 6–8% για να μάθεις να κρατάς
               σταθερούς τους παλμούς χωρίς να αδειάζεις.
             </Tip>
+
+            <SubTitle>Η τελευταία εβδομάδα — Tapering</SubTitle>
+            <p className="text-white/70 text-sm leading-relaxed mb-4">
+              Η εβδομάδα πριν το brevet δεν είναι εβδομάδα προπόνησης — είναι εβδομάδα
+              ξεκούρασης. Το λεγόμενο <strong className="text-white">tapering</strong>:
+              μειώνεις δραστικά τα χιλιόμετρα για να φτάσεις φρέσκος στην εκκίνηση.
+            </p>
+            <BulletList items={[
+              {
+                label: 'Τελευταίες 5–7 μέρες:',
+                body: 'Μέγιστο 30–40 χλμ εύκολης βόλτας, χωρίς ανηφόρες και χωρίς ένταση.',
+              },
+              {
+                label: 'Τελευταία μέρα:',
+                body: 'Ιδανικά ξεκούραση ή 15–20 λεπτά χαλαρό spinning για να ξεσκουριάσουν τα πόδια.',
+              },
+              {
+                label: 'Μην παρασυρθείς:',
+                body: 'Το άγχος οδηγεί πολλούς να «βάλουν ακόμα ένα μεγάλο ride» την τελευταία εβδομάδα — αυτό κάνει περισσότερη ζημιά από καλό.',
+              },
+            ]} />
           </Card>
         </section>
 
@@ -423,7 +518,93 @@ export default function GuidePage() {
           </Card>
         </section>
 
-        {/* ── 7. Κοινότητα στην Ελλάδα ── */}
+        {/* ── 7. Πώς Λειτουργεί ένα Brevet ── */}
+        <section className="mb-12">
+          <SectionTitle emoji="🗂️">Πώς Λειτουργεί ένα Brevet</SectionTitle>
+          <Card>
+            <SubTitle>Η Brevet Card</SubTitle>
+            <p className="text-white/70 text-sm leading-relaxed mb-5">
+              Στην εκκίνηση παραλαμβάνεις μια κάρτα — τη <strong className="text-white">Brevet Card</strong>.
+              Είναι το επίσημο αποδεικτικό της συμμετοχής σου. Σε κάθε σημείο ελέγχου (control)
+              σφραγίζεται από κατάστημα ή καφετέρια της διαδρομής ή από εθελοντή της διοργάνωσης.
+              Στο τέλος, ο διοργανωτής επαληθεύει την κάρτα και καταχωρεί το αποτέλεσμα.
+            </p>
+
+            <SubTitle>Photo Controls</SubTitle>
+            <p className="text-white/70 text-sm leading-relaxed mb-5">
+              Μερικά σημεία ελέγχου δεν έχουν σφραγίδα — αντ' αυτού τραβάς μια φωτογραφία σε
+              συγκεκριμένο σημείο (π.χ. πινακίδα, γέφυρα, εκκλησία) ως απόδειξη ότι πέρασες
+              από εκεί. Η ώρα της φωτογραφίας στο κινητό επαληθεύει ότι ήσουν εντός χρονικού ορίου.
+            </p>
+
+            <SubTitle>Αν βγεις εκτός χρόνου</SubTitle>
+            <p className="text-white/70 text-sm leading-relaxed mb-5">
+              Οι νέοι κανόνες της ACP επιτρέπουν να περάσεις ένα control και μετά την ώρα
+              κλεισίματός του, τραβώντας απλώς μια φωτογραφία ως απόδειξη. Αν όμως τερματίσεις
+              εκτός του συνολικού χρονικού ορίου, το brevet δεν καταχωρείται επίσημα. Μπορείς
+              να συνεχίσεις για προσωπική ικανοποίηση.
+            </p>
+
+            <SubTitle>Αν ξεμείνεις στη μέση</SubTitle>
+            <p className="text-white/70 text-sm leading-relaxed">
+              Το randonneuring βασίζεται στην αυτονομία — δεν υπάρχει επίσημη υποστήριξη
+              που να σε «μαζέψει» αν κολλήσεις. Σε σπάνιες περιπτώσεις μπορεί να υπάρχει
+              όχημα της διοργάνωσης, αλλά δεν είναι κάτι που μπορείς να υπολογίζεις.
+              Πάντα να έχεις <strong className="text-white">πλάνο Β</strong>: είτε
+              επικοινωνείς με κάποιον που μπορεί να έρθει να σε παραλάβει, είτε βρίσκεις
+              ΚΤΕΛ ή άλλη μεταφορά από το σημείο που βρίσκεσαι.
+            </p>
+          </Card>
+        </section>
+
+        {/* ── 8. Εγγραφή & Κόστη ── */}
+        <section className="mb-12">
+          <SectionTitle emoji="📋">Εγγραφή & Κόστη</SectionTitle>
+          <Card>
+            <SubTitle>Πρέπει να γραφτείς σε σύλλογο;</SubTitle>
+            <p className="text-white/70 text-sm leading-relaxed mb-4">
+              Για να συμμετέχεις σε επίσημο brevet και να αναγνωριστεί το αποτέλεσμά σου
+              είτε διεθνώς είτε σε εθνικό επίπεδο, χρειάζεσαι{' '}
+              <strong className="text-white">αριθμό μητρώου</strong> από έναν από τους δύο
+              επίσημους φορείς στην Ελλάδα:
+            </p>
+            <BulletList items={[
+              {
+                label: 'ΛΕ.Π.Ο.Τ.Ε.:',
+                body: <a href="https://brevets.gr/brevets/%CE%B8%CE%AD%CE%BB%CE%B5%CF%84%CE%B5-%CE%BD%CE%B1-%CF%80%CE%AC%CF%81%CE%B5%CF%84%CE%B5-%CE%BC%CE%AD%CF%81%CE%BF%CF%82-%CF%83%E2%80%99-%CE%AD%CE%BD%CE%B1-brevet.html" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 transition-colors">Οδηγίες εγγραφής στο brevets.gr ↗</a>,
+              },
+              {
+                label: 'H.A.R.:',
+                body: <a href="https://www.hellenic-autonomous-randonneur.com/eggrafes-podilaton-mitroo/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 transition-colors">Εγγραφή αναβατών στο hellenic-autonomous-randonneur.com ↗</a>,
+              },
+            ]} />
+            <p className="text-white/55 text-sm leading-relaxed mt-4">
+              Μερικά clubs (π.χ. Ble Cycling Club) τηρούν επίσης δικό τους μητρώο μελών
+              για τις δικές τους διοργανώσεις (π.χ. permanents) ή τις προπονήσεις τους.
+            </p>
+
+            <SubTitle>Κόστη</SubTitle>
+            <p className="text-white/70 text-sm leading-relaxed">
+              Δεν υπάρχει σταθερή τιμή. Το κόστος συμμετοχής σε brevet ποικίλει ανάλογα
+              με την απόσταση και τον διοργανωτή.
+            </p>
+
+            <SubTitle>Ασφάλιση</SubTitle>
+            <p className="text-white/70 text-sm leading-relaxed">
+              Για brevets της ΛΕ.Π.Ο.Τ.Ε. η ασφάλιση είναι{' '}
+              <strong className="text-white">υποχρεωτική</strong> — χωρίς αυτή δεν μπορείς
+              να συμμετέχεις. Για brevets της H.A.R. δεν είναι απαραίτητη.
+            </p>
+
+            <SubTitle>Μεταφορά στην εκκίνηση</SubTitle>
+            <p className="text-white/70 text-sm leading-relaxed">
+              Η μεταφορά είναι αποκλειστικά δική σου ευθύνη — δεν προσφέρεται από τη
+              διοργάνωση.
+            </p>
+          </Card>
+        </section>
+
+        {/* ── 9. Κοινότητα στην Ελλάδα ── */}
         <section className="mb-12">
           <SectionTitle emoji="🇬🇷">Η Κοινότητα στην Ελλάδα</SectionTitle>
           <p className="text-white/50 text-sm mb-5 leading-relaxed">
@@ -472,6 +653,42 @@ export default function GuidePage() {
             αρχάριος, θέλω να δοκιμάσω» — πάντα θα βρεθεί παρέα έμπειρων
             randonneurs να σε βάλει στο γκρουπ της.
           </Tip>
+
+          <div className="mt-5 bg-white/3 border border-white/8 rounded-2xl p-5">
+            <div className="text-white font-semibold text-sm mb-3">
+              Οργανωμένες βόλτες & στέκια
+            </div>
+            <ul className="space-y-3">
+              {[
+                {
+                  label: 'Οι Άγιοι',
+                  note: 'κάθε Δευτέρα',
+                  href: 'https://www.facebook.com/groups/484265904937327',
+                },
+                {
+                  label: 'Ble Cycling Club',
+                  note: 'τακτικές ομαδικές βόλτες',
+                  href: 'https://blecyclingclub.gr/workouts/team-meetings/',
+                },
+                {
+                  label: 'Ποδηλάτες της Πλατείας',
+                  note: 'κάθε Πέμπτη',
+                  href: 'https://www.facebook.com/profile.php?id=61574825438429',
+                },
+              ].map((g) => (
+                <li key={g.label} className="flex items-start gap-3 text-sm">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500/60 flex-shrink-0" />
+                  <span>
+                    <a href={g.href} target="_blank" rel="noopener noreferrer"
+                      className="text-white font-medium hover:text-cyan-400 transition-colors">
+                      {g.label}
+                    </a>
+                    <span className="text-white/40"> — {g.note}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
 
         {/* ── 8. Checklist ── */}
