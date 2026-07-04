@@ -102,6 +102,7 @@ export default function PodiumCarousel({ orgs }: Props) {
               <p className="font-bold text-base leading-tight truncate" style={{ color }}>
                 {org.name}
               </p>
+              <p className="text-xs opacity-30">{org.id}</p>
             </div>
           </div>
 
