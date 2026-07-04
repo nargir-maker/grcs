@@ -164,22 +164,28 @@ export default function BubbleChart({ items }: Props) {
                       fill="white" fontSize="8" fontWeight="800" style={{ pointerEvents: 'none' }}>#{c.rank}</text>
                   </>
                 )}
-
-                {/* Tooltip on select */}
-                {isActive && (
-                  <g transform={`translate(0,${-c.r - 52})`}>
-                    <rect x={-75} y={-18} width={150} height={44} rx={8}
-                      fill="#0d1f3c" stroke={style.stroke} strokeWidth={1.5} />
-                    <text textAnchor="middle" y={-4} fill="white" fontSize="11" fontWeight="700">
-                      {c.label.length > 22 ? c.label.slice(0, 21) + '…' : c.label}
-                    </text>
-                    <text textAnchor="middle" y={14} fill="rgba(255,255,255,0.5)" fontSize="10">{c.sublabel}</text>
-                  </g>
-                )}
               </g>
             </g>
           );
         })}
+
+        {/* Tooltip on select — rendered last so it always paints on top of every
+            bubble, instead of being covered by later (higher z-order) bubbles */}
+        {(() => {
+          const c = circles.find(c => c.id === selected);
+          if (!c) return null;
+          const style = getStyle(c.rank);
+          return (
+            <g transform={`translate(${c.x},${c.y - c.r - 52})`} style={{ pointerEvents: 'none' }}>
+              <rect x={-75} y={-18} width={150} height={44} rx={8}
+                fill="#0d1f3c" stroke={style.stroke} strokeWidth={1.5} />
+              <text textAnchor="middle" y={-4} fill="white" fontSize="11" fontWeight="700">
+                {c.label.length > 22 ? c.label.slice(0, 21) + '…' : c.label}
+              </text>
+              <text textAnchor="middle" y={14} fill="rgba(255,255,255,0.5)" fontSize="10">{c.sublabel}</text>
+            </g>
+          );
+        })()}
       </svg>
 
       <style>{`
