@@ -113,9 +113,13 @@ export default function BubbleChart({ items }: Props) {
           const filterId = c.rank === 1 ? 'bc-glow-a' : c.rank <= 5 ? 'bc-glow-b' : undefined;
 
           return (
+            // Outer g: position only (SVG attribute — not touched by CSS)
             <g key={c.id} transform={`translate(${c.x},${c.y})`}
               onClick={() => setSelected(isActive ? null : c.id)}
-              style={{ cursor: 'pointer', opacity: 0, animation: `bc-in 0.45s ease forwards`, animationDelay: `${idx * 20}ms` }}>
+              style={{ cursor: 'pointer' }}>
+            {/* Inner g: animation only (scale from bubble center) */}
+            <g style={{ opacity: 0, animation: `bc-in 0.45s ease forwards`, animationDelay: `${idx * 20}ms`,
+              transformBox: 'fill-box', transformOrigin: 'center' }}>
 
               {c.rank <= 10 && (
                 <circle r={c.r + 7} fill="none" stroke={style.glow} strokeWidth={isActive ? 2.5 : 1.5}
@@ -156,6 +160,7 @@ export default function BubbleChart({ items }: Props) {
                   <text textAnchor="middle" y={14} fill="rgba(255,255,255,0.5)" fontSize="10">{c.sublabel}</text>
                 </g>
               )}
+            </g>{/* end inner animation g */}
             </g>
           );
         })}
