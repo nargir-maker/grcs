@@ -77,8 +77,16 @@ if (isOrganizer && organizer) {
                   Πάνθεον
                 </Link>
                 <Link href="/community"
-                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
                   Κοινότητα
+                </Link>
+                <Link href="/organizer-universe"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Organizer Universe
+                </Link>
+                <Link href="/brevet-universe"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  Brevet Universe
                 </Link>
               </div>
             </div>
@@ -98,8 +106,12 @@ if (isOrganizer && organizer) {
                   Ιστορία του Randonneuring
                 </Link>
                 <Link href="/randonneuring/guide"
-                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
                   Πρακτικός Οδηγός
+                </Link>
+                <Link href="/randonneuring/acp-guide"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  Οδηγός ACP
                 </Link>
               </div>
             </div>
@@ -180,6 +192,10 @@ if (isOrganizer && organizer) {
                 onClick={() => setMenuOpen(false)}>Πάνθεον</Link>
               <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>Κοινότητα</Link>
+              <Link href="/organizer-universe" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Organizer Universe</Link>
+              <Link href="/brevet-universe" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Brevet Universe</Link>
             </div>
           </div>
           <div className="flex flex-col gap-2">
@@ -189,6 +205,8 @@ if (isOrganizer && organizer) {
                 onClick={() => setMenuOpen(false)}>Ιστορία</Link>
               <Link href="/randonneuring/guide" className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>Πρακτικός Οδηγός</Link>
+              <Link href="/randonneuring/acp-guide" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Οδηγός ACP</Link>
             </div>
           </div>
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors"
@@ -272,8 +290,16 @@ if (isOrganizer && organizer) {
                   Πάνθεον
                 </Link>
                 <Link href="/community"
-                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
                   Κοινότητα
+                </Link>
+                <Link href="/organizer-universe"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Organizer Universe
+                </Link>
+                <Link href="/brevet-universe"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  Brevet Universe
                 </Link>
               </div>
             </div>
@@ -293,8 +319,12 @@ if (isOrganizer && organizer) {
                   Ιστορία του Randonneuring
                 </Link>
                 <Link href="/randonneuring/guide"
-                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
                   Πρακτικός Οδηγός
+                </Link>
+                <Link href="/randonneuring/acp-guide"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                  Οδηγός ACP
                 </Link>
               </div>
             </div>
@@ -430,6 +460,11 @@ if (isOrganizer && organizer) {
                 className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>
                 Πρακτικός Οδηγός
+              </Link>
+              <Link href="/randonneuring/acp-guide"
+                className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>
+                Οδηγός ACP
               </Link>
             </div>
           </div>

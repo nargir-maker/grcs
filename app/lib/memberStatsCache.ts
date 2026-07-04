@@ -75,6 +75,20 @@ async function computeAllStats() {
   const memberEventCounts: Record<string, number>      = {};
   const memberNames:       Record<string, string>      = {};
 
+  // ── Universe accumulators ─────────────────────────────────────────────────
+  const ogParticipants:   Record<string, number>      = {};
+  const ogRiders:         Record<string, Set<string>> = {};
+  const ogBrevetKeys:     Record<string, Set<string>> = {};
+  const ogFirstYear:      Record<string, string>      = {};
+  const ogLastYear:       Record<string, string>      = {};
+  const routeParticipants:  Record<string, number>      = {};
+  const routeEditions:      Record<string, Set<string>> = {};
+  const routeDistance:      Record<string, number>      = {};
+  const routeDisplayName:   Record<string, string>      = {};
+  const routeOrganizer:     Record<string, string>      = {};
+  const routeFirstYear:     Record<string, string>      = {};
+  const routeLastYear:      Record<string, string>      = {};
+
   // ── Single pass over all member documents ─────────────────────────────────
   for (const doc of snap.docs) {
     const raw       = doc.data();
@@ -136,6 +150,28 @@ async function computeAllStats() {
         } else {
           cur.women += gender === 'F' ? 1 : 0;
           cur.total += 1;
+        }
+
+        // ── Universe accumulation ────────────────────────────────────────────
+        const evOg   = ev.og?.toString() ?? '';
+        const evName = (ev.n  ?? '').toString().trim();
+        const evDist = parseInt(ev.d?.toString() ?? '0') || 0;
+        if (evOg) {
+          ogParticipants[evOg] = (ogParticipants[evOg] ?? 0) + 1;
+          (ogRiders[evOg]     ??= new Set<string>()).add(uid);
+          (ogBrevetKeys[evOg] ??= new Set<string>()).add(`${evName}_${year}`);
+          if (!ogFirstYear[evOg] || year < ogFirstYear[evOg]) ogFirstYear[evOg] = year;
+          if (!ogLastYear[evOg]  || year > ogLastYear[evOg])  ogLastYear[evOg]  = year;
+        }
+        if (evName && evDist > 0) {
+          const rk = `${evName.toLowerCase().replace(/\s+/g, '_')}_${evDist}`;
+          routeParticipants[rk]  = (routeParticipants[rk]  ?? 0) + 1;
+          (routeEditions[rk]    ??= new Set<string>()).add(`${year}_${ev.dt ?? ''}`);
+          routeDistance[rk]      = evDist;
+          routeDisplayName[rk]   = evName;
+          if (evOg) routeOrganizer[rk] = evOg;
+          if (!routeFirstYear[rk] || year < routeFirstYear[rk]) routeFirstYear[rk] = year;
+          if (!routeLastYear[rk]  || year > routeLastYear[rk])  routeLastYear[rk]  = year;
         }
 
         if (gender === 'F' && year < firstWomanYear) {
@@ -272,6 +308,41 @@ async function computeAllStats() {
       .sort((a, b) => b.count - a.count);
   }
 
+  // ── Post-processing: Universe ─────────────────────────────────────────────
+  const clubNames: Record<string, string> = {};
+  try {
+    const clubsSnap = await adminDb!.collection('clubs').get();
+    for (const doc of clubsSnap.docs) {
+      const d = doc.data();
+      clubNames[doc.id] = (d.clubNameGr || d.name || doc.id) as string;
+    }
+  } catch { /* optional */ }
+
+  const organizerRanking = Object.entries(ogParticipants)
+    .map(([id, participants]) => ({
+      id,
+      name:         clubNames[id] || id,
+      participants,
+      uniqueRiders: ogRiders[id]?.size    ?? 0,
+      brevets:      ogBrevetKeys[id]?.size ?? 0,
+      firstYear:    ogFirstYear[id]        ?? '',
+      lastYear:     ogLastYear[id]         ?? '',
+    }))
+    .sort((a, b) => b.participants - a.participants);
+
+  const routeRanking = Object.entries(routeParticipants)
+    .map(([key, participants]) => ({
+      key,
+      name:      routeDisplayName[key] ?? key,
+      distance:  routeDistance[key]    ?? 0,
+      organizer: clubNames[routeOrganizer[key] ?? ''] || routeOrganizer[key] || '',
+      participants,
+      editions:  routeEditions[key]?.size ?? 0,
+      firstYear: routeFirstYear[key]      ?? '',
+      lastYear:  routeLastYear[key]       ?? '',
+    }))
+    .sort((a, b) => b.participants - a.participants);
+
   return {
     community: {
       totalWomen, totalMen,
@@ -297,6 +368,16 @@ async function computeAllStats() {
       mostSrName:  srRanking[0]?.name    ?? '',
       mostSrCount: srRanking[0]?.srCount ?? 0,
       kmRanking, brevetsRanking, srRanking, milestoneLists,
+    },
+    organizerUniverse: {
+      totalOrganizers:    organizerRanking.length,
+      totalParticipations: organizerRanking.reduce((s, o) => s + o.participants, 0),
+      ranking: organizerRanking,
+    },
+    brevetUniverse: {
+      totalRoutes:         routeRanking.length,
+      totalParticipations: routeRanking.reduce((s, r) => s + r.participants, 0),
+      ranking: routeRanking,
     },
   };
 }
