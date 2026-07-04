@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { BubbleItem } from '../components/BubbleChart';
+import BrevetSpotlightCarousel from '../components/BrevetSpotlightCarousel';
 
 const BubbleChart = dynamic(() => import('../components/BubbleChart'), { ssr: false });
 
@@ -123,6 +124,11 @@ export default function BrevetUniversePage() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Spotlight Carousel — most popular brevet overall + per distance */}
+        {data && data.ranking.length > 0 && (
+          <BrevetSpotlightCarousel routes={data.ranking} />
         )}
 
         {/* Distance filter chips */}
