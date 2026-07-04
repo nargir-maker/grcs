@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { resolveOrganizerLogoId } from '../lib/organizerLogo';
 
 export interface BubbleItem {
   id: string;
@@ -92,16 +93,22 @@ export default function BubbleChart({ items }: Props) {
           <filter id="bc-glow-b" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
-          {/* SVG pattern per bubble — fills a circle with the logo image, no clipPath needed */}
-          {circles.map(c => (
-            <pattern key={c.id} id={`logo-${c.id}`}
-              x="0" y="0" width="1" height="1"
-              patternUnits="objectBoundingBox"
-              patternContentUnits="objectBoundingBox">
-              <image href={`/logos/${c.id}.png`} x="0" y="0" width="1" height="1"
-                preserveAspectRatio="xMidYMid meet" />
-            </pattern>
-          ))}
+          {/* SVG pattern per bubble — fills a circle with the logo image, no clipPath needed.
+              Pattern id is index-based (not the raw org id) since ids like
+              "BLE CYCLING CLUB" contain spaces that break url(#...) references. */}
+          {circles.map((c, idx) => {
+            const logoId = resolveOrganizerLogoId(c.id);
+            if (!logoId) return null;
+            return (
+              <pattern key={c.id} id={`logo-${idx}`}
+                x="0" y="0" width="1" height="1"
+                patternUnits="objectBoundingBox"
+                patternContentUnits="objectBoundingBox">
+                <image href={`/logos/${logoId}.png`} x="0" y="0" width="1" height="1"
+                  preserveAspectRatio="xMidYMid meet" />
+              </pattern>
+            );
+          })}
         </defs>
 
         {circles.map((c, idx) => {
@@ -110,6 +117,7 @@ export default function BubbleChart({ items }: Props) {
           const words    = c.label.split(/\s+/);
           const fs       = Math.max(8, Math.min(13, c.r / 4));
           const filterId = c.rank === 1 ? 'bc-glow-a' : c.rank <= 5 ? 'bc-glow-b' : undefined;
+          const hasLogo  = resolveOrganizerLogoId(c.id) !== null;
 
           return (
             <g key={c.id} transform={`translate(${c.x},${c.y})`}
@@ -130,12 +138,12 @@ export default function BubbleChart({ items }: Props) {
                   strokeWidth={isActive ? 2 : 1} style={{ transition: 'r 0.2s, stroke-width 0.2s' }} />
 
                 {/* Logo circle filled via pattern — covers name text when image loads */}
-                {c.r >= 26 && (
-                  <circle r={c.r * 0.64} fill={`url(#logo-${c.id})`} style={{ pointerEvents: 'none' }} />
+                {c.r >= 26 && hasLogo && (
+                  <circle r={c.r * 0.64} fill={`url(#logo-${idx})`} style={{ pointerEvents: 'none' }} />
                 )}
 
-                {/* Name text — always rendered, visible only if pattern is transparent (no logo) */}
-                {c.r >= 26 && (
+                {/* Name text — rendered whenever there's no known logo for this organizer */}
+                {c.r >= 26 && !hasLogo && (
                   <text textAnchor="middle" fill="white" fontSize={fs} fontWeight="700"
                     style={{ pointerEvents: 'none', mixBlendMode: 'difference' }}>
                     {words.slice(0, 2).map((w, wi, arr) => (

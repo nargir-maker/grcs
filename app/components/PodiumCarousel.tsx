@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { resolveOrganizerLogoId } from '../lib/organizerLogo';
 
 export interface PodiumEntry {
   id: string;
@@ -51,9 +52,10 @@ export default function PodiumCarousel({ orgs }: Props) {
 
   if (count === 0) return null;
 
-  const org   = orgs[idx];
-  const title = TITLES[idx];
-  const color = title.color;
+  const org    = orgs[idx];
+  const title  = TITLES[idx];
+  const color  = title.color;
+  const logoId = resolveOrganizerLogoId(org.id);
 
   const slideStyle: React.CSSProperties = {
     transition: 'transform 0.5s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease',
@@ -93,16 +95,19 @@ export default function PodiumCarousel({ orgs }: Props) {
             <div className="flex-shrink-0 w-16 h-16 rounded-full flex items-center justify-center p-1.5"
               style={{ border: `2px solid ${color}`, boxShadow: `0 0 16px ${color}80`,
                        background: 'rgba(255,255,255,0.06)' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/logos/${org.id}.png`} alt={org.name}
-                className="w-full h-full object-contain"
-                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+              {logoId ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`/logos/${logoId}.png`} alt={org.name}
+                  className="w-full h-full object-contain"
+                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+              ) : (
+                <span className="text-2xl">🚴</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-base leading-tight truncate" style={{ color }}>
                 {org.name}
               </p>
-              <p className="text-xs opacity-30">{org.id}</p>
             </div>
           </div>
 
