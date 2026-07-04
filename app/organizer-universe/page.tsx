@@ -109,7 +109,7 @@ export default function OrganizerUniversePage() {
               </div>
             </div>
             <div className="p-4">
-              <BubbleChart items={bubbleItems} height={500} />
+              <BubbleChart items={bubbleItems} />
             </div>
           </div>
         )}
