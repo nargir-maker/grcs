@@ -33,7 +33,7 @@ interface Props {
 
 export default function BubbleChart({ items, height = 480 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth]           = useState(640);
+  const [width, setWidth]           = useState(0);
   const [positions, setPositions]   = useState<(SimNode & { x: number; y: number })[]>([]);
   const [selected, setSelected]     = useState<string | null>(null);
   const [mounted, setMounted]       = useState(false);
@@ -42,7 +42,13 @@ export default function BubbleChart({ items, height = 480 }: Props) {
     setMounted(true);
     const el = containerRef.current;
     if (!el) return;
-    const obs = new ResizeObserver(e => setWidth(e[0].contentRect.width || 640));
+    // Read actual width immediately on mount
+    const initial = el.getBoundingClientRect().width;
+    if (initial > 0) setWidth(initial);
+    const obs = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect.width;
+      if (w > 0) setWidth(w);
+    });
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
@@ -77,7 +83,7 @@ export default function BubbleChart({ items, height = 480 }: Props) {
     );
   }, [items, width, height]);
 
-  if (!mounted) return <div style={{ height }} className="w-full" />;
+  if (!mounted || width === 0) return <div style={{ height }} className="w-full" ref={containerRef} />;
 
   const maxVal = items.length ? Math.max(...items.map(i => i.value), 1) : 1;
   const rScale = d3.scaleSqrt().domain([0, maxVal]).range([MIN_R, MAX_R]);
