@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as d3 from 'd3';
 
 export interface BubbleItem {
@@ -13,6 +13,8 @@ export interface BubbleItem {
 
 interface SimNode extends d3.SimulationNodeDatum, BubbleItem {}
 
+const VW = 800;
+const VH = 480;
 const MIN_R = 18;
 const MAX_R = 72;
 
@@ -31,65 +33,51 @@ interface Props {
   height?: number;
 }
 
-export default function BubbleChart({ items, height = 480 }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth]           = useState(0);
-  const [positions, setPositions]   = useState<(SimNode & { x: number; y: number })[]>([]);
-  const [selected, setSelected]     = useState<string | null>(null);
-  const [mounted, setMounted]       = useState(false);
+export default function BubbleChart({ items }: Props) {
+  const [positions, setPositions] = useState<(SimNode & { x: number; y: number })[]>([]);
+  const [selected, setSelected]   = useState<string | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-    const el = containerRef.current;
-    if (!el) return;
-    // Read actual width immediately on mount
-    const initial = el.getBoundingClientRect().width;
-    if (initial > 0) setWidth(initial);
-    const obs = new ResizeObserver(entries => {
-      const w = entries[0]?.contentRect.width;
-      if (w > 0) setWidth(w);
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!items.length || !width) return;
+    if (!items.length) return;
 
     const maxVal = Math.max(...items.map(i => i.value), 1);
     const rScale = d3.scaleSqrt().domain([0, maxVal]).range([MIN_R, MAX_R]);
 
     const nodes: SimNode[] = items.map(item => ({
       ...item,
-      x: width / 2 + (Math.random() - 0.5) * width * 0.4,
-      y: height / 2 + (Math.random() - 0.5) * height * 0.4,
+      x: VW / 2 + (Math.random() - 0.5) * VW * 0.4,
+      y: VH / 2 + (Math.random() - 0.5) * VH * 0.4,
     }));
 
-    const sim = d3
-      .forceSimulation<SimNode>(nodes)
-      .force('center', d3.forceCenter(width / 2, height / 2).strength(0.08))
-      .force('charge', d3.forceManyBody<SimNode>().strength(-15))
+    d3.forceSimulation<SimNode>(nodes)
+      .force('center',  d3.forceCenter(VW / 2, VH / 2).strength(0.08))
+      .force('charge',  d3.forceManyBody<SimNode>().strength(-15))
       .force('collide', d3.forceCollide<SimNode>().radius(n => rScale(n.value) + 3).strength(0.95))
-      .stop();
-
-    sim.tick(350);
+      .stop()
+      .tick(350);
 
     setPositions(
       nodes.map(n => ({
         ...n,
-        x: Math.max(MAX_R + 4, Math.min(width  - MAX_R - 4, n.x ?? width / 2)),
-        y: Math.max(MAX_R + 4, Math.min(height - MAX_R - 4, n.y ?? height / 2)),
+        x: Math.max(MAX_R + 4, Math.min(VW - MAX_R - 4, n.x ?? VW / 2)),
+        y: Math.max(MAX_R + 4, Math.min(VH - MAX_R - 4, n.y ?? VH / 2)),
       })) as (SimNode & { x: number; y: number })[]
     );
-  }, [items, width, height]);
+  }, [items]);
 
   const maxVal = items.length ? Math.max(...items.map(i => i.value), 1) : 1;
   const rScale = d3.scaleSqrt().domain([0, maxVal]).range([MIN_R, MAX_R]);
 
+  if (!positions.length) {
+    return <div style={{ paddingBottom: `${(VH / VW) * 100}%` }} className="w-full" />;
+  }
+
   return (
-    <div ref={containerRef} className="w-full select-none" style={{ minHeight: height }}>
-      {(!mounted || width === 0 || positions.length === 0) ? null : (<>
-      <svg width={width} height={height}>
+    <div className="w-full select-none">
+      <svg
+        viewBox={`0 0 ${VW} ${VH}`}
+        style={{ width: '100%', height: 'auto', display: 'block' }}
+      >
         <defs>
           <filter id="glow-gold" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="6" result="blur" />
@@ -111,7 +99,7 @@ export default function BubbleChart({ items, height = 480 }: Props) {
           const isActive = selected === node.id;
           const glowId  = node.rank === 1 ? 'glow-gold' : node.rank <= 5 ? 'glow-cyan' : 'glow-std';
           const words   = node.label.split(/\s+/);
-          const fontSize = Math.max(8, Math.min(12, r / 4.5));
+          const fontSize = Math.max(8, Math.min(13, r / 4));
 
           return (
             <g
@@ -125,36 +113,19 @@ export default function BubbleChart({ items, height = 480 }: Props) {
               }}
               onClick={() => setSelected(isActive ? null : node.id)}
             >
-              {/* Outer glow ring for top 10 */}
               {node.rank <= 10 && (
-                <circle
-                  r={r + 6}
-                  fill="none"
-                  stroke={style.shadow}
-                  strokeWidth={isActive ? 3 : 1.5}
-                  filter={`url(#${glowId})`}
-                  style={{ transition: 'all 0.25s' }}
-                />
+                <circle r={r + 6} fill="none" stroke={style.shadow}
+                  strokeWidth={isActive ? 3 : 1.5} filter={`url(#${glowId})`}
+                  style={{ transition: 'all 0.25s' }} />
               )}
 
-              {/* Main bubble */}
-              <circle
-                r={isActive ? r + 5 : r}
-                fill={style.fill}
-                stroke={style.stroke}
-                strokeWidth={isActive ? 2 : 1}
-                style={{ transition: 'all 0.25s ease' }}
-              />
+              <circle r={isActive ? r + 5 : r} fill={style.fill}
+                stroke={style.stroke} strokeWidth={isActive ? 2 : 1}
+                style={{ transition: 'all 0.25s ease' }} />
 
-              {/* Label text */}
               {r >= 26 && (
-                <text
-                  textAnchor="middle"
-                  fill="white"
-                  fontSize={fontSize}
-                  fontWeight="700"
-                  style={{ pointerEvents: 'none' }}
-                >
+                <text textAnchor="middle" fill="white" fontSize={fontSize}
+                  fontWeight="700" style={{ pointerEvents: 'none' }}>
                   {words.length === 1 ? (
                     <tspan x="0" dominantBaseline="central">
                       {words[0].length > 12 ? words[0].slice(0, 11) + '…' : words[0]}
@@ -173,7 +144,6 @@ export default function BubbleChart({ items, height = 480 }: Props) {
                 </text>
               )}
 
-              {/* Rank badge (top 5) */}
               {node.rank <= 5 && r >= 22 && (
                 <>
                   <circle cx={r - 9} cy={-r + 9} r={9} fill="#0A1628" stroke={style.stroke} strokeWidth={1.5} />
@@ -184,7 +154,6 @@ export default function BubbleChart({ items, height = 480 }: Props) {
                 </>
               )}
 
-              {/* Tooltip on select */}
               {isActive && (
                 <g transform={`translate(0,${-r - 48})`}>
                   <rect x={-72} y={-16} width={144} height={40} rx={8}
@@ -208,7 +177,6 @@ export default function BubbleChart({ items, height = 480 }: Props) {
           to   { opacity: 1; transform: scale(1); }
         }
       `}</style>
-      </>)}
     </div>
   );
 }
