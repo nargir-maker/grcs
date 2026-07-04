@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import * as d3 from 'd3';
 
 export interface BubbleItem {
   id: string;
@@ -11,159 +10,150 @@ export interface BubbleItem {
   rank: number;
 }
 
-interface SimNode extends d3.SimulationNodeDatum, BubbleItem {}
-
 const VW = 800;
 const VH = 480;
-const MIN_R = 18;
-const MAX_R = 72;
+const MIN_R = 20;
+const MAX_R = 80;
+
+function sqrtScale(v: number, maxVal: number) {
+  return MIN_R + (MAX_R - MIN_R) * Math.sqrt(v / Math.max(maxVal, 1));
+}
+
+// Deterministic pseudo-random
+function seeded(n: number) {
+  const x = Math.sin(n * 9301 + 49297) * 233280;
+  return x - Math.floor(x);
+}
+
+interface Circle {
+  id: string;
+  r: number;
+  x: number;
+  y: number;
+}
+
+function packCircles(items: BubbleItem[], maxVal: number): Circle[] {
+  const circles: Circle[] = items.map((item, i) => ({
+    id:  item.id,
+    r:   sqrtScale(item.value, maxVal),
+    x:   VW / 2 + (seeded(i * 3)     - 0.5) * VW * 0.3,
+    y:   VH / 2 + (seeded(i * 3 + 1) - 0.5) * VH * 0.3,
+  }));
+
+  for (let iter = 0; iter < 250; iter++) {
+    // Pull toward center
+    for (const c of circles) {
+      c.x += (VW / 2 - c.x) * 0.01;
+      c.y += (VH / 2 - c.y) * 0.01;
+    }
+    // Resolve overlaps
+    for (let i = 0; i < circles.length; i++) {
+      for (let j = i + 1; j < circles.length; j++) {
+        const a = circles[i], b = circles[j];
+        const dx = b.x - a.x || 0.001;
+        const dy = b.y - a.y || 0.001;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const minD = a.r + b.r + 4;
+        if (dist < minD) {
+          const push = (minD - dist) / dist / 2;
+          a.x -= dx * push;  a.y -= dy * push;
+          b.x += dx * push;  b.y += dy * push;
+        }
+      }
+      // Keep in bounds
+      circles[i].x = Math.max(circles[i].r + 4, Math.min(VW - circles[i].r - 4, circles[i].x));
+      circles[i].y = Math.max(circles[i].r + 4, Math.min(VH - circles[i].r - 4, circles[i].y));
+    }
+  }
+  return circles;
+}
 
 function getStyle(rank: number) {
-  if (rank === 1) return { fill: 'rgba(234,179,8,0.85)',   stroke: 'rgba(234,179,8,1)',    shadow: 'rgba(234,179,8,0.5)' };
-  if (rank === 2) return { fill: 'rgba(148,163,184,0.8)',  stroke: 'rgba(148,163,184,1)',  shadow: 'rgba(148,163,184,0.4)' };
-  if (rank === 3) return { fill: 'rgba(194,100,20,0.85)',  stroke: 'rgba(194,100,20,1)',   shadow: 'rgba(194,100,20,0.5)' };
-  if (rank <= 5)  return { fill: 'rgba(6,182,212,0.75)',   stroke: 'rgba(6,182,212,1)',    shadow: 'rgba(6,182,212,0.4)' };
-  if (rank <= 10) return { fill: 'rgba(139,92,246,0.65)',  stroke: 'rgba(139,92,246,0.9)', shadow: 'rgba(139,92,246,0.35)' };
-  if (rank <= 20) return { fill: 'rgba(99,102,241,0.5)',   stroke: 'rgba(99,102,241,0.7)', shadow: 'rgba(99,102,241,0.25)' };
-  return { fill: 'rgba(255,255,255,0.08)', stroke: 'rgba(255,255,255,0.2)', shadow: 'rgba(255,255,255,0.05)' };
+  if (rank === 1) return { fill: 'rgba(234,179,8,0.85)',  stroke: '#eab308', glow: 'rgba(234,179,8,0.5)' };
+  if (rank === 2) return { fill: 'rgba(148,163,184,0.8)', stroke: '#94a3b8', glow: 'rgba(148,163,184,0.4)' };
+  if (rank === 3) return { fill: 'rgba(194,100,20,0.85)', stroke: '#c26414', glow: 'rgba(194,100,20,0.5)' };
+  if (rank <= 5)  return { fill: 'rgba(6,182,212,0.75)',  stroke: '#06b6d4', glow: 'rgba(6,182,212,0.4)' };
+  if (rank <= 10) return { fill: 'rgba(139,92,246,0.65)', stroke: '#8b5cf6', glow: 'rgba(139,92,246,0.35)' };
+  if (rank <= 20) return { fill: 'rgba(99,102,241,0.5)',  stroke: '#6366f1', glow: 'rgba(99,102,241,0.25)' };
+  return { fill: 'rgba(255,255,255,0.08)', stroke: 'rgba(255,255,255,0.2)', glow: 'transparent' };
 }
 
-interface Props {
-  items: BubbleItem[];
-  height?: number;
-}
+interface Props { items: BubbleItem[] }
 
 export default function BubbleChart({ items }: Props) {
-  const [positions, setPositions] = useState<(SimNode & { x: number; y: number })[]>([]);
-  const [selected, setSelected]   = useState<string | null>(null);
+  const [circles, setCircles] = useState<(Circle & BubbleItem)[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
     if (!items.length) return;
-
     const maxVal = Math.max(...items.map(i => i.value), 1);
-    const rScale = d3.scaleSqrt().domain([0, maxVal]).range([MIN_R, MAX_R]);
-
-    const nodes: SimNode[] = items.map(item => ({
-      ...item,
-      x: VW / 2 + (Math.random() - 0.5) * VW * 0.4,
-      y: VH / 2 + (Math.random() - 0.5) * VH * 0.4,
-    }));
-
-    d3.forceSimulation<SimNode>(nodes)
-      .force('center',  d3.forceCenter(VW / 2, VH / 2).strength(0.08))
-      .force('charge',  d3.forceManyBody<SimNode>().strength(-15))
-      .force('collide', d3.forceCollide<SimNode>().radius(n => rScale(n.value) + 3).strength(0.95))
-      .stop()
-      .tick(350);
-
-    setPositions(
-      nodes.map(n => ({
-        ...n,
-        x: Math.max(MAX_R + 4, Math.min(VW - MAX_R - 4, n.x ?? VW / 2)),
-        y: Math.max(MAX_R + 4, Math.min(VH - MAX_R - 4, n.y ?? VH / 2)),
-      })) as (SimNode & { x: number; y: number })[]
-    );
+    const packed  = packCircles(items, maxVal);
+    setCircles(items.map((item, i) => ({ ...item, ...packed[i] })));
   }, [items]);
 
-  const maxVal = items.length ? Math.max(...items.map(i => i.value), 1) : 1;
-  const rScale = d3.scaleSqrt().domain([0, maxVal]).range([MIN_R, MAX_R]);
-
-  if (!positions.length) {
-    return <div style={{ paddingBottom: `${(VH / VW) * 100}%` }} className="w-full" />;
-  }
+  if (!circles.length) return <div style={{ paddingBottom: '60%' }} className="w-full" />;
 
   return (
     <div className="w-full select-none">
-      <svg
-        viewBox={`0 0 ${VW} ${VH}`}
-        style={{ width: '100%', height: 'auto', display: 'block' }}
-      >
+      <svg viewBox={`0 0 ${VW} ${VH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
         <defs>
-          <filter id="glow-gold" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="6" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          <filter id="bc-glow-a" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="6" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
-          <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="5" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-          <filter id="glow-std" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          <filter id="bc-glow-b" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
         </defs>
 
-        {positions.map((node, idx) => {
-          const r       = rScale(node.value);
-          const style   = getStyle(node.rank);
-          const isActive = selected === node.id;
-          const glowId  = node.rank === 1 ? 'glow-gold' : node.rank <= 5 ? 'glow-cyan' : 'glow-std';
-          const words   = node.label.split(/\s+/);
-          const fontSize = Math.max(8, Math.min(13, r / 4));
+        {circles.map((c, idx) => {
+          const style    = getStyle(c.rank);
+          const isActive = selected === c.id;
+          const words    = c.label.split(/\s+/);
+          const fs       = Math.max(8, Math.min(13, c.r / 4));
+          const filterId = c.rank === 1 ? 'bc-glow-a' : c.rank <= 5 ? 'bc-glow-b' : undefined;
 
           return (
-            <g
-              key={node.id}
-              transform={`translate(${node.x},${node.y})`}
-              style={{
-                cursor: 'pointer',
-                opacity: 0,
-                animation: `bubbleIn 0.5s ease forwards`,
-                animationDelay: `${idx * 18}ms`,
-              }}
-              onClick={() => setSelected(isActive ? null : node.id)}
-            >
-              {node.rank <= 10 && (
-                <circle r={r + 6} fill="none" stroke={style.shadow}
-                  strokeWidth={isActive ? 3 : 1.5} filter={`url(#${glowId})`}
-                  style={{ transition: 'all 0.25s' }} />
+            <g key={c.id} transform={`translate(${c.x},${c.y})`}
+              onClick={() => setSelected(isActive ? null : c.id)}
+              style={{ cursor: 'pointer', opacity: 0, animation: `bc-in 0.45s ease forwards`, animationDelay: `${idx * 20}ms` }}>
+
+              {c.rank <= 10 && (
+                <circle r={c.r + 7} fill="none" stroke={style.glow} strokeWidth={isActive ? 2.5 : 1.5}
+                  filter={filterId ? `url(#${filterId})` : undefined} />
               )}
 
-              <circle r={isActive ? r + 5 : r} fill={style.fill}
-                stroke={style.stroke} strokeWidth={isActive ? 2 : 1}
-                style={{ transition: 'all 0.25s ease' }} />
+              <circle r={isActive ? c.r + 4 : c.r} fill={style.fill} stroke={style.stroke}
+                strokeWidth={isActive ? 2 : 1} style={{ transition: 'r 0.2s, stroke-width 0.2s' }} />
 
-              {r >= 26 && (
-                <text textAnchor="middle" fill="white" fontSize={fontSize}
-                  fontWeight="700" style={{ pointerEvents: 'none' }}>
-                  {words.length === 1 ? (
-                    <tspan x="0" dominantBaseline="central">
-                      {words[0].length > 12 ? words[0].slice(0, 11) + '…' : words[0]}
+              {c.r >= 26 && (
+                <text textAnchor="middle" fill="white" fontSize={fs} fontWeight="700"
+                  style={{ pointerEvents: 'none' }}>
+                  {words.slice(0, 2).map((w, wi, arr) => (
+                    <tspan key={wi} x="0"
+                      dy={arr.length === 1 ? '0' : wi === 0 ? `-${fs * 0.55}` : `${fs * 1.25}`}
+                      dominantBaseline={arr.length === 1 ? 'central' : undefined}>
+                      {w.length > 9 ? w.slice(0, 8) + '…' : w}
                     </tspan>
-                  ) : words.length === 2 ? (
-                    <>
-                      <tspan x="0" dy={`-${fontSize * 0.6}px`}>{words[0].length > 9 ? words[0].slice(0, 8) + '…' : words[0]}</tspan>
-                      <tspan x="0" dy={`${fontSize * 1.3}px`}>{words[1].length > 9 ? words[1].slice(0, 8) + '…' : words[1]}</tspan>
-                    </>
-                  ) : (
-                    <>
-                      <tspan x="0" dy={`-${fontSize * 0.7}px`}>{words[0].length > 8 ? words[0].slice(0, 7) + '…' : words[0]}</tspan>
-                      <tspan x="0" dy={`${fontSize * 1.3}px`}>{words[1].length > 8 ? words[1].slice(0, 7) + '…' : words[1]}</tspan>
-                    </>
-                  )}
+                  ))}
                 </text>
               )}
 
-              {node.rank <= 5 && r >= 22 && (
+              {c.rank <= 5 && c.r >= 24 && (
                 <>
-                  <circle cx={r - 9} cy={-r + 9} r={9} fill="#0A1628" stroke={style.stroke} strokeWidth={1.5} />
-                  <text x={r - 9} y={-r + 9} textAnchor="middle" dominantBaseline="central"
-                    fill="white" fontSize="8" fontWeight="800" style={{ pointerEvents: 'none' }}>
-                    #{node.rank}
-                  </text>
+                  <circle cx={c.r - 10} cy={-c.r + 10} r={10} fill="#0A1628" stroke={style.stroke} strokeWidth={1.5} />
+                  <text x={c.r - 10} y={-c.r + 10} textAnchor="middle" dominantBaseline="central"
+                    fill="white" fontSize="8" fontWeight="800" style={{ pointerEvents: 'none' }}>#{c.rank}</text>
                 </>
               )}
 
               {isActive && (
-                <g transform={`translate(0,${-r - 48})`}>
-                  <rect x={-72} y={-16} width={144} height={40} rx={8}
+                <g transform={`translate(0,${-c.r - 52})`}>
+                  <rect x={-75} y={-18} width={150} height={44} rx={8}
                     fill="#0d1f3c" stroke={style.stroke} strokeWidth={1.5} />
-                  <text textAnchor="middle" y={-2} fill="white" fontSize="11" fontWeight="700">
-                    {node.label.length > 20 ? node.label.slice(0, 19) + '…' : node.label}
+                  <text textAnchor="middle" y={-4} fill="white" fontSize="11" fontWeight="700">
+                    {c.label.length > 22 ? c.label.slice(0, 21) + '…' : c.label}
                   </text>
-                  <text textAnchor="middle" y={13} fill="rgba(255,255,255,0.5)" fontSize="10">
-                    {node.sublabel}
-                  </text>
+                  <text textAnchor="middle" y={14} fill="rgba(255,255,255,0.5)" fontSize="10">{c.sublabel}</text>
                 </g>
               )}
             </g>
@@ -172,8 +162,8 @@ export default function BubbleChart({ items }: Props) {
       </svg>
 
       <style>{`
-        @keyframes bubbleIn {
-          from { opacity: 0; transform: scale(0.2); }
+        @keyframes bc-in {
+          from { opacity: 0; transform: scale(0.15); }
           to   { opacity: 1; transform: scale(1); }
         }
       `}</style>
