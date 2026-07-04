@@ -58,6 +58,23 @@ function packCircles(items: BubbleItem[], maxVal: number): Circle[] {
   return circles;
 }
 
+function wrapLabel(label: string, maxCharsPerLine: number): string[] {
+  const words = label.split(/\s+/);
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    const next = cur ? `${cur} ${w}` : w;
+    if (next.length > maxCharsPerLine && cur) {
+      lines.push(cur);
+      cur = w;
+    } else {
+      cur = next;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
 function getStyle(rank: number) {
   if (rank === 1) return { fill: 'rgba(234,179,8,0.85)',  stroke: '#eab308', glow: 'rgba(234,179,8,0.5)' };
   if (rank === 2) return { fill: 'rgba(148,163,184,0.8)', stroke: '#94a3b8', glow: 'rgba(148,163,184,0.4)' };
@@ -175,14 +192,29 @@ export default function BubbleChart({ items, showOrganizerLogos = false }: Props
           const c = circles.find(c => c.id === selected);
           if (!c) return null;
           const style = getStyle(c.rank);
+
+          const PAD_X = 14, PAD_Y = 10, GAP = 16, LINE_H = 14;
+          const titleLines = wrapLabel(c.label, 24);
+          const titleHeight = titleLines.length * LINE_H;
+          const hasSublabel = c.sublabel.length > 0;
+          const boxHeight = PAD_Y * 2 + titleHeight + (hasSublabel ? 16 : 0);
+          const longestLine = Math.max(...titleLines.map(l => l.length), hasSublabel ? c.sublabel.length * 0.9 : 0);
+          const boxWidth = Math.min(320, Math.max(150, longestLine * 6.4 + PAD_X * 2));
+          const boxTop = -(c.r + GAP) - boxHeight;
+
           return (
-            <g transform={`translate(${c.x},${c.y - c.r - 52})`} style={{ pointerEvents: 'none' }}>
-              <rect x={-75} y={-18} width={150} height={44} rx={8}
+            <g transform={`translate(${c.x},${c.y})`} style={{ pointerEvents: 'none' }}>
+              <rect x={-boxWidth / 2} y={boxTop} width={boxWidth} height={boxHeight} rx={8}
                 fill="#0d1f3c" stroke={style.stroke} strokeWidth={1.5} />
-              <text textAnchor="middle" y={-4} fill="white" fontSize="11" fontWeight="700">
-                {c.label.length > 22 ? c.label.slice(0, 21) + '…' : c.label}
+              <text textAnchor="middle" fill="white" fontSize="11" fontWeight="700">
+                {titleLines.map((line, i) => (
+                  <tspan key={i} x={0} y={boxTop + PAD_Y + (i + 1) * LINE_H - 3}>{line}</tspan>
+                ))}
               </text>
-              <text textAnchor="middle" y={14} fill="rgba(255,255,255,0.5)" fontSize="10">{c.sublabel}</text>
+              {hasSublabel && (
+                <text textAnchor="middle" y={boxTop + PAD_Y + titleHeight + 12}
+                  fill="rgba(255,255,255,0.5)" fontSize="10">{c.sublabel}</text>
+              )}
             </g>
           );
         })()}
