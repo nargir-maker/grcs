@@ -68,9 +68,9 @@ function getStyle(rank: number) {
   return { fill: 'rgba(255,255,255,0.08)', stroke: 'rgba(255,255,255,0.2)', glow: 'transparent' };
 }
 
-interface Props { items: BubbleItem[] }
+interface Props { items: BubbleItem[]; showOrganizerLogos?: boolean }
 
-export default function BubbleChart({ items }: Props) {
+export default function BubbleChart({ items, showOrganizerLogos = false }: Props) {
   const [circles, setCircles]   = useState<(Circle & BubbleItem)[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -96,7 +96,7 @@ export default function BubbleChart({ items }: Props) {
           {/* SVG pattern per bubble — fills a circle with the logo image, no clipPath needed.
               Pattern id is index-based (not the raw org id) since ids like
               "BLE CYCLING CLUB" contain spaces that break url(#...) references. */}
-          {circles.map((c, idx) => {
+          {showOrganizerLogos && circles.map((c, idx) => {
             const logoId = resolveOrganizerLogoId(c.id);
             if (!logoId) return null;
             return (
@@ -117,7 +117,7 @@ export default function BubbleChart({ items }: Props) {
           const words    = c.label.split(/\s+/);
           const fs       = Math.max(8, Math.min(13, c.r / 4));
           const filterId = c.rank === 1 ? 'bc-glow-a' : c.rank <= 5 ? 'bc-glow-b' : undefined;
-          const hasLogo  = resolveOrganizerLogoId(c.id) !== null;
+          const hasLogo  = showOrganizerLogos && resolveOrganizerLogoId(c.id) !== null;
 
           return (
             <g key={c.id} transform={`translate(${c.x},${c.y})`}

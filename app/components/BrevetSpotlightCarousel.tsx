@@ -160,7 +160,7 @@ export default function BrevetSpotlightCarousel({ routes }: Props) {
               <div className="flex-1 flex flex-col items-center min-w-0">
                 {logoId ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={`/logos/${logoId}.png`} alt={route.organizer} className="h-[30px] object-contain"
+                  <img src={`/logos/${logoId}.png`} alt={route.organizer} className="h-11 object-contain"
                     onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                 ) : (
                   <span style={{ color }} className="text-lg">🚴</span>
