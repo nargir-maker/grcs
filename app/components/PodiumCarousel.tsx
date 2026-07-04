@@ -92,13 +92,13 @@ export default function PodiumCarousel({ orgs }: Props) {
 
           {/* Logo + name row */}
           <div className="flex items-center gap-4 mb-5">
-            <div className="flex-shrink-0 w-16 h-16 rounded-full flex items-center justify-center p-1.5"
+            <div className="flex-shrink-0 w-16 h-16 rounded-full flex items-center justify-center overflow-hidden p-0.5"
               style={{ border: `2px solid ${color}`, boxShadow: `0 0 16px ${color}80`,
                        background: 'rgba(255,255,255,0.06)' }}>
               {logoId ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={`/logos/${logoId}.png`} alt={org.name}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-cover"
                   onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
               ) : (
                 <span className="text-2xl">🚴</span>

@@ -105,7 +105,7 @@ export default function BubbleChart({ items }: Props) {
                 patternUnits="objectBoundingBox"
                 patternContentUnits="objectBoundingBox">
                 <image href={`/logos/${logoId}.png`} x="0" y="0" width="1" height="1"
-                  preserveAspectRatio="xMidYMid meet" />
+                  preserveAspectRatio="xMidYMid slice" />
               </pattern>
             );
           })}
@@ -139,7 +139,7 @@ export default function BubbleChart({ items }: Props) {
 
                 {/* Logo circle filled via pattern — covers name text when image loads */}
                 {c.r >= 26 && hasLogo && (
-                  <circle r={c.r * 0.64} fill={`url(#logo-${idx})`} style={{ pointerEvents: 'none' }} />
+                  <circle r={c.r * 0.86} fill={`url(#logo-${idx})`} style={{ pointerEvents: 'none' }} />
                 )}
 
                 {/* Name text — rendered whenever there's no known logo for this organizer */}
