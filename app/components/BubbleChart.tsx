@@ -81,8 +81,9 @@ function getStyle(rank: number) {
 interface Props { items: BubbleItem[] }
 
 export default function BubbleChart({ items }: Props) {
-  const [circles, setCircles] = useState<(Circle & BubbleItem)[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [circles, setCircles]     = useState<(Circle & BubbleItem)[]>([]);
+  const [selected, setSelected]   = useState<string | null>(null);
+  const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!items.length) return;
@@ -111,6 +112,9 @@ export default function BubbleChart({ items }: Props) {
           const words    = c.label.split(/\s+/);
           const fs       = Math.max(8, Math.min(13, c.r / 4));
           const filterId = c.rank === 1 ? 'bc-glow-a' : c.rank <= 5 ? 'bc-glow-b' : undefined;
+          const hasLogo  = !imgErrors.has(c.id);
+          const logoSize = c.r * 1.3;
+          const clipId   = `clip-${c.id}`;
 
           return (
             // Outer g: position only (SVG attribute — not touched by CSS)
@@ -129,7 +133,25 @@ export default function BubbleChart({ items }: Props) {
               <circle r={isActive ? c.r + 4 : c.r} fill={style.fill} stroke={style.stroke}
                 strokeWidth={isActive ? 2 : 1} style={{ transition: 'r 0.2s, stroke-width 0.2s' }} />
 
-              {c.r >= 26 && (
+              {/* Logo or name text */}
+              {c.r >= 26 && (hasLogo ? (
+                <>
+                  <defs>
+                    <clipPath id={clipId}>
+                      <circle r={c.r * 0.62} />
+                    </clipPath>
+                  </defs>
+                  <image
+                    href={`/logos/${c.id}.png`}
+                    x={-logoSize / 2} y={-logoSize / 2}
+                    width={logoSize} height={logoSize}
+                    clipPath={`url(#${clipId})`}
+                    preserveAspectRatio="xMidYMid meet"
+                    style={{ pointerEvents: 'none' }}
+                    onError={() => setImgErrors(prev => new Set([...prev, c.id]))}
+                  />
+                </>
+              ) : (
                 <text textAnchor="middle" fill="white" fontSize={fs} fontWeight="700"
                   style={{ pointerEvents: 'none' }}>
                   {words.slice(0, 2).map((w, wi, arr) => (
@@ -140,7 +162,7 @@ export default function BubbleChart({ items }: Props) {
                     </tspan>
                   ))}
                 </text>
-              )}
+              ))}
 
               {c.rank <= 5 && c.r >= 24 && (
                 <>
