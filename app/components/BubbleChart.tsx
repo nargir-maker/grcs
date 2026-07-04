@@ -83,13 +83,12 @@ export default function BubbleChart({ items, height = 480 }: Props) {
     );
   }, [items, width, height]);
 
-  if (!mounted || width === 0) return <div style={{ height }} className="w-full" ref={containerRef} />;
-
   const maxVal = items.length ? Math.max(...items.map(i => i.value), 1) : 1;
   const rScale = d3.scaleSqrt().domain([0, maxVal]).range([MIN_R, MAX_R]);
 
   return (
-    <div ref={containerRef} className="w-full select-none">
+    <div ref={containerRef} className="w-full select-none" style={{ minHeight: height }}>
+      {(!mounted || width === 0 || positions.length === 0) ? null : (<>
       <svg width={width} height={height}>
         <defs>
           <filter id="glow-gold" x="-50%" y="-50%" width="200%" height="200%">
@@ -209,6 +208,7 @@ export default function BubbleChart({ items, height = 480 }: Props) {
           to   { opacity: 1; transform: scale(1); }
         }
       `}</style>
+      </>)}
     </div>
   );
 }
