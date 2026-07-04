@@ -81,15 +81,28 @@ function getStyle(rank: number) {
 interface Props { items: BubbleItem[] }
 
 export default function BubbleChart({ items }: Props) {
-  const [circles, setCircles]     = useState<(Circle & BubbleItem)[]>([]);
-  const [selected, setSelected]   = useState<string | null>(null);
-  const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
+  const [circles, setCircles]   = useState<(Circle & BubbleItem)[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [logoOk, setLogoOk]     = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!items.length) return;
     const maxVal = Math.max(...items.map(i => i.value), 1);
     const packed  = packCircles(items, maxVal);
     setCircles(items.map((item, i) => ({ ...item, ...packed[i] })));
+  }, [items]);
+
+  // Pre-check which logos exist using browser Image
+  useEffect(() => {
+    if (!items.length) return;
+    const ok = new Set<string>();
+    let pending = items.length;
+    items.forEach(item => {
+      const img = new window.Image();
+      img.onload  = () => { ok.add(item.id); if (--pending === 0) setLogoOk(new Set(ok)); };
+      img.onerror = () => {                   if (--pending === 0) setLogoOk(new Set(ok)); };
+      img.src = `/logos/${item.id}.png`;
+    });
   }, [items]);
 
   if (!circles.length) return <div style={{ paddingBottom: '60%' }} className="w-full" />;
@@ -104,6 +117,12 @@ export default function BubbleChart({ items }: Props) {
           <filter id="bc-glow-b" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
+          {/* Circular clip paths in SVG-root coordinate space (cx=0,cy=0 = center of bubble's <g>) */}
+          {circles.map(c => (
+            <clipPath key={`clip-${c.id}`} id={`clip-${c.id}`}>
+              <circle cx="0" cy="0" r={c.r * 0.62} />
+            </clipPath>
+          ))}
         </defs>
 
         {circles.map((c, idx) => {
@@ -112,8 +131,8 @@ export default function BubbleChart({ items }: Props) {
           const words    = c.label.split(/\s+/);
           const fs       = Math.max(8, Math.min(13, c.r / 4));
           const filterId = c.rank === 1 ? 'bc-glow-a' : c.rank <= 5 ? 'bc-glow-b' : undefined;
-          const hasLogo  = !imgErrors.has(c.id);
-          const logoSize = c.r * 1.3;
+          const hasLogo  = logoOk.has(c.id);
+          const logoSize = c.r * 1.24;
           const clipId   = `clip-${c.id}`;
 
           return (
@@ -133,25 +152,8 @@ export default function BubbleChart({ items }: Props) {
               <circle r={isActive ? c.r + 4 : c.r} fill={style.fill} stroke={style.stroke}
                 strokeWidth={isActive ? 2 : 1} style={{ transition: 'r 0.2s, stroke-width 0.2s' }} />
 
-              {/* Logo or name text */}
-              {c.r >= 26 && (hasLogo ? (
-                <>
-                  <defs>
-                    <clipPath id={clipId}>
-                      <circle r={c.r * 0.62} />
-                    </clipPath>
-                  </defs>
-                  <image
-                    href={`/logos/${c.id}.png`}
-                    x={-logoSize / 2} y={-logoSize / 2}
-                    width={logoSize} height={logoSize}
-                    clipPath={`url(#${clipId})`}
-                    preserveAspectRatio="xMidYMid meet"
-                    style={{ pointerEvents: 'none' }}
-                    onError={() => setImgErrors(prev => new Set([...prev, c.id]))}
-                  />
-                </>
-              ) : (
+              {/* Name text — only when no logo */}
+              {c.r >= 26 && !hasLogo && (
                 <text textAnchor="middle" fill="white" fontSize={fs} fontWeight="700"
                   style={{ pointerEvents: 'none' }}>
                   {words.slice(0, 2).map((w, wi, arr) => (
@@ -162,7 +164,7 @@ export default function BubbleChart({ items }: Props) {
                     </tspan>
                   ))}
                 </text>
-              ))}
+              )}
 
               {c.rank <= 5 && c.r >= 24 && (
                 <>
@@ -183,6 +185,18 @@ export default function BubbleChart({ items }: Props) {
                 </g>
               )}
             </g>{/* end inner animation g */}
+
+            {/* Logo rendered in outer g — not affected by CSS scale animation */}
+            {hasLogo && c.r >= 26 && (
+              <image
+                href={`/logos/${c.id}.png`}
+                x={-logoSize / 2} y={-logoSize / 2}
+                width={logoSize} height={logoSize}
+                clipPath={`url(#${clipId})`}
+                preserveAspectRatio="xMidYMid meet"
+                style={{ pointerEvents: 'none' }}
+              />
+            )}
             </g>
           );
         })}
