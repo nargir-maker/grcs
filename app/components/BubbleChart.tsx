@@ -19,48 +19,37 @@ function sqrtScale(v: number, maxVal: number) {
   return MIN_R + (MAX_R - MIN_R) * Math.sqrt(v / Math.max(maxVal, 1));
 }
 
-// Deterministic pseudo-random
 function seeded(n: number) {
   const x = Math.sin(n * 9301 + 49297) * 233280;
   return x - Math.floor(x);
 }
 
-interface Circle {
-  id: string;
-  r: number;
-  x: number;
-  y: number;
-}
+interface Circle { id: string; r: number; x: number; y: number; }
 
 function packCircles(items: BubbleItem[], maxVal: number): Circle[] {
   const circles: Circle[] = items.map((item, i) => ({
-    id:  item.id,
-    r:   sqrtScale(item.value, maxVal),
-    x:   VW / 2 + (seeded(i * 3)     - 0.5) * VW * 0.3,
-    y:   VH / 2 + (seeded(i * 3 + 1) - 0.5) * VH * 0.3,
+    id: item.id,
+    r:  sqrtScale(item.value, maxVal),
+    x:  VW / 2 + (seeded(i * 3)     - 0.5) * VW * 0.3,
+    y:  VH / 2 + (seeded(i * 3 + 1) - 0.5) * VH * 0.3,
   }));
-
   for (let iter = 0; iter < 250; iter++) {
-    // Pull toward center
     for (const c of circles) {
       c.x += (VW / 2 - c.x) * 0.01;
       c.y += (VH / 2 - c.y) * 0.01;
     }
-    // Resolve overlaps
     for (let i = 0; i < circles.length; i++) {
       for (let j = i + 1; j < circles.length; j++) {
         const a = circles[i], b = circles[j];
-        const dx = b.x - a.x || 0.001;
-        const dy = b.y - a.y || 0.001;
+        const dx = b.x - a.x || 0.001, dy = b.y - a.y || 0.001;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const minD = a.r + b.r + 4;
         if (dist < minD) {
           const push = (minD - dist) / dist / 2;
-          a.x -= dx * push;  a.y -= dy * push;
-          b.x += dx * push;  b.y += dy * push;
+          a.x -= dx * push; a.y -= dy * push;
+          b.x += dx * push; b.y += dy * push;
         }
       }
-      // Keep in bounds
       circles[i].x = Math.max(circles[i].r + 4, Math.min(VW - circles[i].r - 4, circles[i].x));
       circles[i].y = Math.max(circles[i].r + 4, Math.min(VH - circles[i].r - 4, circles[i].y));
     }
@@ -83,26 +72,12 @@ interface Props { items: BubbleItem[] }
 export default function BubbleChart({ items }: Props) {
   const [circles, setCircles]   = useState<(Circle & BubbleItem)[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [logoOk, setLogoOk]     = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!items.length) return;
     const maxVal = Math.max(...items.map(i => i.value), 1);
     const packed  = packCircles(items, maxVal);
     setCircles(items.map((item, i) => ({ ...item, ...packed[i] })));
-  }, [items]);
-
-  // Pre-check which logos exist using browser Image
-  useEffect(() => {
-    if (!items.length) return;
-    const ok = new Set<string>();
-    let pending = items.length;
-    items.forEach(item => {
-      const img = new window.Image();
-      img.onload  = () => { ok.add(item.id); if (--pending === 0) setLogoOk(new Set(ok)); };
-      img.onerror = () => {                   if (--pending === 0) setLogoOk(new Set(ok)); };
-      img.src = `/logos/${item.id}.png`;
-    });
   }, [items]);
 
   if (!circles.length) return <div style={{ paddingBottom: '60%' }} className="w-full" />;
@@ -117,11 +92,15 @@ export default function BubbleChart({ items }: Props) {
           <filter id="bc-glow-b" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
-          {/* Circular clip paths in SVG-root coordinate space (cx=0,cy=0 = center of bubble's <g>) */}
+          {/* SVG pattern per bubble — fills a circle with the logo image, no clipPath needed */}
           {circles.map(c => (
-            <clipPath key={`clip-${c.id}`} id={`clip-${c.id}`}>
-              <circle cx="0" cy="0" r={c.r * 0.62} />
-            </clipPath>
+            <pattern key={c.id} id={`logo-${c.id}`}
+              x="0" y="0" width="1" height="1"
+              patternUnits="objectBoundingBox"
+              patternContentUnits="objectBoundingBox">
+              <image href={`/logos/${c.id}.png`} x="0" y="0" width="1" height="1"
+                preserveAspectRatio="xMidYMid meet" />
+            </pattern>
           ))}
         </defs>
 
@@ -131,72 +110,65 @@ export default function BubbleChart({ items }: Props) {
           const words    = c.label.split(/\s+/);
           const fs       = Math.max(8, Math.min(13, c.r / 4));
           const filterId = c.rank === 1 ? 'bc-glow-a' : c.rank <= 5 ? 'bc-glow-b' : undefined;
-          const hasLogo  = logoOk.has(c.id);
-          const logoSize = c.r * 1.24;
-          const clipId   = `clip-${c.id}`;
 
           return (
-            // Outer g: position only (SVG attribute — not touched by CSS)
             <g key={c.id} transform={`translate(${c.x},${c.y})`}
               onClick={() => setSelected(isActive ? null : c.id)}
               style={{ cursor: 'pointer' }}>
-            {/* Inner g: animation only (scale from bubble center) */}
-            <g style={{ opacity: 0, animation: `bc-in 0.45s ease forwards`, animationDelay: `${idx * 20}ms`,
-              transformBox: 'fill-box', transformOrigin: 'center' }}>
 
-              {c.rank <= 10 && (
-                <circle r={c.r + 7} fill="none" stroke={style.glow} strokeWidth={isActive ? 2.5 : 1.5}
-                  filter={filterId ? `url(#${filterId})` : undefined} />
-              )}
+              {/* Animation wrapper */}
+              <g style={{ opacity: 0, animation: `bc-in 0.45s ease forwards`, animationDelay: `${idx * 20}ms`,
+                transformBox: 'fill-box', transformOrigin: 'center' }}>
 
-              <circle r={isActive ? c.r + 4 : c.r} fill={style.fill} stroke={style.stroke}
-                strokeWidth={isActive ? 2 : 1} style={{ transition: 'r 0.2s, stroke-width 0.2s' }} />
+                {c.rank <= 10 && (
+                  <circle r={c.r + 7} fill="none" stroke={style.glow} strokeWidth={isActive ? 2.5 : 1.5}
+                    filter={filterId ? `url(#${filterId})` : undefined} />
+                )}
 
-              {/* Name text — only when no logo */}
-              {c.r >= 26 && !hasLogo && (
-                <text textAnchor="middle" fill="white" fontSize={fs} fontWeight="700"
-                  style={{ pointerEvents: 'none' }}>
-                  {words.slice(0, 2).map((w, wi, arr) => (
-                    <tspan key={wi} x="0"
-                      dy={arr.length === 1 ? '0' : wi === 0 ? `-${fs * 0.55}` : `${fs * 1.25}`}
-                      dominantBaseline={arr.length === 1 ? 'central' : undefined}>
-                      {w.length > 9 ? w.slice(0, 8) + '…' : w}
-                    </tspan>
-                  ))}
-                </text>
-              )}
+                {/* Main bubble */}
+                <circle r={isActive ? c.r + 4 : c.r} fill={style.fill} stroke={style.stroke}
+                  strokeWidth={isActive ? 2 : 1} style={{ transition: 'r 0.2s, stroke-width 0.2s' }} />
 
-              {c.rank <= 5 && c.r >= 24 && (
-                <>
-                  <circle cx={c.r - 10} cy={-c.r + 10} r={10} fill="#0A1628" stroke={style.stroke} strokeWidth={1.5} />
-                  <text x={c.r - 10} y={-c.r + 10} textAnchor="middle" dominantBaseline="central"
-                    fill="white" fontSize="8" fontWeight="800" style={{ pointerEvents: 'none' }}>#{c.rank}</text>
-                </>
-              )}
+                {/* Logo circle filled via pattern — covers name text when image loads */}
+                {c.r >= 26 && (
+                  <circle r={c.r * 0.64} fill={`url(#logo-${c.id})`} style={{ pointerEvents: 'none' }} />
+                )}
 
-              {isActive && (
-                <g transform={`translate(0,${-c.r - 52})`}>
-                  <rect x={-75} y={-18} width={150} height={44} rx={8}
-                    fill="#0d1f3c" stroke={style.stroke} strokeWidth={1.5} />
-                  <text textAnchor="middle" y={-4} fill="white" fontSize="11" fontWeight="700">
-                    {c.label.length > 22 ? c.label.slice(0, 21) + '…' : c.label}
+                {/* Name text — always rendered, visible only if pattern is transparent (no logo) */}
+                {c.r >= 26 && (
+                  <text textAnchor="middle" fill="white" fontSize={fs} fontWeight="700"
+                    style={{ pointerEvents: 'none', mixBlendMode: 'difference' }}>
+                    {words.slice(0, 2).map((w, wi, arr) => (
+                      <tspan key={wi} x="0"
+                        dy={arr.length === 1 ? '0' : wi === 0 ? `-${fs * 0.55}` : `${fs * 1.25}`}
+                        dominantBaseline={arr.length === 1 ? 'central' : undefined}>
+                        {w.length > 9 ? w.slice(0, 8) + '…' : w}
+                      </tspan>
+                    ))}
                   </text>
-                  <text textAnchor="middle" y={14} fill="rgba(255,255,255,0.5)" fontSize="10">{c.sublabel}</text>
-                </g>
-              )}
-            </g>{/* end inner animation g */}
+                )}
 
-            {/* Logo rendered in outer g — not affected by CSS scale animation */}
-            {hasLogo && c.r >= 26 && (
-              <image
-                href={`/logos/${c.id}.png`}
-                x={-logoSize / 2} y={-logoSize / 2}
-                width={logoSize} height={logoSize}
-                clipPath={`url(#${clipId})`}
-                preserveAspectRatio="xMidYMid meet"
-                style={{ pointerEvents: 'none' }}
-              />
-            )}
+                {/* Rank badge */}
+                {c.rank <= 5 && c.r >= 24 && (
+                  <>
+                    <circle cx={c.r - 10} cy={-c.r + 10} r={10} fill="#0A1628" stroke={style.stroke} strokeWidth={1.5} />
+                    <text x={c.r - 10} y={-c.r + 10} textAnchor="middle" dominantBaseline="central"
+                      fill="white" fontSize="8" fontWeight="800" style={{ pointerEvents: 'none' }}>#{c.rank}</text>
+                  </>
+                )}
+
+                {/* Tooltip on select */}
+                {isActive && (
+                  <g transform={`translate(0,${-c.r - 52})`}>
+                    <rect x={-75} y={-18} width={150} height={44} rx={8}
+                      fill="#0d1f3c" stroke={style.stroke} strokeWidth={1.5} />
+                    <text textAnchor="middle" y={-4} fill="white" fontSize="11" fontWeight="700">
+                      {c.label.length > 22 ? c.label.slice(0, 21) + '…' : c.label}
+                    </text>
+                    <text textAnchor="middle" y={14} fill="rgba(255,255,255,0.5)" fontSize="10">{c.sublabel}</text>
+                  </g>
+                )}
+              </g>
             </g>
           );
         })}

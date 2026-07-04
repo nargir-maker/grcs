@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { BubbleItem } from '../components/BubbleChart';
+import PodiumCarousel from '../components/PodiumCarousel';
+import type { PodiumEntry } from '../components/PodiumCarousel';
 
 const BubbleChart = dynamic(() => import('../components/BubbleChart'), { ssr: false });
 
@@ -97,6 +99,11 @@ export default function OrganizerUniversePage() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Podium Carousel — top 5 */}
+        {data && data.ranking.length >= 1 && (
+          <PodiumCarousel orgs={data.ranking.slice(0, 5) as PodiumEntry[]} />
         )}
 
         {/* Bubble Universe */}
