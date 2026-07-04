@@ -655,7 +655,7 @@ function DualCard({ e }: { e: BrevetEvent }) {
 
       {/* Indicators */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'6px 0 2px', flexShrink:0 }}>
-        <span style={{ fontSize:7, fontWeight:700, color:'#a16207', letterSpacing:1 }}>ΔΙΠΛΗ ΟΜΟΛΟΓΗΣΗ</span>
+        <span style={{ fontSize:7, fontWeight:700, color:'#a16207', letterSpacing:1 }}>ΔΙΠΛΗ ΠΙΣΤΟΠΟΙΗΣΗ</span>
         {[0,1].map(i => (
           <button key={i} onClick={() => setPage(i)} style={{
             width: page === i ? 18 : 6, height:6, borderRadius:3, border:'none', cursor:'pointer', padding:0,
