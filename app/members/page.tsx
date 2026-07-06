@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
+import PageViews from '@/app/components/PageViews';
 
 const PAGE_SIZE = 12;
 // Unicode sentinel for Firestore prefix range queries
@@ -427,6 +428,7 @@ export default function MembersPage() {
           </>
         )}
 
+        <PageViews page="members" />
       </div>
     </div>
   );

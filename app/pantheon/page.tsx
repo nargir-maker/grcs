@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
+import PageViews from '@/app/components/PageViews';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -324,6 +325,8 @@ export default function PantheonPage() {
           )}
 
         </div>
+
+        <PageViews page="pantheon" />
       </div>
     </main>
   );

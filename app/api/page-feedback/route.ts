@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from '@/app/lib/firebaseAdmin';
 
-const VALID_PAGES = ['history', 'guide', 'acp-guide'];
+const VALID_PAGES = [
+  'randonneuring', 'guide', 'acp-guide',
+  'home', 'about', 'brevet-history', 'community', 'members', 'results',
+  'pantheon', 'brevet-universe', 'organizer-universe', 'brevets', 'live',
+];
 
 export async function GET(req: NextRequest) {
   const page = req.nextUrl.searchParams.get('page');

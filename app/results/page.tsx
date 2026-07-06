@@ -9,6 +9,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
 import { getPublicMembers } from '@/app/lib/publicMembersCache';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
+import PageViews from '@/app/components/PageViews';
 import {
   BarChart, Bar, AreaChart, Area, LineChart, Line,
   PieChart, Pie, Cell,
@@ -749,6 +750,7 @@ export default function StatisticsPage() {
           );
         })()}
 
+        <PageViews page="results" />
       </div>
     </div>
   );

@@ -601,13 +601,13 @@ export default function RandonneuringPage() {
           </Link>
         </section>
 
-        <UsefulButton page="history" />
+        <UsefulButton page="randonneuring" />
 
         {/* Footer note */}
         <div className="text-white/20 text-xs text-center pb-2">
           Πηγές: ACP, LRM, Provence Randonneurs, Union des Audax Français
         </div>
-        <PageViews page="history" />
+        <PageViews page="randonneuring" />
 
       </div>
     </div>

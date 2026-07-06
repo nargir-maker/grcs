@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { BubbleItem } from '../components/BubbleChart';
 import BrevetSpotlightCarousel from '../components/BrevetSpotlightCarousel';
+import PageViews from '../components/PageViews';
 
 const BubbleChart = dynamic(() => import('../components/BubbleChart'), { ssr: false });
 
@@ -221,6 +222,7 @@ export default function BrevetUniversePage() {
           </div>
         )}
 
+        <PageViews page="brevet-universe" />
       </div>
     </div>
   );

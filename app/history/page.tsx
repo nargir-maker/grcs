@@ -5,6 +5,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
 import { getPublicMembers } from '@/app/lib/publicMembersCache';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
+import PageViews from '@/app/components/PageViews';
 
 interface BrevetEvent {
   key: string;
@@ -448,6 +449,8 @@ export default function HistoryPage() {
             })}
           </div>
         )}
+
+        <PageViews page="brevet-history" />
       </div>
     </div>
   );

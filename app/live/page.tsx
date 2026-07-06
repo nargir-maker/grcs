@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react';
 import { ref, onValue, off, get } from 'firebase/database';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db, rtdb } from '@/app/lib/firebase';
+import PageViews from '@/app/components/PageViews';
 
 interface LiveBrevet {
   id: string;
@@ -325,6 +326,8 @@ export default function LivePage() {
             )}
           </>
         )}
+
+        <PageViews page="live" />
       </div>
     </div>
   );

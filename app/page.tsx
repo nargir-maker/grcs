@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { db } from '@/app/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import PageViews from './components/PageViews';
 
 // ── TYPES ──────────────────────────────────────────────────────
 interface Brevet {
@@ -304,6 +305,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <PageViews page="home" />
     </div>
   );
 }

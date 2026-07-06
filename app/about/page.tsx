@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import VideoOrImage from '../components/VideoOrImage';
+import PageViews from '../components/PageViews';
 
 export const metadata: Metadata = {
   title: 'Σχετικά — GRC Platform',
@@ -212,6 +213,7 @@ export default function AboutPage() {
           </p>
         </div>
 
+        <PageViews page="about" />
       </div>
     </div>
   );

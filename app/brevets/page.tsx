@@ -5,6 +5,7 @@ import { db } from '@/app/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 import BrevetCard from '@/app/components/BrevetCard';
+import PageViews from '@/app/components/PageViews';
 
 const scrollStyle = `
   @keyframes brevScroll {
@@ -559,6 +560,7 @@ export default function BrevetsPage() {
           </p>
         )}
 
+        <PageViews page="brevets" />
       </div>
     </div>
   );

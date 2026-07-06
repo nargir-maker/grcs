@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
+import PageViews from '@/app/components/PageViews';
 import {
   BarChart, Bar, AreaChart, Area,
   ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
@@ -412,6 +413,7 @@ export default function CommunityPage() {
           </div>
         </Card>
 
+        <PageViews page="community" />
       </div>
     </main>
   );

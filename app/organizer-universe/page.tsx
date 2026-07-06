@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import type { BubbleItem } from '../components/BubbleChart';
 import PodiumCarousel from '../components/PodiumCarousel';
 import type { PodiumEntry } from '../components/PodiumCarousel';
+import PageViews from '../components/PageViews';
 
 const BubbleChart = dynamic(() => import('../components/BubbleChart'), { ssr: false });
 
@@ -168,6 +169,7 @@ export default function OrganizerUniversePage() {
           </div>
         )}
 
+        <PageViews page="organizer-universe" />
       </div>
     </div>
   );
