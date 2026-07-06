@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { adminDb } from '@/app/lib/firebaseAdmin';
+import UsefulButton from '../../components/UsefulButton';
+import PageViews from '../../components/PageViews';
 
 export const metadata: Metadata = {
   title: 'Οδηγός Randonneuring — GRC',
@@ -135,6 +137,9 @@ export default async function AcpGuidePage() {
             ← Πρακτικός Οδηγός
           </Link>
         </div>
+
+        <UsefulButton page="acp-guide" />
+        <PageViews page="acp-guide" />
 
       </div>
     </div>

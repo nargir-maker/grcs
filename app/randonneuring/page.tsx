@@ -3,6 +3,8 @@
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import UsefulButton from '../components/UsefulButton';
+import PageViews from '../components/PageViews';
 
 export const metadata: Metadata = {
   title: 'Ιστορία & Δομή του Randonneuring — GRC',
@@ -599,10 +601,13 @@ export default function RandonneuringPage() {
           </Link>
         </section>
 
+        <UsefulButton page="history" />
+
         {/* Footer note */}
-        <div className="text-white/20 text-xs text-center pb-4">
+        <div className="text-white/20 text-xs text-center pb-2">
           Πηγές: ACP, LRM, Provence Randonneurs, Union des Audax Français
         </div>
+        <PageViews page="history" />
 
       </div>
     </div>

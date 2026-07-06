@@ -4,6 +4,8 @@
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import UsefulButton from '../../components/UsefulButton';
+import PageViews from '../../components/PageViews';
 
 export const metadata: Metadata = {
   title: 'Οδηγός Αρχαρίου Randonneur — GRC',
@@ -741,6 +743,9 @@ export default function GuidePage() {
             </Link>
           </div>
         </div>
+
+        <UsefulButton page="guide" />
+        <PageViews page="guide" />
 
       </div>
     </div>
