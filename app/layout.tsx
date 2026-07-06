@@ -56,6 +56,19 @@ export default function RootLayout({
                 </div>
                 <div className="flex items-center gap-3">
                   <a
+                    href="https://www.facebook.com/profile.php?id=61590386704957"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="GRC στο Facebook"
+                    className="flex items-center justify-center w-10 h-10 rounded-full
+                      bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/30
+                      hover:border-[#1877F2]/60 transition-all duration-200"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#1877F2]">
+                      <path d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.9h2.54V9.85c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.44 2.9h-2.34V22c4.78-.76 8.44-4.92 8.44-9.94Z" />
+                    </svg>
+                  </a>
+                  <a
                     href="https://play.google.com/store/apps/details?id=com.nikos.greekbrevets"
                     target="_blank"
                     rel="noopener noreferrer"
