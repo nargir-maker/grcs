@@ -563,19 +563,19 @@ export default function ElevationChart({
             {climbProfile.map((climb, i) => (
               <button key={i} onClick={() => setSelectedClimb(climb)}
                 className="flex items-center gap-3 rounded-xl px-4 py-3 border text-left w-full transition-all hover:scale-[1.01] hover:brightness-110 group"
-                style={{ backgroundColor: getCategoryColor(climb.category) + '10', borderColor: getCategoryColor(climb.category) + '30' }}>
-                <span className="text-xs font-bold px-2 py-1 rounded-lg shrink-0 min-w-8 text-center"
-                  style={{ backgroundColor: getCategoryColor(climb.category) + '25', color: getCategoryColor(climb.category), border: `1px solid ${getCategoryColor(climb.category)}50` }}>{climb.category}</span>
+                style={{ backgroundColor: getCategoryColor(climb.category), borderColor: getCategoryColor(climb.category) }}>
+                <span className="text-xs font-bold px-2 py-1 rounded-lg shrink-0 min-w-8 text-center text-white"
+                  style={{ backgroundColor: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.35)' }}>{climb.category}</span>
                 <div className="flex-1 flex items-center gap-4 text-xs">
-                  <span className="text-white/70">km {climb.startKm} → {climb.endKm}</span>
-                  <span className="text-white/50">{(climb.endKm - climb.startKm).toFixed(1)}km</span>
-                  <span className="text-white/50">↑{climb.elevationGain.toFixed(0)}m</span>
+                  <span className="text-white/90">km {climb.startKm} → {climb.endKm}</span>
+                  <span className="text-white/70">{(climb.endKm - climb.startKm).toFixed(1)}km</span>
+                  <span className="text-white/70">↑{climb.elevationGain.toFixed(0)}m</span>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-sm font-bold" style={{ color: getCategoryColor(climb.category) }}>{climb.avgGrade.toFixed(1)}%</div>
-                  <div className="text-white/40 text-xs">max {climb.maxGrade.toFixed(1)}%</div>
+                  <div className="text-sm font-bold text-white">{climb.avgGrade.toFixed(1)}%</div>
+                  <div className="text-white/70 text-xs">max {climb.maxGrade.toFixed(1)}%</div>
                 </div>
-                <span className="text-white/30 group-hover:text-white/60 transition-colors text-lg ml-1">›</span>
+                <span className="text-white/60 group-hover:text-white transition-colors text-lg ml-1">›</span>
               </button>
             ))}
           </div>
