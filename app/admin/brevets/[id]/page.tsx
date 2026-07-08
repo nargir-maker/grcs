@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
 import Link from 'next/link';
+import { decodeParam } from '@/app/lib/routeParams';
 
 interface BrevetData {
   // info
@@ -51,7 +52,7 @@ export default function EditBrevetPage() {
   const { data: session, status } = useSession();
   const router  = useRouter();
   const params  = useParams();
-  const id      = params?.id as string;
+  const id      = decodeParam(params?.id as string);
 
   const [authorized, setAuthorized] = useState(false);
   const [checking,   setChecking]   = useState(true);

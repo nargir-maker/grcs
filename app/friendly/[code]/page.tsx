@@ -8,6 +8,7 @@ import { useParams } from 'next/navigation';
 import { ref, onValue, off, get, push, set, serverTimestamp } from 'firebase/database';
 import { rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
+import { decodeParam } from '@/app/lib/routeParams';
 
 const LiveMap = dynamic(() => import('../../components/LiveMap'), {
   ssr: false,
@@ -261,7 +262,7 @@ function ChatPanel({
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function FriendlyRidePage() {
   const params  = useParams();
-  const code    = (params.code as string)?.toUpperCase();
+  const code    = decodeParam(params.code as string)?.toUpperCase();
 
   const [riders, setRiders]               = useState<Rider[]>([]);
   const [messages, setMessages]           = useState<ChatMessage[]>([]);

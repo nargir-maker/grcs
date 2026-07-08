@@ -16,6 +16,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { BrevetCalendarPicker } from '@/app/components/BrevetCalendarPicker';
 import { GREEK_CITIES } from '@/app/lib/greek-cities';
+import { decodeParam } from '@/app/lib/routeParams';
 
 const GpxPreviewMap = dynamic(() => import('@/app/components/GpxPreviewMap'), {
   ssr: false,
@@ -220,7 +221,7 @@ function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: bool
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function EditBrevetPage() {
   const params = useParams();
-  const brevetId = params.id as string;
+  const brevetId = decodeParam(params.id as string);
   const router = useRouter();
 
   const { organizer, isOrganizer, organizerLoaded } = useAuth();

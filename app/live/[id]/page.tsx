@@ -6,6 +6,7 @@ import { ref, onValue, off } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
+import { decodeParam } from '@/app/lib/routeParams';
 
 const LiveMap = dynamic(() => import('../../components/LiveMap'), {
   ssr: false,
@@ -80,7 +81,7 @@ function StatChip({ value, label, color }: {
 
 export default function LiveBrevetPage() {
   const params = useParams();
-  const id = params.id as string;
+  const id = decodeParam(params.id as string);
   const [brevet, setBrevet]           = useState<BrevetInfo | null>(null);
   const [riders, setRiders]           = useState<Rider[]>([]);
   const [loading, setLoading]         = useState(true);

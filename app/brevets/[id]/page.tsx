@@ -7,6 +7,7 @@ import { doc, getDoc, getDocFromCache, getDocs, collection, query, where } from 
 import dynamic from 'next/dynamic';
 import { useSession, signIn } from 'next-auth/react';
 import RegistrationForm from '@/app/components/RegistrationForm';
+import { decodeParam } from '@/app/lib/routeParams';
 
 
 const WeatherStrip = dynamic(() => import('../../components/WeatherStrip'), {
@@ -424,7 +425,7 @@ function BackButton() {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function BrevetDetailPage() {
   const params = useParams();
-  const id = params.id as string;
+  const id = decodeParam(params.id as string);
   const [brevet, setBrevet] = useState<BrevetDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
