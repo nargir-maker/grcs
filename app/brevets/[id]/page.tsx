@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import { useSession, signIn } from 'next-auth/react';
 import RegistrationForm from '@/app/components/RegistrationForm';
 import { decodeParam } from '@/app/lib/routeParams';
+import { isNightStart } from '@/app/lib/nightStart';
 
 
 const WeatherStrip = dynamic(() => import('../../components/WeatherStrip'), {
@@ -152,6 +153,50 @@ function getSunTimes(lat: number, lng: number, date: Date): { sunrise: Date; sun
   return { sunrise: toDate(srLocal), sunset: toDate(ssLocal) };
 }
 
+// ── Total darkness across the full brevet window ────────────────────────────
+// Loops over every calendar day the brevet touches (not just the start day),
+// so multi-day distances (400/600/1000km) correctly sum every night instead
+// of only the first one. Reduces to the original single-night formula when
+// the brevet fits inside one calendar day. Returns milliseconds.
+function computeTotalDarkness(lat: number, lng: number, brevetStart: Date, brevetEnd: Date): number {
+  const startDay = new Date(brevetStart.getFullYear(), brevetStart.getMonth(), brevetStart.getDate());
+  const endDay   = new Date(brevetEnd.getFullYear(), brevetEnd.getMonth(), brevetEnd.getDate());
+  const spanDays = Math.round((endDay.getTime() - startDay.getTime()) / 86400000) + 1;
+
+  const dailySun = Array.from({ length: spanDays }, (_, i) => {
+    const d = new Date(startDay);
+    d.setDate(d.getDate() + i);
+    return getSunTimes(lat, lng, d);
+  });
+
+  let darkness = 0;
+
+  // Pre-dawn darkness on the first day.
+  const firstLightsOff = new Date(dailySun[0].sunrise.getTime() - 30 * 60000);
+  if (brevetStart < firstLightsOff) {
+    const segEnd = brevetEnd < firstLightsOff ? brevetEnd : firstLightsOff;
+    darkness += segEnd.getTime() - brevetStart.getTime();
+  }
+
+  // Full nights between consecutive days.
+  for (let i = 0; i < spanDays - 1; i++) {
+    const lightsOn  = new Date(dailySun[i].sunset.getTime() + 30 * 60000);
+    const lightsOff = new Date(dailySun[i + 1].sunrise.getTime() - 30 * 60000);
+    const segStart = lightsOn > brevetStart ? lightsOn : brevetStart;
+    const segEnd   = lightsOff < brevetEnd ? lightsOff : brevetEnd;
+    if (segEnd > segStart) darkness += segEnd.getTime() - segStart.getTime();
+  }
+
+  // Post-dusk darkness on the last day.
+  const lastLightsOn = new Date(dailySun[spanDays - 1].sunset.getTime() + 30 * 60000);
+  if (brevetEnd > lastLightsOn) {
+    const segStart = brevetStart > lastLightsOn ? brevetStart : lastLightsOn;
+    darkness += brevetEnd.getTime() - segStart.getTime();
+  }
+
+  return darkness;
+}
+
 // ── DaylightSection component ─────────────────────────────────────────────────
 function DaylightSection({ startCoords, startDate, distanceKm }: {
   startCoords: string;
@@ -180,20 +225,17 @@ function DaylightSection({ startCoords, startDate, distanceKm }: {
   const hoursToLightsOn = msToLightsOn / 3600000;
   const kmAtLightsOn  = Math.round(hoursToLightsOn * avgSpeed);
 
-  // Total darkness within brevet window
-  let darkMinutes = 0;
-  if (lightsOn < brevetEnd) {
-    const darkStart = lightsOn > startDate ? lightsOn : startDate;
-    darkMinutes += (brevetEnd.getTime() - darkStart.getTime()) / 60000;
-  }
-  if (startDate < lightsOff) {
-    const darkEnd = lightsOff < brevetEnd ? lightsOff : brevetEnd;
-    darkMinutes += (darkEnd.getTime() - startDate.getTime()) / 60000;
-  }
+  // Total darkness/daylight across the full (possibly multi-day) brevet
+  // window — sums every night the brevet touches, not just the first one.
+  const darkMinutes = Math.round(computeTotalDarkness(lat, lng, startDate, brevetEnd) / 60000);
+  const totalWindowMin = Math.round((brevetEnd.getTime() - startDate.getTime()) / 60000);
+  const totalDaylightMin = totalWindowMin - darkMinutes;
+  const spanDays = Math.round(
+    (new Date(brevetEnd.getFullYear(), brevetEnd.getMonth(), brevetEnd.getDate()).getTime() -
+     new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime()) / 86400000
+  ) + 1;
 
-
-
-  // Daylight duration
+  // Daylight duration (start day only — used for the "Ημέρα" chip/bar)
   const daylightMin = Math.round((sunset.getTime() - sunrise.getTime()) / 60000);
 
   // Bar: full 24h scale
@@ -342,6 +384,35 @@ function DaylightSection({ startCoords, startDate, distanceKm }: {
             </div>
           </div>
 
+          {/* ── TOTAL NIGHT / DAY (multi-day-aware) ── */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            <span className="flex-1 min-w-[140px] rounded-xl px-4 py-3 flex items-center gap-2 border"
+              style={{ background: '#05070F', borderColor: 'rgba(121,134,203,0.35)' }}>
+              <span className="text-xl">🌙</span>
+              <span className="flex flex-col leading-tight">
+                <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#7986CB' }}>
+                  Συνολική Νύχτα
+                </span>
+                <span className="text-sm font-bold text-white">{fmtDuration(darkMinutes)}</span>
+              </span>
+            </span>
+            <span className="flex-1 min-w-[140px] rounded-xl px-4 py-3 flex items-center gap-2 border"
+              style={{ background: '#F4F9FC', borderColor: 'rgba(1,87,155,0.25)' }}>
+              <span className="text-xl">☀️</span>
+              <span className="flex flex-col leading-tight">
+                <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#0288D1' }}>
+                  Συνολική Μέρα
+                </span>
+                <span className="text-sm font-bold" style={{ color: '#01579B' }}>{fmtDuration(totalDaylightMin)}</span>
+              </span>
+            </span>
+          </div>
+          {spanDays > 1 && (
+            <p className="text-white/30 text-[10px] mt-1.5">
+              Το brevet διαρκεί {spanDays} ημέρες — τα σύνολα αθροίζουν όλες τις νύχτες/μέρες της διαδρομής.
+            </p>
+          )}
+
           {/* ── CHIPS ── */}
           <div className="flex flex-wrap gap-2 mt-4">
             <span className="bg-orange-500/15 border border-orange-500/30 text-orange-400
@@ -386,8 +457,8 @@ function DaylightSection({ startCoords, startDate, distanceKm }: {
               <span className="text-2xl">🔋</span>
               <p className="text-white/70 text-sm">
                 Θα χρειαστείς φώτα για{' '}
-                <span className="text-amber-400 font-bold">{fmtDuration(Math.round(darkMinutes))}</span>{' '}
-                συνεχόμενα — έλεγξε τη φόρτιση των φώτων σου
+                <span className="text-amber-400 font-bold">{fmtDuration(darkMinutes)}</span>{' '}
+                {spanDays > 1 ? 'συνολικά' : 'συνεχόμενα'} — έλεγξε τη φόρτιση των φώτων σου
               </p>
             </div>
           )}
@@ -577,6 +648,16 @@ export default function BrevetDetailPage() {
           <div className="h-72 rounded-2xl overflow-hidden border border-white/10 bg-white/5">
             {brevet.imageUrl && <img src={brevet.imageUrl} alt={brevet.title} className="w-full h-full object-cover" />}
           </div>
+          {startDate && isNightStart(startDate) && (
+            <div className="absolute top-3 right-3 z-20 flex flex-col items-center gap-1.5">
+              <div className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm border border-white/20 shadow-lg flex items-center justify-center">
+                <img src="/logos/moon.png" alt="Νυχτερινή εκκίνηση" className="w-11 h-11 object-contain" />
+              </div>
+              <span className="bg-white/90 text-[#1A237E] text-[10px] font-bold px-2 py-0.5 rounded-full shadow tracking-wide">
+                ΝΥΧΤΕΡΙΝΟ
+              </span>
+            </div>
+          )}
           <div className="absolute left-1/2 -translate-x-1/2 -bottom-8 z-10">
             <img
               src={isCoOrg ? '/logos/both.png' : brevet.organizerLogo}

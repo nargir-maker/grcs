@@ -32,6 +32,83 @@ function windIntensityColor(kmh: number): string {
   return '#F87171';
 }
 
+// ── Weather source (route markers) ──────────────────────────────────────────
+// MET Norway is more accurate but only forecasts ~9 days out; beyond that we
+// fall back to Open-Meteo/ECMWF (~16 days). Same 9-day cutoff as the Flutter
+// app's map screen.
+export type WeatherSourceId = 'metno' | 'openmeteo';
+
+function pickWeatherSource(startDate: Date): WeatherSourceId {
+  return startDate.getTime() < Date.now() + 9 * 86400000 ? 'metno' : 'openmeteo';
+}
+
+async function fetchPointWeather(
+  lat: number, lng: number, time: Date, source: WeatherSourceId,
+): Promise<{ windSpeed: number; windDirection: number; precipMm: number; precipProb: number } | null> {
+  try {
+    if (source === 'metno') {
+      const res = await fetch(`/api/weather/metno?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}&time=${encodeURIComponent(time.toISOString())}`);
+      if (!res.ok) return null;
+      const d = await res.json();
+      return {
+        windSpeed: d.windSpeed ?? 0,
+        windDirection: d.windDirection ?? 0,
+        precipMm: d.precipitation ?? 0,
+        precipProb: 0,
+      };
+    }
+    const dateStr = time.toISOString().split('T')[0];
+    const endDate = new Date(time.getTime() + 86400000).toISOString().split('T')[0];
+    const url =
+      `https://api.open-meteo.com/v1/forecast?` +
+      `latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}` +
+      `&hourly=windspeed_10m,winddirection_10m,precipitation_probability` +
+      `&start_date=${dateStr}&end_date=${endDate}&models=best_match&timezone=UTC`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const targetHour = time.toISOString().slice(0, 13) + ':00';
+    const times: string[] = data.hourly?.time ?? [];
+    let idx = times.findIndex((t) => t === targetHour);
+    if (idx === -1) {
+      const targetMs = time.getTime();
+      let minDiff = Infinity;
+      times.forEach((t, i) => {
+        const diff = Math.abs(new Date(t + ':00Z').getTime() - targetMs);
+        if (diff < minDiff) { minDiff = diff; idx = i; }
+      });
+    }
+    if (idx === -1) return null;
+    return {
+      windSpeed: Math.round(data.hourly.windspeed_10m?.[idx] ?? 0),
+      windDirection: Math.round(data.hourly.winddirection_10m?.[idx] ?? 0),
+      precipMm: 0,
+      precipProb: Math.round(data.hourly.precipitation_probability?.[idx] ?? 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ── Rain indicator chip — 💧XX% (Open-Meteo) or 💧X.Xmm (MET Norway) ─────────
+// severity: 1=light, 2=moderate, 3=heavy (same thresholds as the Flutter app)
+function rainChipInfo(source: WeatherSourceId, precipMm: number, precipProb: number): { label: string; title: string; severity: number } | null {
+  if (source === 'metno') {
+    if (precipMm < 0.5) return null;
+    return {
+      label: `${precipMm.toFixed(1)}mm`,
+      title: `💧 ${precipMm.toFixed(1)}mm βροχή`,
+      severity: precipMm < 1.0 ? 1 : (precipMm < 3.0 ? 2 : 3),
+    };
+  }
+  if (precipProb < 20) return null;
+  return {
+    label: `${precipProb}%`,
+    title: `💧 ${precipProb}% πιθανότητα βροχής`,
+    severity: precipProb < 40 ? 1 : (precipProb < 70 ? 2 : 3),
+  };
+}
+
 // returns true = clockwise, false = counter-clockwise, null = open route
 export function detectClockwise(coords: { lat: number; lng: number }[]): boolean | null {
   if (coords.length < 3) return null;
@@ -53,16 +130,19 @@ function interp(coords: { lat: number; lng: number; distKm: number }[], km: numb
   return { lat: a.lat + t * (b.lat - a.lat), lng: a.lng + t * (b.lng - a.lng) };
 }
 
-async function addWindArrows(
+async function addWeatherMarkers(
   map: any, L: any,
   coords: { lat: number; lng: number; distKm: number }[],
   startDate: Date,
   aborted: { current: boolean },
+  onSource?: (source: WeatherSourceId) => void,
 ) {
   if (coords.length === 0) return;
   const totalKm = coords[coords.length - 1].distKm;
   const AVG_SPEED = 18;
   const NUM = 7;
+  const source = pickWeatherSource(startDate);
+  onSource?.(source);
 
   for (let i = 1; i < NUM; i++) {
     if (aborted.current) return;
@@ -77,13 +157,11 @@ async function addWindArrows(
 
     const eta = new Date(startDate.getTime() + (km / AVG_SPEED) * 3600000);
     try {
-      const res = await fetch(`/api/weather/metno?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}&time=${encodeURIComponent(eta.toISOString())}`);
-      if (!res.ok || aborted.current) continue;
-      const w = await res.json();
-      if (aborted.current) return;
+      const w = await fetchPointWeather(lat, lng, eta, source);
+      if (!w || aborted.current) continue;
 
-      const windDir: number = w.windDirection ?? 0;
-      const windSpd: number = w.windSpeed ?? 0;
+      const windDir = w.windDirection;
+      const windSpd = w.windSpeed;
 
       // Arrow points where wind GOES, absolute map direction
       const arrowRot = (windDir + 180) % 360;
@@ -94,7 +172,9 @@ async function addWindArrows(
       const rel = (windDir - routeBrg + 360) % 360;
       const impact = (rel <= 45 || rel >= 315) ? 'Αντίθετος' : (rel >= 135 && rel <= 225) ? 'Ευνοϊκός' : 'Πλαϊνός';
 
-      const html = `<div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
+      const etaLabel = eta.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
+
+      const windHtml = `<div style="display:flex;flex-direction:column;align-items:center;user-select:none;">
         <svg width="22" height="32" viewBox="0 0 22 32" xmlns="http://www.w3.org/2000/svg"
           style="transform:rotate(${arrowRot}deg);filter:drop-shadow(0 0 2px rgba(0,0,0,.9));overflow:visible">
           <path d="M11 1 L20 11 L16 11 L16 31 L6 31 L6 11 L2 11 Z"
@@ -107,10 +187,25 @@ async function addWindArrows(
         </div>
       </div>`;
 
-      const icon = L.divIcon({ html, className: '', iconSize: [30, 52], iconAnchor: [15, 16] });
-      L.marker([lat, lng], { icon, zIndexOffset: 500 })
-        .bindTooltip(`💨 ${windSpd} km/h · ${impact}<br/>km ${Math.round(km)} · ETA ${eta.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}`)
+      const windIcon = L.divIcon({ html: windHtml, className: '', iconSize: [30, 52], iconAnchor: [15, 16] });
+      L.marker([lat, lng], { icon: windIcon, zIndexOffset: 500 })
+        .bindTooltip(`💨 ${windSpd} km/h · ${impact}<br/>km ${Math.round(km)} · ETA ${etaLabel}`)
         .addTo(map);
+
+      // ── Rain indicator chip — below the point, so it doesn't collide with the wind arrow above it ──
+      const rain = rainChipInfo(source, w.precipMm, w.precipProb);
+      if (rain) {
+        const rainColor = rain.severity <= 1 ? '#64B5F6' : rain.severity === 2 ? '#1E88E5' : '#0D47A1';
+        const rainTextColor = rain.severity >= 3 ? '#fff' : '#000';
+        const rainHtml = `<div style="display:flex;align-items:center;gap:2px;background:${rainColor};
+          border:1.5px solid black;border-radius:10px;padding:2px 6px;font-size:11px;font-weight:800;
+          color:${rainTextColor};font-family:Arial,sans-serif;white-space:nowrap;
+          box-shadow:0 1px 3px rgba(0,0,0,.5)">💧${rain.label}</div>`;
+        const rainIcon = L.divIcon({ html: rainHtml, className: '', iconSize: [60, 22], iconAnchor: [30, -6] });
+        L.marker([lat, lng], { icon: rainIcon, zIndexOffset: 400 })
+          .bindTooltip(`${rain.title}<br/>km ${Math.round(km)} · ETA ${etaLabel}`)
+          .addTo(map);
+      }
     } catch { /* skip this point */ }
 
     if (i < NUM - 1) await new Promise(r => setTimeout(r, 200));
@@ -370,12 +465,16 @@ const WIND_LEGEND_ITEMS = [
   { color: '#F87171', label: '> 50 Θυελλώδης' },
 ] as const;
 
+function weatherSourceLabel(source: WeatherSourceId): string {
+  return source === 'metno' ? 'Καιρός: 🇳🇴 MET Norway' : 'Καιρός: 🌐 Open-Meteo';
+}
+
 // full = below inline map; compact = overlay inside fullscreen
 function WindLegend({
-  clockwise, showLegend, compact = false,
-}: { clockwise?: boolean | null; showLegend: boolean; compact?: boolean }) {
+  clockwise, showLegend, compact = false, source = null,
+}: { clockwise?: boolean | null; showLegend: boolean; compact?: boolean; source?: WeatherSourceId | null }) {
   if (compact) {
-    if (!showLegend && clockwise == null) return null;
+    if (!showLegend && clockwise == null && !source) return null;
     return (
       <div className="flex flex-wrap items-center gap-1.5">
         {showLegend && WIND_LEGEND_ITEMS.map(({ color, label }) => (
@@ -394,6 +493,12 @@ function WindLegend({
           <span className="flex items-center px-2 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-md"
             style={{ background: 'rgba(10,22,40,0.80)', borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.75)' }}>
             {clockwise ? '↻ Δεξιόστροφη' : '↺ Αριστερόστροφη'}
+          </span>
+        )}
+        {source && (
+          <span className="flex items-center px-2 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-md"
+            style={{ background: 'rgba(10,22,40,0.80)', borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.75)' }}>
+            {weatherSourceLabel(source)}
           </span>
         )}
       </div>
@@ -418,6 +523,11 @@ function WindLegend({
             {clockwise != null && (
               <span className="ml-1 px-2 py-0.5 rounded-full border border-white/20 text-white/60 font-medium">
                 {clockwise ? '↻ Δεξιόστροφη' : '↺ Αριστερόστροφη'}
+              </span>
+            )}
+            {source && (
+              <span className="ml-1 px-2 py-0.5 rounded-full border border-white/20 text-white/60 font-medium">
+                {weatherSourceLabel(source)}
               </span>
             )}
           </div>
@@ -495,6 +605,7 @@ function FullscreenMap({
   const [modalScrubberKm, setModalScrubberKm] = useState<number | null>(null);
   const [showChart,       setShowChart]       = useState(true);
   const [fsActiveStyle,   setFsActiveStyle]   = useState(initialStyle ?? DEFAULT_STYLE);
+  const [fsWeatherSource, setFsWeatherSource] = useState<WeatherSourceId | null>(null);
 
   useEffect(() => {
     if (!modalMapRef.current) return;
@@ -512,7 +623,7 @@ function FullscreenMap({
       modalDotMarkerRef.current   = markerRef.current;
       fsLRef.current = (await import('leaflet')).default;
       if (startDate && capturedCoords.length > 0 && !destroyed) {
-        addWindArrows(map, fsLRef.current, capturedCoords, startDate, windAborted);
+        addWeatherMarkers(map, fsLRef.current, capturedCoords, startDate, windAborted, setFsWeatherSource);
       }
     });
     return () => {
@@ -590,6 +701,7 @@ function FullscreenMap({
             compact
             showLegend={!!startDate}
             clockwise={startDate ? detectClockwise(modalCoords) : undefined}
+            source={fsWeatherSource}
           />
         </div>
 
@@ -636,6 +748,7 @@ export default function BrevetMap({
   const [activeStyle,  setActiveStyle]  = useState<string>(DEFAULT_STYLE);
   const [mapReady,     setMapReady]     = useState(false);
   const [clockwise,    setClockwise]    = useState<boolean | null>(null);
+  const [weatherSource, setWeatherSource] = useState<WeatherSourceId | null>(null);
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(f => !f), []);
 
@@ -669,7 +782,7 @@ export default function BrevetMap({
     const L   = LRef.current;
     if (!map || !L) return;
     windAbortRef.current = false;
-    addWindArrows(map, L, parsedCoords, startDate, windAbortRef);
+    addWeatherMarkers(map, L, parsedCoords, startDate, windAbortRef, setWeatherSource);
     return () => { windAbortRef.current = true; };
   }, [mapReady, startDate, parsedCoords]);
 
@@ -730,7 +843,7 @@ export default function BrevetMap({
       </div>
 
       {/* Legend + attribution — outside the relative div so it never shifts tile buttons */}
-      <WindLegend clockwise={startDate ? clockwise : undefined} showLegend={!!startDate} />
+      <WindLegend clockwise={startDate ? clockwise : undefined} showLegend={!!startDate} source={weatherSource} />
     </>
   );
 }

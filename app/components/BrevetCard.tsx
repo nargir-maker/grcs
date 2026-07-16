@@ -2,6 +2,8 @@
 // Drop-in replacement card component for the brevets grid
 // Usage: <BrevetCard b={brevet} hasCoOrg={hasCoOrg(brevet)} />
 
+import { isNightStart } from '@/app/lib/nightStart';
+
 interface BrevetCardProps {
   b: {
     id: string;
@@ -37,11 +39,13 @@ export default function BrevetCard({ b, hasCoOrg }: BrevetCardProps) {
   const hasImage = b.imageUrl && b.imageUrl.length > 0;
   const emoji    = DIFF_EMOJI[b.difficultyLabel] ?? '⚪';
 
-  const dateStr = b.date
-    ? new Date(b.date).toLocaleDateString('el-GR', {
+  const dateObj = b.date ? new Date(b.date) : null;
+  const dateStr = dateObj
+    ? dateObj.toLocaleDateString('el-GR', {
         day: 'numeric', month: 'long', year: 'numeric',
       })
     : '—';
+  const isNight = !!dateObj && !isNaN(dateObj.getTime()) && isNightStart(dateObj);
 
   return (
     <a
@@ -179,8 +183,16 @@ export default function BrevetCard({ b, hasCoOrg }: BrevetCardProps) {
             className="flex items-center justify-between flex-wrap gap-2 pt-3"
             style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
           >
-            <span className="text-white/45 text-xs">
+            <span className="text-white/45 text-xs flex items-center gap-1.5">
               📅 {dateStr}
+              {isNight && (
+                <img
+                  src="/logos/moon.png"
+                  alt="Νυχτερινή εκκίνηση"
+                  title="Νυχτερινή εκκίνηση"
+                  className="w-4 h-4 object-contain"
+                />
+              )}
             </span>
 
             <div className="flex items-center gap-3">
