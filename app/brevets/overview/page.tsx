@@ -126,7 +126,7 @@ export default function BrevetsOverviewPage() {
       destroyed = true;
       if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
     };
-  }, []);
+  }, [enabled]);
 
   // Kick off GPX fetches once, after the doc list arrives
   useEffect(() => {
