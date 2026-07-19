@@ -354,13 +354,27 @@ export default function BrevetsPage() {
         })()}
 
         {/* ── HEADER ── */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            📅 Ημερολόγιο Brevet
-          </h1>
-          <p className="text-white/50">
-            Όλα τα προγραμματισμένα brevets της σεζόν
-          </p>
+        <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              📅 Ημερολόγιο Brevet
+            </h1>
+            <p className="text-white/50">
+              Όλα τα προγραμματισμένα brevets της σεζόν
+            </p>
+          </div>
+          <a
+            href="/brevets/overview"
+            className="flex items-center gap-2 text-xs font-bold px-3.5 py-2.5 rounded-xl
+              transition-all hover:bg-cyan-500/20 no-underline"
+            style={{
+              color: '#06b6d4',
+              border: '1px solid rgba(6,182,212,0.3)',
+              background: 'rgba(6,182,212,0.08)',
+            }}
+          >
+            🗺️ Χάρτης όλων των διαδρομών
+          </a>
         </div>
 
         {/* ── FILTERS ── */}
