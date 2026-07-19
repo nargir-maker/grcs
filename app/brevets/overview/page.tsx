@@ -25,13 +25,37 @@ function colorForDistance(km: number): string {
   return (DISTANCE_COLORS.find(b => km <= b.max) ?? DISTANCE_COLORS[DISTANCE_COLORS.length - 1]).color;
 }
 
+type Club = 'lepote' | 'har' | 'both';
+
 interface RouteInfo {
   id: string;
   title: string;
   distance: number;
   start: string;
   gpxUrl: string;
+  club: Club;
   coords: [number, number][] | null; // null = not yet fetched, [] = failed
+}
+
+// Same club-detection rule as RegistrationForm.tsx: a co-organizer means both
+// clubs homologate it; otherwise the certification field decides ACP/ΛΕΠΟΤΕ vs HAR.
+function deriveClub(certification: string, coOrganizerId: string): Club {
+  const cert     = certification.toUpperCase().replaceAll('.', '').trim();
+  const hasCoOrg = !!(coOrganizerId && coOrganizerId !== '0');
+  const isHAR    = cert.includes('HAR');
+  return hasCoOrg ? 'both' : isHAR ? 'har' : 'lepote';
+}
+
+const CLUB_FILTERS: { id: 'all' | 'har' | 'lepote'; label: string }[] = [
+  { id: 'all',    label: 'Όλα' },
+  { id: 'lepote', label: 'ΛΕ.ΠΟ.Τ.Ε.' },
+  { id: 'har',    label: 'HAR' },
+];
+
+function matchesClubFilter(club: Club, filter: 'all' | 'har' | 'lepote'): boolean {
+  if (filter === 'all')    return true;
+  if (filter === 'har')    return club === 'har'    || club === 'both';
+  return club === 'lepote' || club === 'both';
 }
 
 // Keep each polyline light — an overview map doesn't need full GPS precision.
@@ -65,12 +89,15 @@ export default function BrevetsOverviewPage() {
   const polylinesRef   = useRef<Record<string, any>>({});
   const fetchStartedRef = useRef(false);
   const fittedRef      = useRef(false);
+  const prevFilterRef  = useRef<'all' | 'har' | 'lepote'>('all');
 
   const [routes, setRoutes]       = useState<RouteInfo[]>([]);
   const [pending, setPending]     = useState(0);
   const [mapReady, setMapReady]   = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [docsLoaded, setDocsLoaded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [clubFilter, setClubFilter] = useState<'all' | 'har' | 'lepote'>('all');
 
   const enabled = usePageEnabled('brevets-overview');
 
@@ -97,6 +124,7 @@ export default function BrevetsOverviewPage() {
           distance: parseInt(info.distance?.toString() ?? '0') || 0,
           start:    route.start?.toString() ?? '',
           gpxUrl,
+          club:     deriveClub(info.certification?.toString() ?? '', info.coOrganizerId?.toString() ?? ''),
           coords:   null,
         });
       });
@@ -184,6 +212,57 @@ export default function BrevetsOverviewPage() {
     }
   }, [selectedId]);
 
+  // Show only the routes matching the club filter; drop the selection if it
+  // falls outside the current filter.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const routeById = new Map(routes.map(r => [r.id, r]));
+    Object.entries(polylinesRef.current).forEach(([id, pl]) => {
+      const r = routeById.get(id);
+      const visible = !r || matchesClubFilter(r.club, clubFilter);
+      const onMap = map.hasLayer(pl);
+      if (visible && !onMap) pl.addTo(map);
+      if (!visible && onMap) map.removeLayer(pl);
+    });
+    if (selectedId) {
+      const r = routeById.get(selectedId);
+      if (r && !matchesClubFilter(r.club, clubFilter)) setSelectedId(null);
+    }
+  }, [clubFilter, routes, selectedId]);
+
+  // Re-fit the map to whatever's visible, but only on an actual filter change
+  // — not on every GPX arrival, which would otherwise re-zoom constantly.
+  useEffect(() => {
+    const L = LRef.current, map = mapRef.current;
+    if (!L || !map) return;
+    if (prevFilterRef.current === clubFilter) return;
+    prevFilterRef.current = clubFilter;
+    const visiblePls = Object.values(polylinesRef.current).filter((pl: any) => map.hasLayer(pl));
+    if (visiblePls.length > 0) {
+      const group = L.featureGroup(visiblePls);
+      map.fitBounds(group.getBounds(), { padding: [20, 20] });
+    }
+  }, [clubFilter]);
+
+  // Esc exits fullscreen; lock page scroll while fullscreen is open
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullscreen(false); };
+    window.addEventListener('keydown', handler);
+    const prevOverflow = document.body.style.overflow;
+    if (isFullscreen) document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handler);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isFullscreen]);
+
+  // Leaflet needs a nudge once its container's size actually changes
+  useEffect(() => {
+    const id = setTimeout(() => mapRef.current?.invalidateSize(), 60);
+    return () => clearTimeout(id);
+  }, [isFullscreen]);
+
   if (enabled === null) return (
     <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
@@ -191,9 +270,10 @@ export default function BrevetsOverviewPage() {
   );
   if (enabled === false) return <ComingSoon label="Χάρτης διαδρομών" />;
 
+  const filteredRoutes = routes.filter(r => matchesClubFilter(r.club, clubFilter));
   const grouped = DISTANCE_COLORS.map(bucket => ({
     ...bucket,
-    routes: routes.filter(r => colorForDistance(r.distance) === bucket.color),
+    routes: filteredRoutes.filter(r => colorForDistance(r.distance) === bucket.color),
   })).filter(b => b.routes.length > 0);
 
   return (
@@ -211,18 +291,44 @@ export default function BrevetsOverviewPage() {
             </h1>
             <p className="text-white/50 text-sm">
               {routes.length > 0
-                ? `${routes.length} brevets · ${pending > 0 ? `φόρτωση ${routes.length - pending}/${routes.length}…` : 'όλες οι διαδρομές φορτώθηκαν'}`
+                ? `${clubFilter === 'all' ? routes.length : filteredRoutes.length} brevets · ${pending > 0 ? `φόρτωση ${routes.length - pending}/${routes.length}…` : 'όλες οι διαδρομές φορτώθηκαν'}`
                 : 'Φόρτωση διαδρομών…'}
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-4">
+        <div
+          className={isFullscreen ? 'fixed inset-0 z-50 bg-[#0A1628]' : 'flex flex-col lg:flex-row gap-4'}
+        >
           {/* ── Route list ── */}
           <div
-            className="lg:w-72 shrink-0 rounded-2xl border border-white/10 overflow-hidden flex flex-col"
-            style={{ background: 'rgba(255,255,255,0.03)', maxHeight: 640 }}
+            className={
+              isFullscreen
+                ? 'absolute top-4 left-4 bottom-4 z-10 w-72 rounded-2xl border border-white/10 overflow-hidden flex flex-col shadow-2xl backdrop-blur-md'
+                : 'lg:w-72 shrink-0 rounded-2xl border border-white/10 overflow-hidden flex flex-col'
+            }
+            style={{
+              background: isFullscreen ? 'rgba(10,22,40,0.72)' : 'rgba(255,255,255,0.03)',
+              maxHeight: isFullscreen ? undefined : 640,
+            }}
           >
+            {/* ── Club filter ── */}
+            <div className="flex items-center gap-1 p-2 border-b border-white/10">
+              {CLUB_FILTERS.map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setClubFilter(f.id)}
+                  className="flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold transition-colors"
+                  style={{
+                    background: clubFilter === f.id ? 'rgba(6,182,212,0.2)' : 'transparent',
+                    color:      clubFilter === f.id ? '#06b6d4' : 'rgba(255,255,255,0.5)',
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
             {selectedId && (
               <button
                 onClick={() => setSelectedId(null)}
@@ -236,7 +342,7 @@ export default function BrevetsOverviewPage() {
                 <div key={bucket.label}>
                   <div
                     className="sticky top-0 flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wide"
-                    style={{ background: 'rgba(10,22,40,0.92)', color: bucket.color }}
+                    style={{ background: isFullscreen ? 'rgba(10,22,40,0.85)' : 'rgba(10,22,40,0.92)', color: bucket.color }}
                   >
                     <span className="w-2.5 h-2.5 rounded-full" style={{ background: bucket.color }} />
                     {bucket.label}
@@ -262,8 +368,38 @@ export default function BrevetsOverviewPage() {
           </div>
 
           {/* ── Map ── */}
-          <div className="flex-1 rounded-2xl overflow-hidden border border-white/10" style={{ height: 640 }}>
+          <div
+            className={
+              isFullscreen
+                ? 'absolute inset-0'
+                : 'flex-1 relative rounded-2xl overflow-hidden border border-white/10'
+            }
+            style={{ height: isFullscreen ? '100%' : 640 }}
+          >
             <div ref={mapDivRef} style={{ height: '100%', width: '100%' }} />
+
+            <button
+              onClick={() => setIsFullscreen(f => !f)}
+              title={isFullscreen ? 'Έξοδος από πλήρη οθόνη (Esc)' : 'Πλήρης οθόνη'}
+              className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5
+                rounded-lg text-xs font-bold border backdrop-blur-sm transition-all hover:brightness-110"
+              style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}
+            >
+              {isFullscreen ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round"
+                    d="M9 9L4 4m0 0h5m-5 0v5M15 9l5-5m0 0h-5m5 0v5M9 15l-5 5m0 0h5m-5 0v-5M15 15l5 5m0 0h-5m5 0v-5" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round"
+                    d="M4 8V4m0 0h4M4 4l5 5M20 8V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5M20 16v4m0 0h-4m4 0l-5-5" />
+                </svg>
+              )}
+              {isFullscreen ? 'Έξοδος' : 'Πλήρης οθόνη'}
+            </button>
           </div>
         </div>
 
