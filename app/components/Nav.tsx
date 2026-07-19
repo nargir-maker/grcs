@@ -43,6 +43,10 @@ if (isOrganizer && organizer) {
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
                   Πρόγραμμα Brevets
                 </Link>
+                <Link href="/brevets/overview"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Χάρτης Διαδρομών
+                </Link>
                 <Link href="/history"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
                   Ιστορικό
@@ -175,6 +179,8 @@ if (isOrganizer && organizer) {
             <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
               <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>Πρόγραμμα Brevets</Link>
+              <Link href="/brevets/overview" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Χάρτης Διαδρομών</Link>
               <Link href="/history" className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>Ιστορικό</Link>
               <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors"
@@ -255,6 +261,10 @@ if (isOrganizer && organizer) {
                 <Link href="/brevets"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
                   Πρόγραμμα Brevets
+                </Link>
+                <Link href="/brevets/overview"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  Χάρτης Διαδρομών
                 </Link>
                 <Link href="/history"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
@@ -424,6 +434,8 @@ if (isOrganizer && organizer) {
             <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
               <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>Πρόγραμμα Brevets</Link>
+              <Link href="/brevets/overview" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>Χάρτης Διαδρομών</Link>
               <Link href="/history" className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>Ιστορικό</Link>
               <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors"
