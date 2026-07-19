@@ -374,7 +374,7 @@ export default function BrevetsOverviewPage() {
                 ? 'absolute inset-0'
                 : 'flex-1 relative rounded-2xl overflow-hidden border border-white/10'
             }
-            style={{ height: isFullscreen ? '100%' : 640 }}
+            style={{ height: isFullscreen ? '100%' : 640, isolation: 'isolate' }}
           >
             <div ref={mapDivRef} style={{ height: '100%', width: '100%' }} />
 
