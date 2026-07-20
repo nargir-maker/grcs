@@ -42,7 +42,35 @@ interface RouteInfo {
   certification: string;
   startLat: number | null;
   startLng: number | null;
+  date: Date | null;
   coords: [number, number][] | null; // null = not yet fetched, [] = failed
+}
+
+// Same Greek-abbreviated-month date parser as /history — history_raw event
+// titles are worded slightly differently from the live all_brevets title
+// (e.g. "Δέλβινο - 300km στη Β. Ήπειρο" vs "Δέλβινο…300km στη Βόρεια Ήπειρο"),
+// so matching on the exact date is far more reliable than matching on title text.
+function parseHistDate(dt: string): Date | null {
+  try {
+    const mm: Record<string, number> = {
+      'ιαν': 1, 'φεβ': 2, 'μαρ': 3, 'απρ': 4,
+      'μαΐ': 5, 'μαϊ': 5, 'μαι': 5, 'μάι': 5, 'μάϊ': 5,
+      'ιουν': 6, 'ιουλ': 7, 'αυγ': 8, 'σεπ': 9,
+      'οκτ': 10, 'νοε': 11, 'δεκ': 12,
+    };
+    let s = dt.toLowerCase().trim();
+    for (const [k, v] of Object.entries(mm)) s = s.replaceAll(k, ` ${v} `);
+    const parts = s.replace(/[^0-9]/g, ' ').trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 3) {
+      let y = parseInt(parts[2]);
+      if (y < 100) y += 2000;
+      return new Date(y, parseInt(parts[1]) - 1, parseInt(parts[0]));
+    }
+  } catch {}
+  return null;
+}
+function sameDay(a: Date | null, b: Date | null): boolean {
+  return !!a && !!b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
 // Same club-detection rule as RegistrationForm.tsx: a co-organizer means both
@@ -235,15 +263,16 @@ export default function BrevetsOverviewPage() {
     return matchesClubFilter(r.club, clubFilter) && matchesRegionFilter(regionByRouteId[r.id] ?? null, regionFilter);
   }
 
-  // Results (who actually rode it) for the selected brevet, matched by exact
-  // title against each public member's history_raw — same convention as
-  // /history and /results. Only covers brevets that have already happened
-  // and whose riders have a public profile, so most upcoming/unrun brevets
-  // will legitimately show no data.
+  // Results (who actually rode it) for the selected brevet, matched by date +
+  // distance against each public member's history_raw — same source /history
+  // and /results use. Matching on date rather than title text, since the
+  // historical record's wording can differ from the live brevet title (e.g.
+  // "Δέλβινο - 300km στη Β. Ήπειρο" vs "Δέλβινο…300km στη Βόρεια Ήπειρο").
+  // Only covers brevets that have already happened and whose riders have a
+  // public profile, so most upcoming/unrun brevets will legitimately show no data.
   const routeParticipants = useMemo(() => {
     const route = selectedId ? routes.find(r => r.id === selectedId) : null;
-    if (!route || !publicMembers) return null;
-    const title = route.title.trim();
+    if (!route || !route.date || !publicMembers) return null;
     const names: string[] = [];
     for (const m of publicMembers) {
       let hist: Record<string, any> = {};
@@ -253,7 +282,8 @@ export default function BrevetsOverviewPage() {
       } catch { continue; }
       for (const yd of Object.values(hist)) {
         for (const ev of ((yd as any).events ?? [])) {
-          if ((ev.n ?? '').toString().trim() === title && (ev.dt ?? '').toString().includes(String(YEAR))) {
+          const evDate = parseHistDate((ev.dt ?? '').toString());
+          if (sameDay(evDate, route.date) && Number(ev.d) === route.distance) {
             const first = (m.name_el ?? '').toString().trim();
             const lastInitial = (m.surname_el ?? '').toString().trim().charAt(0);
             if (first) names.push(lastInitial ? `${first} ${lastInitial}.` : first);
@@ -294,6 +324,11 @@ export default function BrevetsOverviewPage() {
         const [startLatStr, startLngStr] = (route.startCoords?.toString() ?? '').split(',');
         const startLat = parseFloat(startLatStr);
         const startLng = parseFloat(startLngStr);
+        let date: Date | null = null;
+        try {
+          const d2 = new Date((info.date?.toString() ?? '').split('+')[0]);
+          if (!isNaN(d2.getTime())) date = d2;
+        } catch {}
         list.push({
           id:       doc.id,
           title:    info.title?.toString() ?? doc.id,
@@ -306,6 +341,7 @@ export default function BrevetsOverviewPage() {
           certification,
           startLat: Number.isFinite(startLat) ? startLat : null,
           startLng: Number.isFinite(startLng) ? startLng : null,
+          date,
           coords:   null,
         });
       });
