@@ -448,14 +448,17 @@ export default function BrevetsOverviewPage() {
 
             {selectedRoute && badge && (
               <div
-                className="absolute top-14 right-3 z-[1000] rounded-lg border backdrop-blur-sm px-3 py-2 space-y-2"
+                className="absolute top-16 right-3 z-[1000] rounded-lg border backdrop-blur-sm px-3 py-2 space-y-2"
                 style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)' }}
               >
                 <div className="flex items-center gap-2">
                   <img
                     src={organizerLogo}
                     alt={organizerName}
-                    className="w-6 h-6 rounded-full object-cover shrink-0"
+                    width={46}
+                    height={46}
+                    className="rounded-full object-cover shrink-0"
+                    style={{ width: 46, height: 46 }}
                     onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                   />
                   <div className="leading-tight">
@@ -467,7 +470,10 @@ export default function BrevetsOverviewPage() {
                   <img
                     src={badge.logo}
                     alt={badge.label}
-                    className="w-6 h-6 rounded-full object-cover shrink-0"
+                    width={46}
+                    height={46}
+                    className="rounded-full object-cover shrink-0"
+                    style={{ width: 46, height: 46 }}
                     onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                   />
                   <div className="leading-tight">
