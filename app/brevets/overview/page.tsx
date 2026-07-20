@@ -10,6 +10,7 @@ import { collection, getDocs, query, where, documentId } from 'firebase/firestor
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 import { TILE_STYLES, DEFAULT_STYLE, TileSwitcher } from '@/app/components/BrevetMap';
 import PageViews from '@/app/components/PageViews';
+import { getPublicMembers, type RawMemberDoc } from '@/app/lib/publicMembersCache';
 
 const YEAR = 2026;
 
@@ -194,25 +195,19 @@ export default function BrevetsOverviewPage() {
   const [regionGeo, setRegionGeo] = useState<any>(null);
   const [activeStyle, setActiveStyle] = useState<string>(DEFAULT_STYLE);
   const [clubNames, setClubNames] = useState<Record<string, string>>({});
-  const [participants, setParticipants] = useState<{ count: number; names: string[] } | null>(null);
-  const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [publicMembers, setPublicMembers] = useState<RawMemberDoc[] | null>(null);
 
   const enabled = usePageEnabled('brevets-overview');
 
-  // Fetch privacy-safe participant info (count + "First L." names) for whichever
-  // brevet is currently selected, via the server route — the underlying
-  // registrations subcollection isn't publicly readable.
+  // Same source as /history and /results: each public member's stats.history_raw
+  // JSON blob lists the brevets they've completed. Fetched once and matched
+  // client-side against the selected route's title — this is the actual
+  // "results" data (who finished), as opposed to pre-event registrations.
   useEffect(() => {
-    if (!selectedId) { setParticipants(null); return; }
     let cancelled = false;
-    setParticipantsLoading(true);
-    fetch(`/api/brevet-participants?brevetId=${encodeURIComponent(selectedId)}`)
-      .then(res => res.json())
-      .then(data => { if (!cancelled) setParticipants({ count: data.count ?? 0, names: data.names ?? [] }); })
-      .catch(() => { if (!cancelled) setParticipants({ count: 0, names: [] }); })
-      .finally(() => { if (!cancelled) setParticipantsLoading(false); });
+    getPublicMembers().then(docs => { if (!cancelled) setPublicMembers(docs); }).catch(() => {});
     return () => { cancelled = true; };
-  }, [selectedId]);
+  }, []);
 
   // Region-boundary GeoJSON for the geo filter — fetched once as a static asset,
   // not bundled into the JS, since it's only needed on this page.
@@ -239,6 +234,36 @@ export default function BrevetsOverviewPage() {
   function matchesFilters(r: RouteInfo): boolean {
     return matchesClubFilter(r.club, clubFilter) && matchesRegionFilter(regionByRouteId[r.id] ?? null, regionFilter);
   }
+
+  // Results (who actually rode it) for the selected brevet, matched by exact
+  // title against each public member's history_raw — same convention as
+  // /history and /results. Only covers brevets that have already happened
+  // and whose riders have a public profile, so most upcoming/unrun brevets
+  // will legitimately show no data.
+  const routeParticipants = useMemo(() => {
+    const route = selectedId ? routes.find(r => r.id === selectedId) : null;
+    if (!route || !publicMembers) return null;
+    const title = route.title.trim();
+    const names: string[] = [];
+    for (const m of publicMembers) {
+      let hist: Record<string, any> = {};
+      try {
+        const h = m.stats?.history_raw;
+        if (h) { const p = JSON.parse(h); hist = p.history ?? p; }
+      } catch { continue; }
+      for (const yd of Object.values(hist)) {
+        for (const ev of ((yd as any).events ?? [])) {
+          if ((ev.n ?? '').toString().trim() === title && (ev.dt ?? '').toString().includes(String(YEAR))) {
+            const first = (m.name_el ?? '').toString().trim();
+            const lastInitial = (m.surname_el ?? '').toString().trim().charAt(0);
+            if (first) names.push(lastInitial ? `${first} ${lastInitial}.` : first);
+          }
+        }
+      }
+    }
+    names.sort((a, b) => a.localeCompare(b, 'el'));
+    return { count: names.length, names };
+  }, [selectedId, routes, publicMembers]);
 
   // Fetch all 2026_* brevet docs (doc IDs are "{year}_{startCity}_{km}_{organizerId}")
   useEffect(() => {
@@ -647,15 +672,15 @@ export default function BrevetsOverviewPage() {
                   style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)' }}
                 >
                   <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1">Συμμετέχοντες</div>
-                  {participantsLoading ? (
+                  {!publicMembers ? (
                     <div className="text-xs text-white/40">Φόρτωση…</div>
-                  ) : !participants || participants.count === 0 ? (
+                  ) : !routeParticipants || routeParticipants.count === 0 ? (
                     <div className="text-xs text-white/40">Δεν υπάρχουν διαθέσιμα δεδομένα</div>
                   ) : (
                     <>
-                      <div className="text-xs font-semibold text-cyan-400 mb-1">{participants.count} εγγεγραμμένοι</div>
+                      <div className="text-xs font-semibold text-cyan-400 mb-1">{routeParticipants.count} συμμετέχοντες</div>
                       <div className="text-[11px] text-white/70 leading-snug max-h-24 overflow-y-auto">
-                        {participants.names.join(', ')}
+                        {routeParticipants.names.join(', ')}
                       </div>
                     </>
                   )}
