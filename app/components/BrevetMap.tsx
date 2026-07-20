@@ -213,7 +213,7 @@ async function addWeatherMarkers(
 }
 
 // ── Tile styles — shared between inline map and fullscreen ────────────────────
-const TILE_STYLES = [
+export const TILE_STYLES = [
   {
     id: 'street',
     label: '🗺️', title: 'Οδικός',
@@ -240,7 +240,7 @@ const TILE_STYLES = [
   },
 ];
 
-const DEFAULT_STYLE = 'outdoors';
+export const DEFAULT_STYLE = 'outdoors';
 
 interface BrevetMapProps {
   gpxUrl: string;
@@ -542,7 +542,7 @@ function WindLegend({
 }
 
 // ── Tile switcher buttons — reusable (no absolute positioning; caller positions it) ──
-function TileSwitcher({
+export function TileSwitcher({
   activeId, mapInstanceRef, tileLayerRef, LRef, onSwitch,
 }: {
   activeId:       string;

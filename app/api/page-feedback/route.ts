@@ -6,6 +6,7 @@ const VALID_PAGES = [
   'randonneuring', 'guide', 'acp-guide',
   'home', 'about', 'brevet-history', 'community', 'members', 'results',
   'pantheon', 'brevet-universe', 'organizer-universe', 'brevets', 'live',
+  'brevets-overview',
 ];
 
 export async function GET(req: NextRequest) {

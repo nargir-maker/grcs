@@ -8,6 +8,8 @@ import { useEffect, useRef, useState } from 'react';
 import { db } from '@/app/lib/firebase';
 import { collection, getDocs, query, where, documentId } from 'firebase/firestore';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
+import { TILE_STYLES, DEFAULT_STYLE, TileSwitcher } from '@/app/components/BrevetMap';
+import PageViews from '@/app/components/PageViews';
 
 const YEAR = 2026;
 
@@ -86,6 +88,7 @@ export default function BrevetsOverviewPage() {
   const mapDivRef      = useRef<HTMLDivElement>(null);
   const mapRef         = useRef<any>(null);
   const LRef           = useRef<any>(null);
+  const tileLayerRef   = useRef<any>(null);
   const polylinesRef   = useRef<Record<string, any>>({});
   const fetchStartedRef = useRef(false);
   const fittedRef      = useRef(false);
@@ -98,6 +101,7 @@ export default function BrevetsOverviewPage() {
   const [docsLoaded, setDocsLoaded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [clubFilter, setClubFilter] = useState<'all' | 'har' | 'lepote'>('all');
+  const [activeStyle, setActiveStyle] = useState<string>(DEFAULT_STYLE);
 
   const enabled = usePageEnabled('brevets-overview');
 
@@ -143,8 +147,9 @@ export default function BrevetsOverviewPage() {
       if (destroyed || !mapDivRef.current) return;
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       const map = L.map(mapDivRef.current, { zoomControl: true }).setView([38.5, 23.0], 7);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors', maxZoom: 19,
+      const defaultTile = TILE_STYLES.find(s => s.id === DEFAULT_STYLE) ?? TILE_STYLES[0];
+      tileLayerRef.current = L.tileLayer(defaultTile.url, {
+        attribution: defaultTile.attribution, maxZoom: defaultTile.maxZoom,
       }).addTo(map);
       LRef.current   = L;
       mapRef.current = map;
@@ -304,7 +309,7 @@ export default function BrevetsOverviewPage() {
           <div
             className={
               isFullscreen
-                ? 'absolute top-4 left-4 bottom-4 z-10 w-72 rounded-2xl border border-white/10 overflow-hidden flex flex-col shadow-2xl backdrop-blur-md'
+                ? 'absolute top-20 left-4 bottom-4 z-10 w-72 rounded-2xl border border-white/10 overflow-hidden flex flex-col shadow-2xl backdrop-blur-md'
                 : 'lg:w-72 shrink-0 rounded-2xl border border-white/10 overflow-hidden flex flex-col'
             }
             style={{
@@ -378,28 +383,38 @@ export default function BrevetsOverviewPage() {
           >
             <div ref={mapDivRef} style={{ height: '100%', width: '100%' }} />
 
-            <button
-              onClick={() => setIsFullscreen(f => !f)}
-              title={isFullscreen ? 'Έξοδος από πλήρη οθόνη (Esc)' : 'Πλήρης οθόνη'}
-              className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5
-                rounded-lg text-xs font-bold border backdrop-blur-sm transition-all hover:brightness-110"
-              style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}
-            >
-              {isFullscreen ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none"
-                  viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round"
-                    d="M9 9L4 4m0 0h5m-5 0v5M15 9l5-5m0 0h-5m5 0v5M9 15l-5 5m0 0h5m-5 0v-5M15 15l5 5m0 0h-5m5 0v-5" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none"
-                  viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round"
-                    d="M4 8V4m0 0h4M4 4l5 5M20 8V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5M20 16v4m0 0h-4m4 0l-5-5" />
-                </svg>
-              )}
-              {isFullscreen ? 'Έξοδος' : 'Πλήρης οθόνη'}
-            </button>
+            <div className="absolute top-3 right-3 z-[1000] flex items-center gap-2">
+              <TileSwitcher
+                activeId={activeStyle}
+                mapInstanceRef={mapRef}
+                tileLayerRef={tileLayerRef}
+                LRef={LRef}
+                onSwitch={setActiveStyle}
+              />
+
+              <button
+                onClick={() => setIsFullscreen(f => !f)}
+                title={isFullscreen ? 'Έξοδος από πλήρη οθόνη (Esc)' : 'Πλήρης οθόνη'}
+                className="flex items-center gap-1.5 px-2.5 py-1.5
+                  rounded-lg text-xs font-bold border backdrop-blur-sm transition-all hover:brightness-110"
+                style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}
+              >
+                {isFullscreen ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round"
+                      d="M9 9L4 4m0 0h5m-5 0v5M15 9l5-5m0 0h-5m5 0v5M9 15l-5 5m0 0h5m-5 0v-5M15 15l5 5m0 0h-5m5 0v-5" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round"
+                      d="M4 8V4m0 0h4M4 4l5 5M20 8V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5M20 16v4m0 0h-4m4 0l-5-5" />
+                  </svg>
+                )}
+                {isFullscreen ? 'Έξοδος' : 'Πλήρης οθόνη'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -413,6 +428,8 @@ export default function BrevetsOverviewPage() {
             </span>
           ))}
         </div>
+
+        <PageViews page="brevets-overview" />
       </div>
     </div>
   );
