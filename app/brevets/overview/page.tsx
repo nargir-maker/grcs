@@ -194,8 +194,25 @@ export default function BrevetsOverviewPage() {
   const [regionGeo, setRegionGeo] = useState<any>(null);
   const [activeStyle, setActiveStyle] = useState<string>(DEFAULT_STYLE);
   const [clubNames, setClubNames] = useState<Record<string, string>>({});
+  const [participants, setParticipants] = useState<{ count: number; names: string[] } | null>(null);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
 
   const enabled = usePageEnabled('brevets-overview');
+
+  // Fetch privacy-safe participant info (count + "First L." names) for whichever
+  // brevet is currently selected, via the server route — the underlying
+  // registrations subcollection isn't publicly readable.
+  useEffect(() => {
+    if (!selectedId) { setParticipants(null); return; }
+    let cancelled = false;
+    setParticipantsLoading(true);
+    fetch(`/api/brevet-participants?brevetId=${encodeURIComponent(selectedId)}`)
+      .then(res => res.json())
+      .then(data => { if (!cancelled) setParticipants({ count: data.count ?? 0, names: data.names ?? [] }); })
+      .catch(() => { if (!cancelled) setParticipants({ count: 0, names: [] }); })
+      .finally(() => { if (!cancelled) setParticipantsLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedId]);
 
   // Region-boundary GeoJSON for the geo filter — fetched once as a static asset,
   // not bundled into the JS, since it's only needed on this page.
@@ -587,39 +604,61 @@ export default function BrevetsOverviewPage() {
             </div>
 
             {selectedRoute && badge && (
-              <div
-                className="absolute top-16 right-3 z-[1000] rounded-lg border backdrop-blur-sm px-3 py-2 space-y-2"
-                style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)' }}
-              >
-                <div className="flex items-center gap-2">
-                  <img
-                    src={organizerLogo}
-                    alt={organizerName}
-                    width={56}
-                    height={56}
-                    className="rounded-full object-cover shrink-0"
-                    style={{ width: 56, height: 56 }}
-                    onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
-                  />
-                  <div className="leading-tight">
-                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Διοργανωτής</div>
-                    <div className="text-xs font-semibold text-white truncate max-w-[160px]">{organizerName}</div>
+              <div className="absolute top-16 right-3 z-[1000] flex flex-col gap-2" style={{ width: 232 }}>
+                <div
+                  className="rounded-lg border backdrop-blur-sm px-3 py-2 space-y-2"
+                  style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={organizerLogo}
+                      alt={organizerName}
+                      width={56}
+                      height={56}
+                      className="rounded-full object-cover shrink-0"
+                      style={{ width: 56, height: 56 }}
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
+                    />
+                    <div className="leading-tight">
+                      <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Διοργανωτής</div>
+                      <div className="text-xs font-semibold text-white truncate max-w-[160px]">{organizerName}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={badge.logo}
+                      alt={badge.label}
+                      width={56}
+                      height={56}
+                      className="rounded-full object-cover shrink-0"
+                      style={{ width: 56, height: 56 }}
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
+                    />
+                    <div className="leading-tight">
+                      <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Φορέας</div>
+                      <div className="text-xs font-semibold text-white truncate max-w-[160px]">{badge.label}</div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <img
-                    src={badge.logo}
-                    alt={badge.label}
-                    width={56}
-                    height={56}
-                    className="rounded-full object-cover shrink-0"
-                    style={{ width: 56, height: 56 }}
-                    onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
-                  />
-                  <div className="leading-tight">
-                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Φορέας</div>
-                    <div className="text-xs font-semibold text-white truncate max-w-[160px]">{badge.label}</div>
-                  </div>
+
+                {/* ── Participants ── */}
+                <div
+                  className="rounded-lg border backdrop-blur-sm px-3 py-2"
+                  style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)' }}
+                >
+                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1">Συμμετέχοντες</div>
+                  {participantsLoading ? (
+                    <div className="text-xs text-white/40">Φόρτωση…</div>
+                  ) : !participants || participants.count === 0 ? (
+                    <div className="text-xs text-white/40">Δεν υπάρχουν διαθέσιμα δεδομένα</div>
+                  ) : (
+                    <>
+                      <div className="text-xs font-semibold text-cyan-400 mb-1">{participants.count} εγγεγραμμένοι</div>
+                      <div className="text-[11px] text-white/70 leading-snug max-h-24 overflow-y-auto">
+                        {participants.names.join(', ')}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
