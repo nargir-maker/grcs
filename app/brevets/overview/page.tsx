@@ -54,9 +54,9 @@ function deriveClub(certification: string, coOrganizerId: string): Club {
 // Same asset convention as BrevetCard.tsx / brevets/[id]/page.tsx: a co-organizer
 // gets the combined "both.png" badge, otherwise the club decides ACP/ΛΕΠΟΤΕ vs HAR.
 function homologationBadge(club: Club, certification: string): { logo: string; label: string } {
-  if (club === 'both') return { logo: '/logos/both.png',        label: 'ΛΕ.ΠΟ.Τ.Ε. + HAR' };
-  if (club === 'har')  return { logo: '/logos/har_logo3.png',    label: certification || 'H.A.R.' };
-  return                       { logo: '/logos/Lepote_logo.png', label: certification || 'A.C.P.' };
+  if (club === 'both') return { logo: '/logos/both.png',    label: 'ΛΕ.ΠΟ.Τ.Ε. + HAR' };
+  if (club === 'har')  return { logo: '/logos/659999.png',  label: certification || 'H.A.R.' };
+  return                       { logo: '/logos/650000.png', label: certification || 'A.C.P.' };
 }
 
 const CLUB_FILTERS: { id: 'all' | 'har' | 'lepote'; label: string }[] = [
@@ -455,10 +455,10 @@ export default function BrevetsOverviewPage() {
                   <img
                     src={organizerLogo}
                     alt={organizerName}
-                    width={46}
-                    height={46}
+                    width={56}
+                    height={56}
                     className="rounded-full object-cover shrink-0"
-                    style={{ width: 46, height: 46 }}
+                    style={{ width: 56, height: 56 }}
                     onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                   />
                   <div className="leading-tight">
@@ -470,10 +470,10 @@ export default function BrevetsOverviewPage() {
                   <img
                     src={badge.logo}
                     alt={badge.label}
-                    width={46}
-                    height={46}
+                    width={56}
+                    height={56}
                     className="rounded-full object-cover shrink-0"
-                    style={{ width: 46, height: 46 }}
+                    style={{ width: 56, height: 56 }}
                     onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                   />
                   <div className="leading-tight">
