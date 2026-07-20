@@ -36,6 +36,9 @@ interface RouteInfo {
   start: string;
   gpxUrl: string;
   club: Club;
+  organizerId: string;
+  coOrganizerId: string;
+  certification: string;
   coords: [number, number][] | null; // null = not yet fetched, [] = failed
 }
 
@@ -46,6 +49,14 @@ function deriveClub(certification: string, coOrganizerId: string): Club {
   const hasCoOrg = !!(coOrganizerId && coOrganizerId !== '0');
   const isHAR    = cert.includes('HAR');
   return hasCoOrg ? 'both' : isHAR ? 'har' : 'lepote';
+}
+
+// Same asset convention as BrevetCard.tsx / brevets/[id]/page.tsx: a co-organizer
+// gets the combined "both.png" badge, otherwise the club decides ACP/ΛΕΠΟΤΕ vs HAR.
+function homologationBadge(club: Club, certification: string): { logo: string; label: string } {
+  if (club === 'both') return { logo: '/logos/both.png',        label: 'ΛΕ.ΠΟ.Τ.Ε. + HAR' };
+  if (club === 'har')  return { logo: '/logos/har_logo3.png',    label: certification || 'H.A.R.' };
+  return                       { logo: '/logos/Lepote_logo.png', label: certification || 'A.C.P.' };
 }
 
 const CLUB_FILTERS: { id: 'all' | 'har' | 'lepote'; label: string }[] = [
@@ -102,6 +113,7 @@ export default function BrevetsOverviewPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [clubFilter, setClubFilter] = useState<'all' | 'har' | 'lepote'>('all');
   const [activeStyle, setActiveStyle] = useState<string>(DEFAULT_STYLE);
+  const [clubNames, setClubNames] = useState<Record<string, string>>({});
 
   const enabled = usePageEnabled('brevets-overview');
 
@@ -109,12 +121,19 @@ export default function BrevetsOverviewPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const q = query(
-        collection(db, 'all_brevets'),
-        where(documentId(), '>=', `${YEAR}_`),
-        where(documentId(), '<', `${YEAR + 1}_`),
-      );
-      const snap = await getDocs(q);
+      const [snap, clubsSnap] = await Promise.all([
+        getDocs(query(
+          collection(db, 'all_brevets'),
+          where(documentId(), '>=', `${YEAR}_`),
+          where(documentId(), '<', `${YEAR + 1}_`),
+        )),
+        getDocs(collection(db, 'clubs')),
+      ]);
+      const names: Record<string, string> = {};
+      clubsSnap.forEach(doc => {
+        const d = doc.data();
+        names[doc.id] = d.CLUB_NAME_SHORT_EN || d.CLUB_NAME_SHORT_GR || doc.id;
+      });
       const list: RouteInfo[] = [];
       snap.forEach(doc => {
         const d = doc.data();
@@ -122,18 +141,23 @@ export default function BrevetsOverviewPage() {
         const route = d.route || {};
         const gpxUrl = route.gpxUrl?.toString() ?? '';
         if (!gpxUrl) return;
+        const certification = info.certification?.toString() ?? '';
+        const coOrganizerId = info.coOrganizerId?.toString() ?? '';
         list.push({
           id:       doc.id,
           title:    info.title?.toString() ?? doc.id,
           distance: parseInt(info.distance?.toString() ?? '0') || 0,
           start:    route.start?.toString() ?? '',
           gpxUrl,
-          club:     deriveClub(info.certification?.toString() ?? '', info.coOrganizerId?.toString() ?? ''),
+          club:     deriveClub(certification, coOrganizerId),
+          organizerId: info.organizerId?.toString() ?? '',
+          coOrganizerId,
+          certification,
           coords:   null,
         });
       });
       list.sort((a, b) => a.distance - b.distance || a.title.localeCompare(b.title, 'el'));
-      if (!cancelled) { setRoutes(list); setDocsLoaded(true); }
+      if (!cancelled) { setRoutes(list); setClubNames(names); setDocsLoaded(true); }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -281,6 +305,12 @@ export default function BrevetsOverviewPage() {
     routes: filteredRoutes.filter(r => colorForDistance(r.distance) === bucket.color),
   })).filter(b => b.routes.length > 0);
 
+  const selectedRoute = selectedId ? routes.find(r => r.id === selectedId) ?? null : null;
+  const isCoOrg = !!(selectedRoute && selectedRoute.coOrganizerId && selectedRoute.coOrganizerId !== '0');
+  const organizerLogo = isCoOrg ? '/logos/both.png' : `/logos/${selectedRoute?.organizerId}.png`;
+  const organizerName = isCoOrg ? 'Συνδιοργάνωση' : (clubNames[selectedRoute?.organizerId ?? ''] ?? selectedRoute?.organizerId ?? '');
+  const badge = selectedRoute ? homologationBadge(selectedRoute.club, selectedRoute.certification) : null;
+
   return (
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
@@ -415,6 +445,38 @@ export default function BrevetsOverviewPage() {
                 {isFullscreen ? 'Έξοδος' : 'Πλήρης οθόνη'}
               </button>
             </div>
+
+            {selectedRoute && badge && (
+              <div
+                className="absolute top-14 right-3 z-[1000] rounded-lg border backdrop-blur-sm px-3 py-2 space-y-2"
+                style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)' }}
+              >
+                <div className="flex items-center gap-2">
+                  <img
+                    src={organizerLogo}
+                    alt={organizerName}
+                    className="w-6 h-6 rounded-full object-cover shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
+                  />
+                  <div className="leading-tight">
+                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Διοργανωτής</div>
+                    <div className="text-xs font-semibold text-white truncate max-w-[160px]">{organizerName}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <img
+                    src={badge.logo}
+                    alt={badge.label}
+                    className="w-6 h-6 rounded-full object-cover shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
+                  />
+                  <div className="leading-tight">
+                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Φορέας</div>
+                    <div className="text-xs font-semibold text-white truncate max-w-[160px]">{badge.label}</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
