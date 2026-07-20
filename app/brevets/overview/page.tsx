@@ -207,7 +207,7 @@ export default function BrevetsOverviewPage() {
   const mapRef         = useRef<any>(null);
   const LRef           = useRef<any>(null);
   const tileLayerRef   = useRef<any>(null);
-  const polylinesRef   = useRef<Record<string, any>>({});
+  const polylinesRef   = useRef<Record<string, { line: any; casing: any }>>({});
   const fetchStartedRef = useRef(false);
   const fittedRef      = useRef(false);
   const prevFilterRef  = useRef('all|all');
@@ -395,17 +395,23 @@ export default function BrevetsOverviewPage() {
 
     routes.forEach(r => {
       if (!r.coords || r.coords.length === 0 || polylinesRef.current[r.id]) return;
+      // A dark casing drawn under each colored line — same trick transit maps
+      // use to keep routes readable against busy/light basemaps without
+      // needing to make the line itself thick (which gets blurry when zoomed out).
+      const casing = L.polyline(r.coords, {
+        color: '#0A1628', weight: 5, opacity: 0.35, interactive: false,
+      }).addTo(map);
       const pl = L.polyline(r.coords, {
-        color: colorForDistance(r.distance), weight: 2.5, opacity: 0.55,
+        color: colorForDistance(r.distance), weight: 2.5, opacity: 0.85,
       }).addTo(map);
       pl.bindTooltip(`${r.title} — ${r.distance} km`, { sticky: true });
       pl.on('click', () => setSelectedId(prev => prev === r.id ? null : r.id));
-      polylinesRef.current[r.id] = pl;
+      polylinesRef.current[r.id] = { line: pl, casing };
     });
 
     if (!fittedRef.current && pending === 0 && Object.keys(polylinesRef.current).length > 0) {
       fittedRef.current = true;
-      const group = L.featureGroup(Object.values(polylinesRef.current));
+      const group = L.featureGroup(Object.values(polylinesRef.current).map(p => p.line));
       map.fitBounds(group.getBounds(), { padding: [20, 20] });
     }
   }, [routes, mapReady, pending]);
@@ -414,18 +420,22 @@ export default function BrevetsOverviewPage() {
   useEffect(() => {
     const L = LRef.current, map = mapRef.current;
     if (!L || !map) return;
-    Object.entries(polylinesRef.current).forEach(([id, pl]) => {
+    Object.entries(polylinesRef.current).forEach(([id, { line, casing }]) => {
       if (selectedId === null) {
-        pl.setStyle({ opacity: 0.55, weight: 2.5 });
+        line.setStyle({ opacity: 0.85, weight: 2.5 });
+        casing.setStyle({ opacity: 0.35, weight: 5 });
       } else if (id === selectedId) {
-        pl.setStyle({ opacity: 1, weight: 5 });
-        pl.bringToFront();
+        line.setStyle({ opacity: 1, weight: 5 });
+        casing.setStyle({ opacity: 0.45, weight: 8 });
+        casing.bringToFront();
+        line.bringToFront();
       } else {
-        pl.setStyle({ opacity: 0.12, weight: 2 });
+        line.setStyle({ opacity: 0.12, weight: 2 });
+        casing.setStyle({ opacity: 0.05, weight: 3.5 });
       }
     });
     if (selectedId) {
-      const pl = polylinesRef.current[selectedId];
+      const pl = polylinesRef.current[selectedId]?.line;
       if (pl) map.fitBounds(pl.getBounds(), { padding: [40, 40] });
     }
   }, [selectedId]);
@@ -436,12 +446,12 @@ export default function BrevetsOverviewPage() {
     const map = mapRef.current;
     if (!map) return;
     const routeById = new Map(routes.map(r => [r.id, r]));
-    Object.entries(polylinesRef.current).forEach(([id, pl]) => {
+    Object.entries(polylinesRef.current).forEach(([id, { line, casing }]) => {
       const r = routeById.get(id);
       const visible = !r || matchesFilters(r);
-      const onMap = map.hasLayer(pl);
-      if (visible && !onMap) pl.addTo(map);
-      if (!visible && onMap) map.removeLayer(pl);
+      const onMap = map.hasLayer(line);
+      if (visible && !onMap) { casing.addTo(map); line.addTo(map); }
+      if (!visible && onMap) { map.removeLayer(line); map.removeLayer(casing); }
     });
     if (selectedId) {
       const r = routeById.get(selectedId);
@@ -457,7 +467,7 @@ export default function BrevetsOverviewPage() {
     const key = `${clubFilter}|${regionFilter}`;
     if (prevFilterRef.current === key) return;
     prevFilterRef.current = key;
-    const visiblePls = Object.values(polylinesRef.current).filter((pl: any) => map.hasLayer(pl));
+    const visiblePls = Object.values(polylinesRef.current).map(p => p.line).filter((pl: any) => map.hasLayer(pl));
     if (visiblePls.length > 0) {
       const group = L.featureGroup(visiblePls);
       map.fitBounds(group.getBounds(), { padding: [20, 20] });
