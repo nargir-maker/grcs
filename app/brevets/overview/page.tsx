@@ -4,7 +4,7 @@
 // One map showing every 2026 brevet route at once, color-coded by distance,
 // with a clickable route list that highlights a single route on the map.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { db } from '@/app/lib/firebase';
 import { collection, getDocs, query, where, documentId } from 'firebase/firestore';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
@@ -39,6 +39,8 @@ interface RouteInfo {
   organizerId: string;
   coOrganizerId: string;
   certification: string;
+  startLat: number | null;
+  startLng: number | null;
   coords: [number, number][] | null; // null = not yet fetched, [] = failed
 }
 
@@ -69,6 +71,82 @@ function matchesClubFilter(club: Club, filter: 'all' | 'har' | 'lepote'): boolea
   if (filter === 'all')    return true;
   if (filter === 'har')    return club === 'har'    || club === 'both';
   return club === 'lepote' || club === 'both';
+}
+
+// The 13 official Greek administrative regions (Περιφέρειες), north-to-south /
+// west-to-east. `id` matches the "name" property in the bundled boundary GeoJSON.
+const REGIONS: { id: string; label: string }[] = [
+  { id: 'East Macedonia and Thrace', label: 'Αν. Μακεδονία - Θράκη' },
+  { id: 'Central Macedonia',         label: 'Κεντρική Μακεδονία' },
+  { id: 'West Macedonia',            label: 'Δυτική Μακεδονία' },
+  { id: 'Epirus',                    label: 'Ήπειρος' },
+  { id: 'Thessaly',                  label: 'Θεσσαλία' },
+  { id: 'Ionian Islands',            label: 'Ιόνια Νησιά' },
+  { id: 'Western Greece',            label: 'Δυτική Ελλάδα' },
+  { id: 'Central Greece',            label: 'Στερεά Ελλάδα' },
+  { id: 'Attica',                    label: 'Αττική' },
+  { id: 'Peloponnese',               label: 'Πελοπόννησος' },
+  { id: 'North Aegean',              label: 'Βόρειο Αιγαίο' },
+  { id: 'South Aegean',              label: 'Νότιο Αιγαίο' },
+  { id: 'Crete',                     label: 'Κρήτη' },
+];
+
+function matchesRegionFilter(region: string | null, filter: string): boolean {
+  return filter === 'all' || region === filter;
+}
+
+// Ray-casting point-in-polygon, GeoJSON [lng,lat] winding, Polygon + MultiPolygon.
+function pointInRing(pt: [number, number], ring: [number, number][]): boolean {
+  const [x, y] = pt;
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    const intersect = (yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+function pointInFeature(pt: [number, number], geometry: any): boolean {
+  const polys = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+  for (const poly of polys) {
+    const [outer, ...holes] = poly;
+    if (pointInRing(pt, outer) && !holes.some((h: [number, number][]) => pointInRing(pt, h))) return true;
+  }
+  return false;
+}
+function distPointToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 === 0 ? 0 : ((px - ax) * dx + (py - ay) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+function minDistToFeature(pt: [number, number], geometry: any): number {
+  const polys = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+  let min = Infinity;
+  for (const poly of polys) {
+    for (const ring of poly) {
+      for (let i = 0; i < ring.length - 1; i++) {
+        min = Math.min(min, distPointToSegment(pt[0], pt[1], ring[i][0], ring[i][1], ring[i + 1][0], ring[i + 1][1]));
+      }
+    }
+  }
+  return min;
+}
+// Point-in-polygon against the region boundaries, falling back to "nearest region"
+// for coastal towns that sit just outside the (simplified) coastline.
+function classifyRegion(lat: number, lng: number, geo: any): string | null {
+  if (!geo) return null;
+  const pt: [number, number] = [lng, lat];
+  for (const f of geo.features) {
+    if (pointInFeature(pt, f.geometry)) return f.properties.name;
+  }
+  let best: string | null = null, bestDist = Infinity;
+  for (const f of geo.features) {
+    const d = minDistToFeature(pt, f.geometry);
+    if (d < bestDist) { bestDist = d; best = f.properties.name; }
+  }
+  return best;
 }
 
 // Keep each polyline light — an overview map doesn't need full GPS precision.
@@ -103,7 +181,7 @@ export default function BrevetsOverviewPage() {
   const polylinesRef   = useRef<Record<string, any>>({});
   const fetchStartedRef = useRef(false);
   const fittedRef      = useRef(false);
-  const prevFilterRef  = useRef<'all' | 'har' | 'lepote'>('all');
+  const prevFilterRef  = useRef('all|all');
 
   const [routes, setRoutes]       = useState<RouteInfo[]>([]);
   const [pending, setPending]     = useState(0);
@@ -112,10 +190,38 @@ export default function BrevetsOverviewPage() {
   const [docsLoaded, setDocsLoaded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [clubFilter, setClubFilter] = useState<'all' | 'har' | 'lepote'>('all');
+  const [regionFilter, setRegionFilter] = useState<string>('all');
+  const [regionGeo, setRegionGeo] = useState<any>(null);
   const [activeStyle, setActiveStyle] = useState<string>(DEFAULT_STYLE);
   const [clubNames, setClubNames] = useState<Record<string, string>>({});
 
   const enabled = usePageEnabled('brevets-overview');
+
+  // Region-boundary GeoJSON for the geo filter — fetched once as a static asset,
+  // not bundled into the JS, since it's only needed on this page.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/data/greece-regions.geojson')
+      .then(res => res.json())
+      .then(data => { if (!cancelled) setRegionGeo(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  // Classify each route's start point into a region once the boundaries are loaded.
+  const regionByRouteId = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    if (!regionGeo) return map;
+    for (const r of routes) {
+      if (r.startLat === null || r.startLng === null) { map[r.id] = null; continue; }
+      map[r.id] = classifyRegion(r.startLat, r.startLng, regionGeo);
+    }
+    return map;
+  }, [routes, regionGeo]);
+
+  function matchesFilters(r: RouteInfo): boolean {
+    return matchesClubFilter(r.club, clubFilter) && matchesRegionFilter(regionByRouteId[r.id] ?? null, regionFilter);
+  }
 
   // Fetch all 2026_* brevet docs (doc IDs are "{year}_{startCity}_{km}_{organizerId}")
   useEffect(() => {
@@ -143,6 +249,9 @@ export default function BrevetsOverviewPage() {
         if (!gpxUrl) return;
         const certification = info.certification?.toString() ?? '';
         const coOrganizerId = info.coOrganizerId?.toString() ?? '';
+        const [startLatStr, startLngStr] = (route.startCoords?.toString() ?? '').split(',');
+        const startLat = parseFloat(startLatStr);
+        const startLng = parseFloat(startLngStr);
         list.push({
           id:       doc.id,
           title:    info.title?.toString() ?? doc.id,
@@ -153,6 +262,8 @@ export default function BrevetsOverviewPage() {
           organizerId: info.organizerId?.toString() ?? '',
           coOrganizerId,
           certification,
+          startLat: Number.isFinite(startLat) ? startLat : null,
+          startLng: Number.isFinite(startLng) ? startLng : null,
           coords:   null,
         });
       });
@@ -241,38 +352,39 @@ export default function BrevetsOverviewPage() {
     }
   }, [selectedId]);
 
-  // Show only the routes matching the club filter; drop the selection if it
-  // falls outside the current filter.
+  // Show only the routes matching the club + region filters (combined with AND);
+  // drop the selection if it falls outside the current filters.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const routeById = new Map(routes.map(r => [r.id, r]));
     Object.entries(polylinesRef.current).forEach(([id, pl]) => {
       const r = routeById.get(id);
-      const visible = !r || matchesClubFilter(r.club, clubFilter);
+      const visible = !r || matchesFilters(r);
       const onMap = map.hasLayer(pl);
       if (visible && !onMap) pl.addTo(map);
       if (!visible && onMap) map.removeLayer(pl);
     });
     if (selectedId) {
       const r = routeById.get(selectedId);
-      if (r && !matchesClubFilter(r.club, clubFilter)) setSelectedId(null);
+      if (r && !matchesFilters(r)) setSelectedId(null);
     }
-  }, [clubFilter, routes, selectedId]);
+  }, [clubFilter, regionFilter, regionByRouteId, routes, selectedId]);
 
   // Re-fit the map to whatever's visible, but only on an actual filter change
   // — not on every GPX arrival, which would otherwise re-zoom constantly.
   useEffect(() => {
     const L = LRef.current, map = mapRef.current;
     if (!L || !map) return;
-    if (prevFilterRef.current === clubFilter) return;
-    prevFilterRef.current = clubFilter;
+    const key = `${clubFilter}|${regionFilter}`;
+    if (prevFilterRef.current === key) return;
+    prevFilterRef.current = key;
     const visiblePls = Object.values(polylinesRef.current).filter((pl: any) => map.hasLayer(pl));
     if (visiblePls.length > 0) {
       const group = L.featureGroup(visiblePls);
       map.fitBounds(group.getBounds(), { padding: [20, 20] });
     }
-  }, [clubFilter]);
+  }, [clubFilter, regionFilter]);
 
   // Esc exits fullscreen; lock page scroll while fullscreen is open
   useEffect(() => {
@@ -299,7 +411,8 @@ export default function BrevetsOverviewPage() {
   );
   if (enabled === false) return <ComingSoon label="Χάρτης διαδρομών" />;
 
-  const filteredRoutes = routes.filter(r => matchesClubFilter(r.club, clubFilter));
+  const filteredRoutes = routes.filter(matchesFilters);
+  const anyFilterActive = clubFilter !== 'all' || regionFilter !== 'all';
   const grouped = DISTANCE_COLORS.map(bucket => ({
     ...bucket,
     routes: filteredRoutes.filter(r => colorForDistance(r.distance) === bucket.color),
@@ -326,7 +439,7 @@ export default function BrevetsOverviewPage() {
             </h1>
             <p className="text-white/50 text-sm">
               {routes.length > 0
-                ? `${clubFilter === 'all' ? routes.length : filteredRoutes.length} brevets · ${pending > 0 ? `φόρτωση ${routes.length - pending}/${routes.length}…` : 'όλες οι διαδρομές φορτώθηκαν'}`
+                ? `${anyFilterActive ? filteredRoutes.length : routes.length} brevets · ${pending > 0 ? `φόρτωση ${routes.length - pending}/${routes.length}…` : 'όλες οι διαδρομές φορτώθηκαν'}`
                 : 'Φόρτωση διαδρομών…'}
             </p>
           </div>
@@ -360,6 +473,33 @@ export default function BrevetsOverviewPage() {
                   }}
                 >
                   {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── Region filter ── */}
+            <div className="flex flex-wrap gap-1 p-2 border-b border-white/10">
+              <button
+                onClick={() => setRegionFilter('all')}
+                className="px-2 py-1 rounded-lg text-[10px] font-bold transition-colors"
+                style={{
+                  background: regionFilter === 'all' ? 'rgba(6,182,212,0.2)' : 'transparent',
+                  color:      regionFilter === 'all' ? '#06b6d4' : 'rgba(255,255,255,0.5)',
+                }}
+              >
+                Όλες οι περιοχές
+              </button>
+              {REGIONS.map(reg => (
+                <button
+                  key={reg.id}
+                  onClick={() => setRegionFilter(prev => prev === reg.id ? 'all' : reg.id)}
+                  className="px-2 py-1 rounded-lg text-[10px] font-bold transition-colors"
+                  style={{
+                    background: regionFilter === reg.id ? 'rgba(6,182,212,0.2)' : 'transparent',
+                    color:      regionFilter === reg.id ? '#06b6d4' : 'rgba(255,255,255,0.5)',
+                  }}
+                >
+                  {reg.label}
                 </button>
               ))}
             </div>
