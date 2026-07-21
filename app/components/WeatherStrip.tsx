@@ -21,7 +21,7 @@ interface WeatherPoint extends RoutePoint {
   etaTime: Date;
   loading: boolean;
   error: boolean;
-  source: 'metno' | 'openmeteo' | null;
+  source: 'metno' | 'openmeteo' | 'archive' | null;
 }
 
 interface ControlPoint {
@@ -29,6 +29,17 @@ interface ControlPoint {
   name: string;
   lat: number;
   lng: number;
+}
+
+interface ClimatologyStats {
+  years: number[];
+  sampleDays: number;
+  rainProbability: number;
+  avgTempMax: number;
+  avgTempMin: number;
+  avgWindSpeed: number;
+  avgWindGusts: number;
+  dominantWeatherCode: number;
 }
 
 function weatherInfo(code: number): { emoji: string; color: string } {
@@ -153,7 +164,7 @@ function interpolate(
   return { lat: a.lat + t * (b.lat - a.lat), lng: a.lng + t * (b.lng - a.lng) };
 }
 
-type WeatherSource = 'metno' | 'openmeteo';
+type WeatherSource = 'metno' | 'openmeteo' | 'archive';
 
 async function fetchWeather(
   lat: number,
@@ -167,6 +178,14 @@ async function fetchWeather(
     if (!res.ok) throw new Error(`metno ${res.status}`);
     const data = await res.json();
     return { ...data, source: 'metno' as const };
+  }
+
+  if (source === 'archive') {
+    const url = `/api/weather/archive?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}&time=${encodeURIComponent(date.toISOString())}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`archive ${res.status}`);
+    const data = await res.json();
+    return { ...data, source: 'archive' as const };
   }
 
   const dateStr = date.toISOString().split('T')[0];
@@ -219,10 +238,22 @@ export default function WeatherStrip({
   const [expanded, setExpanded]     = useState(false);
   const [avgSpeed, setAvgSpeed]     = useState(() => defaultSpeed(distanceKm));
   const [sliderSpeed, setSliderSpeed] = useState(() => defaultSpeed(distanceKm));
-  const [weatherSource, setWeatherSource] = useState<WeatherSource>(() =>
-    startDate && (startDate.getTime() - Date.now()) <= 48 * 3600 * 1000
-      ? 'metno' : 'openmeteo'
-  );
+
+  // Forecasts are only meaningful within ~16 days (Open-Meteo's horizon).
+  // Past brevets show what actually happened; far-future ones fall back to
+  // a historical climatology summary since no forecast can reach that far.
+  const diffDays = (startDate.getTime() - Date.now()) / 86400000;
+  const mode: 'forecast' | 'archive' | 'climatology' =
+    diffDays < 0 ? 'archive' : diffDays <= 16 ? 'forecast' : 'climatology';
+
+  const [weatherSource, setWeatherSource] = useState<WeatherSource>(() => {
+    if (mode === 'archive') return 'archive';
+    return startDate && (startDate.getTime() - Date.now()) <= 48 * 3600 * 1000
+      ? 'metno' : 'openmeteo';
+  });
+  const [climatology, setClimatology] = useState<ClimatologyStats | null>(null);
+  const [climLoading, setClimLoading] = useState(true);
+  const [climError, setClimError]     = useState('');
   const abortRef = useRef<boolean>(false);
 
   const load = useCallback(async (speed: number, source: WeatherSource) => {
@@ -326,9 +357,35 @@ export default function WeatherStrip({
     }
   }, [gpxUrl, startDate?.toISOString(), distanceKm]);
 
+  const loadClimatology = useCallback(async () => {
+    if (!gpxUrl || !startDate) return;
+    try {
+      setClimLoading(true);
+      setClimError('');
+      const coords = await parseGpxPoints(gpxUrl);
+      if (coords.length === 0) {
+        setClimError('Αδυναμία φόρτωσης GPX');
+        setClimLoading(false);
+        return;
+      }
+      const { lat, lng } = coords[0];
+      const url = `/api/weather/climatology?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}&month=${startDate.getMonth() + 1}&day=${startDate.getDate()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`climatology ${res.status}`);
+      const data: ClimatologyStats = await res.json();
+      setClimatology(data);
+      setClimLoading(false);
+    } catch (e) {
+      console.error('Climatology error:', e);
+      setClimError('Αδυναμία φόρτωσης ιστορικών δεδομένων');
+      setClimLoading(false);
+    }
+  }, [gpxUrl, startDate?.toISOString()]);
+
   useEffect(() => {
-    load(avgSpeed, weatherSource);
-  }, [load, weatherSource]);
+    if (mode === 'climatology') loadClimatology();
+    else load(avgSpeed, weatherSource);
+  }, [load, loadClimatology, weatherSource, mode]);
 
   const finishPoint = points.find(p => p.label === 'FINISH');
 
@@ -339,8 +396,12 @@ export default function WeatherStrip({
         className="w-full flex items-center justify-between text-left"
       >
         <h2 className="text-white font-bold text-lg flex items-center gap-2">
-          🌦️ Καιρός Διαδρομής
-          {!loading && !error && (
+          {mode === 'climatology'
+            ? '📊 Ιστορικό Κλίμα Περιοχής'
+            : mode === 'archive'
+            ? '🕐 Καιρός Διαδρομής (Ιστορικά Δεδομένα)'
+            : '🌦️ Καιρός Διαδρομής'}
+          {mode !== 'climatology' && !loading && !error && (
             <span className="text-white/30 text-xs font-normal ml-1">
               ({points.length} σημεία)
             </span>
@@ -349,7 +410,13 @@ export default function WeatherStrip({
         <span className="text-lime-400 text-xl">{expanded ? '▲' : '☞'}</span>
       </button>
 
-      {expanded && (
+      {expanded && mode === 'climatology' && (
+        <div className="mt-5">
+          <ClimatologyView data={climatology} loading={climLoading} error={climError} />
+        </div>
+      )}
+
+      {expanded && mode !== 'climatology' && (
         <div className="mt-5">
 
           {/* Speed slider */}
@@ -381,30 +448,36 @@ export default function WeatherStrip({
           </div>
 
           {/* Source toggle */}
-          <div className="flex gap-2 mb-5">
-            <button
-              onClick={() => setWeatherSource('metno')}
-              className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold border transition-all ${
-                weatherSource === 'metno'
-                  ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
-                  : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
-              }`}
-            >
-              🇳🇴 MET Norway
-              <span className="block text-xs font-normal opacity-70">Yr.no · ωριαία έως 10 μέρες</span>
-            </button>
-            <button
-              onClick={() => setWeatherSource('openmeteo')}
-              className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold border transition-all ${
-                weatherSource === 'openmeteo'
-                  ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300'
-                  : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
-              }`}
-            >
-              🌐 Open-Meteo
-              <span className="block text-xs font-normal opacity-70">Best Match · ωριαία έως 16 μέρες</span>
-            </button>
-          </div>
+          {mode === 'forecast' ? (
+            <div className="flex gap-2 mb-5">
+              <button
+                onClick={() => setWeatherSource('metno')}
+                className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold border transition-all ${
+                  weatherSource === 'metno'
+                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+                    : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
+                }`}
+              >
+                🇳🇴 MET Norway
+                <span className="block text-xs font-normal opacity-70">Yr.no · ωριαία έως 10 μέρες</span>
+              </button>
+              <button
+                onClick={() => setWeatherSource('openmeteo')}
+                className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold border transition-all ${
+                  weatherSource === 'openmeteo'
+                    ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300'
+                    : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
+                }`}
+              >
+                🌐 Open-Meteo
+                <span className="block text-xs font-normal opacity-70">Best Match · ωριαία έως 16 μέρες</span>
+              </button>
+            </div>
+          ) : (
+            <div className="mb-5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/50 text-xs">
+              🕐 Πραγματικά ιστορικά δεδομένα (Open-Meteo ERA5 Reanalysis) — αυτό συνέβη τότε, όχι πρόγνωση.
+            </div>
+          )}
 
           {loading && (
             <div className="flex items-center gap-3 py-4 text-white/40 text-sm">
@@ -561,6 +634,8 @@ export default function WeatherStrip({
               <p className="text-white/30 text-xs mt-3">
                 {weatherSource === 'metno'
                   ? '🇳🇴 MET Norway (Yr.no)'
+                  : weatherSource === 'archive'
+                  ? '📊 Open-Meteo Historical (ERA5)'
                   : '🌐 Open-Meteo · Best Match'
                 } · ETA με {avgSpeed}km/h
               </p>
@@ -569,5 +644,68 @@ export default function WeatherStrip({
         </div>
       )}
     </div>
+  );
+}
+
+function ClimatologyView({
+  data,
+  loading,
+  error,
+}: {
+  data: ClimatologyStats | null;
+  loading: boolean;
+  error: string;
+}) {
+  if (loading) {
+    return (
+      <div className="flex items-center gap-3 py-4 text-white/40 text-sm">
+        <div className="w-4 h-4 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+        Φόρτωση ιστορικών δεδομένων...
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return <p className="text-red-400 text-sm py-2">{error || 'Αδυναμία φόρτωσης'}</p>;
+  }
+
+  const { emoji } = weatherInfo(data.dominantWeatherCode);
+  const yearsLabel = `${Math.min(...data.years)}–${Math.max(...data.years)}`;
+
+  return (
+    <>
+      <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 mb-5 text-amber-200 text-sm leading-snug">
+        ⚠️ Η ημερομηνία είναι πολύ μακρινή για αξιόπιστη πρόγνωση καιρού. Τα παρακάτω είναι{' '}
+        <strong>ιστορικά στατιστικά</strong> για την περιοχή εκκίνησης τα τελευταία {data.years.length} χρόνια
+        ({yearsLabel}), όχι πρόγνωση για τη συγκεκριμένη μέρα.
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col items-center">
+          <span className="text-4xl mb-1">🌧️</span>
+          <span className="text-white font-bold text-2xl">{data.rainProbability}%</span>
+          <span className="text-white/40 text-xs text-center mt-1">πιθανότητα βροχής αυτές τις μέρες</span>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col items-center">
+          <span className="text-4xl mb-1">{emoji}</span>
+          <span className="text-white font-bold text-2xl">{data.avgTempMin}–{data.avgTempMax}°C</span>
+          <span className="text-white/40 text-xs text-center mt-1">συνήθες εύρος θερμοκρασίας</span>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col items-center">
+          <span className="text-4xl mb-1">💨</span>
+          <span className="text-white font-bold text-2xl">{data.avgWindSpeed} km/h</span>
+          <span className="text-white/40 text-xs text-center mt-1">μέσος άνεμος (ριπές ~{data.avgWindGusts} km/h)</span>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col items-center justify-center">
+          <span className="text-white/40 text-xs text-center">Δείγμα</span>
+          <span className="text-white font-bold text-xl">{data.sampleDays} ημέρες</span>
+          <span className="text-white/40 text-xs text-center">±3 ημέρες × {data.years.length} χρόνια</span>
+        </div>
+      </div>
+
+      <p className="text-white/30 text-xs">
+        📊 Ιστορικά δεδομένα Open-Meteo (ERA5 Reanalysis) · {yearsLabel}
+      </p>
+    </>
   );
 }
