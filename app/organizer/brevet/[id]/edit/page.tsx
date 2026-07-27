@@ -156,8 +156,7 @@ interface FormState {
   title: string; type: string; distancePreset: number | 'other'; distanceCustom: string;
   certification: string; organizerId: string; coOrganizerId: string;
   date: string; startTime: string; durationHours: string;
-  allowPreride: boolean; prerideDate: string; prerideTime: string;
-  allowPostride: boolean; postrideDate: string; postrideTime: string;
+  allowPreRide: boolean; allowPostRide: boolean; allowCustomStart: boolean;
   active: boolean; registrationOpen: boolean; externalRegistration: string;
   start: string; startCoords: string; finish: string; finishCoords: string;
   viaCities: string; ascent: string; descent: string; realKm: string; wcs: string;
@@ -170,8 +169,7 @@ const EMPTY: FormState = {
   title:'', type:'BRM', distancePreset:200, distanceCustom:'',
   certification:'A.C.P.', organizerId:'', coOrganizerId:'',
   date:'', startTime:'07:00', durationHours:'13.5',
-  allowPreride:false, prerideDate:'', prerideTime:'07:00',
-  allowPostride:false, postrideDate:'', postrideTime:'07:00',
+  allowPreRide:false, allowPostRide:false, allowCustomStart:false,
   active:true, registrationOpen:false, externalRegistration:'',
   start:'', startCoords:'', finish:'', finishCoords:'', viaCities:'',
   ascent:'', descent:'', realKm:'', wcs:'',
@@ -277,9 +275,10 @@ export default function EditBrevetPage() {
           return { date, time };
         };
 
-        const main     = parseDateParts(info.date?.toString() ?? '');
-        const preride  = parseDateParts(info.prerideDate?.toString() ?? '');
-        const postride = parseDateParts(info.postrideDate?.toString() ?? '');
+        const main = parseDateParts(info.date?.toString() ?? '');
+
+        const certNorm    = (info.certification?.toString() ?? '').toUpperCase().replace(/[.\s]/g, '');
+        const harFallback = certNorm.includes('HAR');
 
         const dist = parseInt(info.distance?.toString() ?? '200') || 200;
         const isStd = (STD_DISTANCES as readonly number[]).includes(dist);
@@ -297,12 +296,9 @@ export default function EditBrevetPage() {
           date:             main.date,
           startTime:        main.time,
           durationHours:    durHrs,
-          allowPreride:     info.allowPreride   ?? false,
-          prerideDate:      preride.date,
-          prerideTime:      preride.time,
-          allowPostride:    info.allowPostride  ?? false,
-          postrideDate:     postride.date,
-          postrideTime:     postride.time,
+          allowPreRide:     extra.allowPreRide  !== undefined ? !!extra.allowPreRide  : harFallback,
+          allowPostRide:    extra.allowPostRide !== undefined ? !!extra.allowPostRide : harFallback,
+          allowCustomStart: !!extra.allowCustomStart,
           active:           info.active         ?? true,
           registrationOpen: info.registrationOpen ?? false,
           externalRegistration: extra.registration ?? '',
@@ -477,10 +473,6 @@ export default function EditBrevetPage() {
           coOrganizerId:    form.coOrganizerId,
           active:           form.active,
           registrationOpen: form.registrationOpen,
-          allowPreride:     form.allowPreride,
-          prerideDate: form.allowPreride ? `${form.prerideDate}T${form.prerideTime}:00+02:00` : null,
-          allowPostride:    form.allowPostride,
-          postrideDate: form.allowPostride ? `${form.postrideDate}T${form.postrideTime}:00+02:00` : null,
         },
         route: {
           start:        form.start,
@@ -506,6 +498,9 @@ export default function EditBrevetPage() {
           registration: form.externalRegistration?.trim() ?? '',
           imageUrl:     '',
           closeTimeIso: endDt?.toISOString() ?? '',
+          allowPreRide:     form.allowPreRide,
+          allowPostRide:    form.allowPostRide,
+          allowCustomStart: form.allowCustomStart,
         },
         controls:  form.controls,
         updatedAt: serverTimestamp(),
@@ -653,32 +648,12 @@ export default function EditBrevetPage() {
           </Field>
 
           <div className="space-y-4">
-            <Toggle value={form.allowPreride} onChange={v => set('allowPreride', v)} label="Επιτρέπεται Pre-ride" />
-            {form.allowPreride && (
-              <div className="grid grid-cols-2 gap-4 pl-14">
-                <Field label="Ημ/νία Pre-ride">
-                  <input type="date" className={inp} value={form.prerideDate}
-                    onChange={e => set('prerideDate', e.target.value)} />
-                </Field>
-                <Field label="Ώρα">
-                  <input type="time" className={inp} value={form.prerideTime}
-                    onChange={e => set('prerideTime', e.target.value)} />
-                </Field>
-              </div>
-            )}
-            <Toggle value={form.allowPostride} onChange={v => set('allowPostride', v)} label="Επιτρέπεται Post-ride" />
-            {form.allowPostride && (
-              <div className="grid grid-cols-2 gap-4 pl-14">
-                <Field label="Ημ/νία Post-ride">
-                  <input type="date" className={inp} value={form.postrideDate}
-                    onChange={e => set('postrideDate', e.target.value)} />
-                </Field>
-                <Field label="Ώρα">
-                  <input type="time" className={inp} value={form.postrideTime}
-                    onChange={e => set('postrideTime', e.target.value)} />
-                </Field>
-              </div>
-            )}
+            <Toggle value={form.allowPreRide} onChange={v => set('allowPreRide', v)}
+              label="Επιτρέπεται Pre-ride (πριν την επίσημη ημερομηνία)" />
+            <Toggle value={form.allowPostRide} onChange={v => set('allowPostRide', v)}
+              label="Επιτρέπεται Post-ride (μετά τη λήξη)" />
+            <Toggle value={form.allowCustomStart} onChange={v => set('allowCustomStart', v)}
+              label="Ελεύθερη αφετηρία/τερματισμός (μόνο H.A.R.)" />
           </div>
         </Section>
 

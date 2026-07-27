@@ -212,12 +212,9 @@ interface FormState {
   date:           string;   // YYYY-MM-DD
   startTime:      string;   // HH:MM
   durationHours:  string;
-  allowPreride:   boolean;
-  prerideDate:    string;
-  prerideTime:    string;
-  allowPostride:  boolean;
-  postrideDate:   string;
-  postrideTime:   string;
+  allowPreRide:     boolean;
+  allowPostRide:    boolean;
+  allowCustomStart: boolean;
   // status
   active:                boolean;
   registrationOpen:      boolean;
@@ -248,8 +245,7 @@ const EMPTY: FormState = {
   title:'', type:'BRM', distancePreset:200, distanceCustom:'',
   certification:'A.C.P.', organizerId:'', coOrganizerId:'',
   date:'', startTime:'07:00', durationHours:'13.5',
-  allowPreride:false, prerideDate:'', prerideTime:'07:00',
-  allowPostride:false, postrideDate:'', postrideTime:'07:00',
+  allowPreRide:false, allowPostRide:false, allowCustomStart:false,
   active:true, registrationOpen:false, externalRegistration:'',
   start:'', startCoords:'', finish:'', finishCoords:'', viaCities:'',
   ascent:'', descent:'', realKm:'', wcs:'',
@@ -491,8 +487,9 @@ export default function NewBrevetPage() {
         externalRegistration: extra.registration ?? '',
         controls:       ctrls,
         date:'', gpxUrl:'', realKm:'', active:true, registrationOpen:false,
-        allowPreride:  info.allowPreride  ?? false,
-        allowPostride: info.allowPostride ?? false,
+        allowPreRide:     extra.allowPreRide  ?? false,
+        allowPostRide:    extra.allowPostRide ?? false,
+        allowCustomStart: extra.allowCustomStart ?? false,
       }));
       setShowCopy(false);
     } catch (e) { console.error('Copy error:', e); }
@@ -536,12 +533,6 @@ export default function NewBrevetPage() {
           coOrganizerId:    form.coOrganizerId,
           active:           form.active,
           registrationOpen: form.registrationOpen,
-          allowPreride:     form.allowPreride,
-          prerideDate:      form.allowPreride
-            ? `${form.prerideDate}T${form.prerideTime}:00+02:00` : null,
-          allowPostride:    form.allowPostride,
-          postrideDate:     form.allowPostride
-            ? `${form.postrideDate}T${form.postrideTime}:00+02:00` : null,
         },
         route: {
           start:        form.start,
@@ -567,6 +558,9 @@ export default function NewBrevetPage() {
           registration: form.externalRegistration?.trim() ?? '',
           imageUrl:     '',
           closeTimeIso: endDt?.toISOString() ?? '',
+          allowPreRide:     form.allowPreRide,
+          allowPostRide:    form.allowPostRide,
+          allowCustomStart: form.allowCustomStart,
         },
         controls:  form.controls,
         createdAt: serverTimestamp(),
@@ -721,34 +715,12 @@ export default function NewBrevetPage() {
           </Field>
 
           <div className="space-y-4">
-            <Toggle value={form.allowPreride} onChange={v => set('allowPreride', v)}
-              label="Επιτρέπεται Pre-ride" />
-            {form.allowPreride && (
-              <div className="grid grid-cols-2 gap-4 pl-14">
-                <Field label="Ημ/νία Pre-ride">
-                  <input type="date" className={inp} value={form.prerideDate}
-                    onChange={e => set('prerideDate', e.target.value)} />
-                </Field>
-                <Field label="Ώρα">
-                  <input type="time" className={inp} value={form.prerideTime}
-                    onChange={e => set('prerideTime', e.target.value)} />
-                </Field>
-              </div>
-            )}
-            <Toggle value={form.allowPostride} onChange={v => set('allowPostride', v)}
-              label="Επιτρέπεται Post-ride" />
-            {form.allowPostride && (
-              <div className="grid grid-cols-2 gap-4 pl-14">
-                <Field label="Ημ/νία Post-ride">
-                  <input type="date" className={inp} value={form.postrideDate}
-                    onChange={e => set('postrideDate', e.target.value)} />
-                </Field>
-                <Field label="Ώρα">
-                  <input type="time" className={inp} value={form.postrideTime}
-                    onChange={e => set('postrideTime', e.target.value)} />
-                </Field>
-              </div>
-            )}
+            <Toggle value={form.allowPreRide} onChange={v => set('allowPreRide', v)}
+              label="Επιτρέπεται Pre-ride (πριν την επίσημη ημερομηνία)" />
+            <Toggle value={form.allowPostRide} onChange={v => set('allowPostRide', v)}
+              label="Επιτρέπεται Post-ride (μετά τη λήξη)" />
+            <Toggle value={form.allowCustomStart} onChange={v => set('allowCustomStart', v)}
+              label="Ελεύθερη αφετηρία/τερματισμός (μόνο H.A.R.)" />
           </div>
         </Section>
 

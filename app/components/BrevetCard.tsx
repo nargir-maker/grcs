@@ -22,8 +22,12 @@ interface BrevetCardProps {
     imageUrl: string;
     difficultyLabel: string;
     difficultyColor: string;
+    allowPreRide?: boolean;
+    allowPostRide?: boolean;
   };
   hasCoOrg: boolean;
+  isFavorite?: boolean;
+  onToggleFavorite?: (id: string) => void;
 }
 
 const DIFF_EMOJI: Record<string, string> = {
@@ -35,7 +39,7 @@ const DIFF_EMOJI: Record<string, string> = {
   'ΘΡΥΛΙΚΟ':      '☠️',
 };
 
-export default function BrevetCard({ b, hasCoOrg }: BrevetCardProps) {
+export default function BrevetCard({ b, hasCoOrg, isFavorite, onToggleFavorite }: BrevetCardProps) {
   const hasImage = b.imageUrl && b.imageUrl.length > 0;
   const emoji    = DIFF_EMOJI[b.difficultyLabel] ?? '⚪';
 
@@ -130,11 +134,42 @@ export default function BrevetCard({ b, hasCoOrg }: BrevetCardProps) {
               <p className="text-white/40 text-[10px] leading-tight truncate">
                 {b.certification} {b.type}
               </p>
+              {(b.allowPreRide || b.allowPostRide) && (
+                <div className="flex items-center gap-1 mt-1">
+                  {b.allowPreRide && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ color: '#818cf8', background: 'rgba(129,140,248,0.15)', border: '1px solid rgba(129,140,248,0.3)' }}>
+                      🌙 PRE
+                    </span>
+                  )}
+                  {b.allowPostRide && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ color: '#fb923c', background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.3)' }}>
+                      🌆 POST
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right: distance + difficulty */}
-          <div className="flex flex-col items-end shrink-0 ml-3">
+          {/* Right: favorite + distance + difficulty */}
+          <div className="flex items-start gap-2 shrink-0 ml-3">
+            {onToggleFavorite && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleFavorite(b.id);
+                }}
+                title={isFavorite ? 'Αφαίρεση από αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
+                className="w-6 h-6 rounded-full flex items-center justify-center text-sm
+                  transition-transform hover:scale-125 shrink-0"
+              >
+                {isFavorite ? '⭐' : '☆'}
+              </button>
+            )}
+            <div className="flex flex-col items-end shrink-0">
             <span
               className="font-black text-2xl leading-none"
               style={{
@@ -155,6 +190,7 @@ export default function BrevetCard({ b, hasCoOrg }: BrevetCardProps) {
             >
               {emoji} {b.difficultyLabel}
             </span>
+            </div>
           </div>
         </div>
 

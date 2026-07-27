@@ -306,6 +306,12 @@ export default function AdminPage() {
   <span className="text-white/70 text-sm group-hover:text-white">📅 Επεξεργασία Brevets</span>
   <span className="text-white/30 text-xs">→</span>
 </Link>
+            <Link href="/admin/members"
+  className="flex items-center justify-between px-4 py-3
+    bg-white/5 hover:bg-white/10 rounded-xl transition-colors group">
+  <span className="text-white/70 text-sm group-hover:text-white">👥 Επεξεργασία Μητρώου Μελών</span>
+  <span className="text-white/30 text-xs">→</span>
+</Link>
             <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-between px-4 py-3
                 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group">

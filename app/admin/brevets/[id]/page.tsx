@@ -36,8 +36,18 @@ interface BrevetData {
   description:   string;
   registration:  string;
   closeTimeIso:  string;
+  allowPreRide:     boolean;
+  allowPostRide:    boolean;
+  allowCustomStart: boolean;
   // controls — as JSON string for easy editing
   controlsJson:  string;
+}
+
+type StringField = Exclude<keyof BrevetData, 'allowPreRide' | 'allowPostRide' | 'allowCustomStart'>;
+type BoolField = 'allowPreRide' | 'allowPostRide' | 'allowCustomStart';
+
+function certNorm(cert: unknown): string {
+  return (cert?.toString() ?? '').toUpperCase().replace(/[.\s]/g, '');
 }
 
 const EMPTY: BrevetData = {
@@ -45,6 +55,7 @@ const EMPTY: BrevetData = {
   organizerId:'', coOrganizerId:'',
   start:'', finish:'', ascent:'', descent:'', duration:'', gpxUrl:'', mapUrl:'',
   imageUrl:'', description:'', registration:'', closeTimeIso:'',
+  allowPreRide:false, allowPostRide:false, allowCustomStart:false,
   controlsJson:'[]',
 };
 
@@ -116,6 +127,9 @@ export default function EditBrevetPage() {
         description:   extra.description?.toString()   ?? '',
         registration:  extra.registration?.toString()  ?? '',
         closeTimeIso:  extra.closeTimeIso?.toString()  ?? '',
+        allowPreRide:  extra.allowPreRide  !== undefined ? !!extra.allowPreRide  : certNorm(info.certification).includes('HAR'),
+        allowPostRide: extra.allowPostRide !== undefined ? !!extra.allowPostRide : certNorm(info.certification).includes('HAR'),
+        allowCustomStart: !!extra.allowCustomStart,
         controlsJson:  JSON.stringify(ctrls, null, 2),
       });
     } catch (e) { setError('Failed to load brevet'); }
@@ -150,6 +164,9 @@ export default function EditBrevetPage() {
         'extra.description':    form.description,
         'extra.registration':   form.registration,
         'extra.closeTimeIso':   form.closeTimeIso,
+        'extra.allowPreRide':     form.allowPreRide,
+        'extra.allowPostRide':    form.allowPostRide,
+        'extra.allowCustomStart': form.allowCustomStart,
         'controls':             controls,
       });
       setSaved(true);
@@ -160,14 +177,19 @@ export default function EditBrevetPage() {
     } finally { setSaving(false); }
   }
 
-  function set(key: keyof BrevetData, val: string) {
+  function set(key: StringField, val: string) {
+    setForm(prev => ({ ...prev, [key]: val }));
+    setSaved(false);
+  }
+
+  function setBool(key: BoolField, val: boolean) {
     setForm(prev => ({ ...prev, [key]: val }));
     setSaved(false);
   }
 
   // ── UI helpers ─────────────────────────────────────────────────────
   function Field({ label, field, type = 'text', placeholder = '' }: {
-    label: string; field: keyof BrevetData;
+    label: string; field: StringField;
     type?: string; placeholder?: string;
   }) {
     return (
@@ -188,7 +210,7 @@ export default function EditBrevetPage() {
   }
 
   function SelectField({ label, field, options }: {
-    label: string; field: keyof BrevetData;
+    label: string; field: StringField;
     options: { value: string; label: string }[];
   }) {
     return (
@@ -207,6 +229,29 @@ export default function EditBrevetPage() {
           ))}
         </select>
       </div>
+    );
+  }
+
+  function Toggle({ label, field }: { label: string; field: BoolField }) {
+    const value = form[field];
+    return (
+      <button
+        type="button"
+        onClick={() => setBool(field, !value)}
+        className="flex items-center justify-between w-full bg-white/5 border
+          border-white/10 rounded-xl px-4 py-2.5 text-left"
+      >
+        <span className="text-white/70 text-sm">{label}</span>
+        <span
+          className="w-10 h-6 rounded-full relative transition-colors shrink-0 ml-3"
+          style={{ background: value ? '#06b6d4' : 'rgba(255,255,255,0.15)' }}
+        >
+          <span
+            className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform"
+            style={{ transform: value ? 'translateX(18px)' : 'translateX(2px)' }}
+          />
+        </span>
+      </button>
     );
   }
 
@@ -333,6 +378,15 @@ export default function EditBrevetPage() {
                     rounded-xl px-4 py-2.5 text-sm focus:outline-none
                     focus:border-cyan-500/50 resize-none"
                 />
+              </div>
+            </Section>
+
+            {/* ── RIDE WINDOW ── */}
+            <Section title="🚦 Pre/Post-ride">
+              <Toggle label="Επιτρέπεται Pre-ride (πριν την επίσημη ημερομηνία)" field="allowPreRide" />
+              <Toggle label="Επιτρέπεται Post-ride (μετά τη λήξη)" field="allowPostRide" />
+              <div className="sm:col-span-2">
+                <Toggle label="Ελεύθερη αφετηρία/τερματισμός (μόνο H.A.R., όχι A.C.P.)" field="allowCustomStart" />
               </div>
             </Section>
 

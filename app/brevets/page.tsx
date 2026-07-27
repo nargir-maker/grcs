@@ -6,6 +6,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 import BrevetCard from '@/app/components/BrevetCard';
 import PageViews from '@/app/components/PageViews';
+import { useInterestedBrevets } from '@/app/lib/useInterestedBrevets';
 
 const scrollStyle = `
   @keyframes brevScroll {
@@ -55,6 +56,8 @@ interface Brevet {
   imageUrl: string;
   difficultyLabel: string;
   difficultyColor: string;
+  allowPreRide: boolean;
+  allowPostRide: boolean;
 }
 
 interface OrganizerOption {
@@ -112,6 +115,7 @@ export default function BrevetsPage() {
   const [organizers, setOrganizers] = useState<OrganizerOption[]>([]);
   const [isOrganizerView, setIsOrganizerView] = useState(false);
   const [myOrganizerClubId, setMyOrganizerClubId] = useState<string | null>(null);
+  const { isInterested, toggle: toggleFavorite } = useInterestedBrevets();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -174,6 +178,9 @@ export default function BrevetsPage() {
           const orgId   = info.organizerId?.toString()   ?? '';
           const coOrgId = info.coOrganizerId?.toString() ?? '';
 
+          const certNorm    = (info.certification?.toString() ?? '').toUpperCase().replace(/[.\s]/g, '');
+          const harFallback = certNorm.includes('HAR');
+
           data.push({
             id:              doc.id,
             title:           info.title?.toString() ?? doc.id,
@@ -191,6 +198,8 @@ export default function BrevetsPage() {
             imageUrl:        extra.imageUrl?.toString() ?? '',
             difficultyLabel: label,
             difficultyColor: color,
+            allowPreRide:    extra.allowPreRide  !== undefined ? !!extra.allowPreRide  : harFallback,
+            allowPostRide:   extra.allowPostRide !== undefined ? !!extra.allowPostRide : harFallback,
           });
         });
 
@@ -563,7 +572,13 @@ export default function BrevetsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filtered.map((b) => (
-              <BrevetCard key={b.id} b={b} hasCoOrg={!!hasCoOrg(b)} />
+              <BrevetCard
+                key={b.id}
+                b={b}
+                hasCoOrg={!!hasCoOrg(b)}
+                isFavorite={isInterested(b.id)}
+                onToggleFavorite={toggleFavorite}
+              />
             ))}
           </div>
         )}

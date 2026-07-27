@@ -9,6 +9,7 @@ import { useSession, signIn } from 'next-auth/react';
 import RegistrationForm from '@/app/components/RegistrationForm';
 import { decodeParam } from '@/app/lib/routeParams';
 import { isNightStart } from '@/app/lib/nightStart';
+import { useInterestedBrevets } from '@/app/lib/useInterestedBrevets';
 
 
 const WeatherStrip = dynamic(() => import('../../components/WeatherStrip'), {
@@ -60,6 +61,7 @@ interface BrevetDetail {
   difficultyEmoji: string; wcs: number; climbCount: number; duration: string;
   organizerLogo: string; climbProfile: ClimbSegment[];
   externalRegistration: string;
+  allowPreRide: boolean; allowPostRide: boolean;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -504,6 +506,7 @@ export default function BrevetDetailPage() {
   const [showForm, setShowForm] = useState(false);
   const [scrubberKm, setScrubberKm] = useState<number | null>(null);
   const handleScrub = useCallback((km: number | null) => setScrubberKm(km), []);
+  const { isInterested, toggle: toggleFavorite } = useInterestedBrevets();
 
   useEffect(() => {
     const email = session?.user?.email;
@@ -566,6 +569,8 @@ export default function BrevetDetailPage() {
           const d2 = new Date(dateStr.split('+')[0]);
           if (!isNaN(d2.getTime())) parsedDate = d2.toISOString();
         } catch { parsedDate = ''; }
+        const certNorm    = (info.certification?.toString() ?? '').toUpperCase().replace(/[.\s]/g, '');
+        const harFallback = certNorm.includes('HAR');
         setBrevet({
           id: docSnap.id, title: info.title?.toString() ?? docSnap.id,
           distance: km, date: parsedDate, organizer: organizerName,
@@ -582,6 +587,8 @@ export default function BrevetDetailPage() {
           controls, difficultyLabel: label, difficultyColor: color, difficultyEmoji: emoji,
           wcs, climbCount: parseInt(route.climbCount?.toString() ?? '0') || 0,
           duration: getTimeLimit(km), organizerLogo,
+          allowPreRide:  extra.allowPreRide  !== undefined ? !!extra.allowPreRide  : harFallback,
+          allowPostRide: extra.allowPostRide !== undefined ? !!extra.allowPostRide : harFallback,
           climbProfile: (() => {
             const raw = route.climbProfile;
             if (!raw) return [];
@@ -633,14 +640,25 @@ export default function BrevetDetailPage() {
 
         <div className="flex items-center justify-between mb-2">
           <BackButton />
-          {isAdmin && (
-            <a href={`/organizer/brevet/${id}/edit`}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => toggleFavorite(id)}
+              title={isInterested(id) ? 'Αφαίρεση από αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold
-                border border-amber-400/40 bg-amber-500/10 text-amber-300
-                hover:bg-amber-500/20 transition-all">
-              ✏️ Επεξεργασία (Admin)
-            </a>
-          )}
+                border border-white/15 bg-white/5 text-white/70
+                hover:bg-white/10 transition-all"
+            >
+              {isInterested(id) ? '⭐ Αγαπημένο' : '☆ Αγαπημένο'}
+            </button>
+            {isAdmin && (
+              <a href={`/organizer/brevet/${id}/edit`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold
+                  border border-amber-400/40 bg-amber-500/10 text-amber-300
+                  hover:bg-amber-500/20 transition-all">
+                ✏️ Επεξεργασία (Admin)
+              </a>
+            )}
+          </div>
         </div>
 
         {/* ── HERO ── */}
@@ -686,6 +704,18 @@ export default function BrevetDetailPage() {
               <span>📅 {startDate.toLocaleDateString('el-GR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
             )}
             <span>🏷️ {brevet.certification} {brevet.type}</span>
+            {brevet.allowPreRide && (
+              <span className="text-indigo-400 bg-indigo-500/10 border border-indigo-500/25
+                px-3 py-1 rounded-full text-xs font-bold">
+                🌙 Pre-ride
+              </span>
+            )}
+            {brevet.allowPostRide && (
+              <span className="text-orange-400 bg-orange-500/10 border border-orange-500/25
+                px-3 py-1 rounded-full text-xs font-bold">
+                🌆 Post-ride
+              </span>
+            )}
           </div>
         </div>
 
