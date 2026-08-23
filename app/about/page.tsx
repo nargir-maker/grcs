@@ -59,9 +59,17 @@ export default function AboutPage() {
                   Η συνοδευτική εφαρμογή για κινητό — ιστορικό αναβάτη, live GPS tracking, ειδοποιήσεις brevets και ό,τι χρειάζεσαι στη σέλα.
                 </p>
                 <div className="mt-4">
-                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-green-500/15 text-green-400 border border-green-500/25">
+                  <p className="text-white/50 text-xs mb-2">Κατέβασε την εφαρμογή τώρα:</p>
+                  <a
+                    href="https://play.google.com/store/apps/details?id=com.nikos.greekbrevets"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full
+                      bg-green-500/15 text-green-400 border border-green-500/25
+                      hover:bg-green-500/25 hover:border-green-500/50 transition-all duration-200"
+                  >
                     Android
-                  </span>
+                  </a>
                 </div>
               </div>
             </div>
@@ -128,6 +136,33 @@ export default function AboutPage() {
               <p className="text-white/70 leading-relaxed">
                 Η πλατφόρμα δεν ανήκει σε κάποια εταιρεία. Φτιάχτηκε από έναν αναβάτη, για αναβάτες — με σεβασμό στην κουλτούρα του Randonneuring και αγάπη για την ελληνική ύπαιθρο που διασχίζουμε κάθε χρόνο.
               </p>
+              <p className="text-white/70 leading-relaxed">
+                Μπορείτε να βρείτε περισσότερες πληροφορίες σχετικά με την διοργάνωση των brevet στην Ελλάδα από τους παρακάτω φορείς:
+              </p>
+              <div className="flex items-center gap-6 pt-2">
+                <a
+                  href="https://www.brevets.gr"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="ΛΕ.ΠΟ.Τ.Ε. — brevets.gr"
+                  className="flex items-center justify-center w-16 h-16 rounded-full
+                    bg-white/5 border border-white/15 hover:border-cyan-500/50
+                    hover:bg-white/10 transition-all duration-200"
+                >
+                  <img src="/logos/650000.png" alt="ΛΕ.ΠΟ.Τ.Ε." className="w-11 h-11 object-contain rounded-full" />
+                </a>
+                <a
+                  href="https://www.hellenic-autonomous-randonneur.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="H.A.R. — hellenic-autonomous-randonneur.com"
+                  className="flex items-center justify-center w-16 h-16 rounded-full
+                    bg-white/5 border border-white/15 hover:border-cyan-500/50
+                    hover:bg-white/10 transition-all duration-200"
+                >
+                  <img src="/logos/659999.png" alt="H.A.R." className="w-11 h-11 object-contain rounded-full" />
+                </a>
+              </div>
             </div>
 
           </div>
