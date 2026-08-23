@@ -298,6 +298,13 @@ export default function Home() {
             .links-scroll:hover {
               animation-play-state: paused;
             }
+            @keyframes starTwinkle {
+              0%, 100% { opacity: 0.15; transform: scale(0.8); }
+              50%      { opacity: 1; transform: scale(1.15); }
+            }
+            .star-twinkle {
+              animation: starTwinkle ease-in-out infinite;
+            }
           `}</style>
 
           <div className="px-6 mb-4 flex items-center gap-3">
@@ -308,8 +315,35 @@ export default function Home() {
             <div className="h-px flex-1 bg-white/10" />
           </div>
 
-          <div className="w-full overflow-hidden">
-            <div className="flex links-scroll gap-3 w-max px-6 py-8">
+          <div className="w-full overflow-hidden relative">
+            {/* Twinkling star background */}
+            <div className="absolute inset-0 pointer-events-none">
+              {Array.from({ length: 28 }, (_, i) => {
+                const left = (i * 137.5) % 100;
+                const top = (i * 53.7) % 100;
+                const size = 1 + (i % 3);
+                const delay = (i % 7) * 0.4;
+                const duration = 2 + (i % 4) * 0.6;
+                const isCyan = i % 3 === 0;
+                return (
+                  <span
+                    key={i}
+                    className="absolute rounded-full star-twinkle"
+                    style={{
+                      left: `${left}%`,
+                      top: `${top}%`,
+                      width: size,
+                      height: size,
+                      background: isCyan ? 'rgba(6,182,212,0.9)' : '#ffffff',
+                      animationDelay: `${delay}s`,
+                      animationDuration: `${duration}s`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            <div className="relative z-10 flex links-scroll gap-1 w-max px-6 py-8">
               {(() => {
                 const links = [
                   { logo: '650000.png', href: 'https://www.brevets.gr', alt: 'ΛΕ.ΠΟ.Τ.Ε.' },
