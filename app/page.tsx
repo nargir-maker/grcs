@@ -371,6 +371,7 @@ export default function Home() {
                   { logo: '990002.png', href: 'https://www.facebook.com/people/Aridaia-Cycling-Club/61590540376483/', alt: 'Aridaia Cycling Club' },
                   { logo: '990003.png', href: 'https://www.facebook.com/groups/148751578649869', alt: 'Facebook Group' },
                   { logo: '650063.png', href: 'https://www.facebook.com/greekrandonneurs', alt: 'Greek Randonneurs' },
+                  { logo: '990004.png', href: 'https://www.facebook.com/halbike', alt: 'HAL Bike' },
                 ];
                 return [...links, ...links].map((link, i) => (
                   <a
