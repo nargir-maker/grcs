@@ -304,6 +304,7 @@ export default function Home() {
               { logo: '990000.png', href: 'https://ptpns.eu', alt: 'PTPNS' },
               { logo: '990001.png', href: 'https://www.facebook.com/groups/484265904937327/', alt: 'Facebook Group' },
               { logo: '990002.png', href: 'https://www.facebook.com/people/Aridaia-Cycling-Club/61590540376483/', alt: 'Aridaia Cycling Club' },
+              { logo: '990003.png', href: 'https://www.facebook.com/groups/148751578649869', alt: 'Facebook Group' },
             ].map((link) => (
               <a
                 key={link.logo}
