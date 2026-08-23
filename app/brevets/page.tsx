@@ -8,6 +8,35 @@ import BrevetCard from '@/app/components/BrevetCard';
 import PageViews from '@/app/components/PageViews';
 import { useInterestedBrevets } from '@/app/lib/useInterestedBrevets';
 
+const globeButtonStyle = `
+  @keyframes globeSpin {
+    0%, 100% { transform: scaleX(1) rotate(0deg); }
+    25%      { transform: scaleX(0.55) rotate(-3deg); }
+    50%      { transform: scaleX(1) rotate(0deg); }
+    75%      { transform: scaleX(0.55) rotate(3deg); }
+  }
+  .globe-spin-img {
+    animation: globeSpin 4s ease-in-out infinite;
+    transform-origin: center;
+  }
+  @keyframes globeShineSweep {
+    0%   { transform: translateX(-120%) rotate(20deg); opacity: 0; }
+    8%   { opacity: 0.9; }
+    20%  { transform: translateX(120%) rotate(20deg); opacity: 0; }
+    100% { transform: translateX(120%) rotate(20deg); opacity: 0; }
+  }
+  .globe-shine {
+    position: absolute;
+    top: -50%;
+    left: 0;
+    width: 40%;
+    height: 200%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent);
+    animation: globeShineSweep 4s ease-in-out infinite;
+    pointer-events: none;
+  }
+`;
+
 const scrollStyle = `
   @keyframes brevScroll {
     0% { transform: translateX(0); }
@@ -382,7 +411,12 @@ export default function BrevetsPage() {
               background: 'rgba(6,182,212,0.08)',
             }}
           >
-            🗺️ Χάρτης όλων των διαδρομών
+            <style>{globeButtonStyle}</style>
+            <span className="relative w-5 h-5 flex-shrink-0 overflow-hidden rounded-full">
+              <img src="/hellas.png" alt="" className="globe-spin-img w-full h-full object-contain" />
+              <span className="globe-shine" />
+            </span>
+            Χάρτης όλων των διαδρομών
           </a>
         </div>
 
