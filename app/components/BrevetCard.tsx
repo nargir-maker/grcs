@@ -55,7 +55,7 @@ export default function BrevetCard({ b, hasCoOrg, isFavorite, onToggleFavorite }
     <a
       href={`/brevets/${b.id}`}
       className="group block no-underline transition-transform duration-200
-        hover:scale-[1.02] hover:z-20 focus-visible:scale-[1.02] focus-visible:z-20"
+        hover:scale-[1.06] hover:z-20 focus-visible:scale-[1.06] focus-visible:z-20"
       style={{ position: 'relative' }}
     >
 
@@ -75,7 +75,8 @@ export default function BrevetCard({ b, hasCoOrg, isFavorite, onToggleFavorite }
 
       {/* ── Card body ─────────────────────────────────────────────────────── */}
       <div
-        className="relative z-10 rounded-2xl overflow-hidden flex flex-col min-h-[300px]"
+        className="relative z-10 rounded-2xl overflow-hidden flex flex-col min-h-[300px]
+          transition-[filter] duration-300 group-hover:brightness-110 group-hover:saturate-150"
         style={{
           margin: 1.5,
           backgroundImage: hasImage ? `url(${b.imageUrl})` : undefined,
@@ -84,9 +85,9 @@ export default function BrevetCard({ b, hasCoOrg, isFavorite, onToggleFavorite }
           backgroundColor: hasImage ? undefined : 'rgba(255,255,255,0.04)',
         }}
       >
-        {/* Dark gradient overlay on photo */}
+        {/* Dark gradient overlay on photo — lightens on hover so the photo "lights up" */}
         {hasImage && (
-          <div className="absolute inset-0"
+          <div className="absolute inset-0 transition-opacity duration-300 group-hover:opacity-70"
             style={{
               background: 'linear-gradient(to bottom, rgba(5,10,25,0.45) 0%, rgba(5,10,25,0.75) 55%, rgba(5,10,25,0.97) 100%)',
             }}
