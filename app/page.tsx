@@ -295,35 +295,35 @@ export default function Home() {
             <div className="h-px flex-1 bg-white/10" />
           </div>
 
-          <div className="flex flex-wrap justify-center gap-5">
-            {[
-              { logo: '650000.png', href: 'https://www.brevets.gr', alt: 'ΛΕ.ΠΟ.Τ.Ε.' },
-              { logo: '659999.png', href: 'https://www.hellenic-autonomous-randonneur.com', alt: 'H.A.R.' },
-              { logo: '650031.png', href: 'https://www.blecyclingclub.gr', alt: 'BLE Cycling Club' },
-              { logo: '650001.png', href: 'https://www.pepa.gr', alt: 'ΠΕΠΑ' },
-              { logo: '990000.png', href: 'https://ptpns.eu', alt: 'PTPNS' },
-              { logo: '990001.png', href: 'https://www.facebook.com/groups/484265904937327/', alt: 'Facebook Group' },
-              { logo: '990002.png', href: 'https://www.facebook.com/people/Aridaia-Cycling-Club/61590540376483/', alt: 'Aridaia Cycling Club' },
-              { logo: '990003.png', href: 'https://www.facebook.com/groups/148751578649869', alt: 'Facebook Group' },
-            ].map((link) => (
-              <a
-                key={link.logo}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={link.alt}
-                className="relative flex-shrink-0 w-64 h-36 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 group
-                  bg-white/5 border border-white/10 flex items-center justify-center"
-              >
-                <div className="absolute -inset-[2px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"
-                     style={{ boxShadow: '0 0 15px 3px rgba(6,182,212,0.7)' }} />
-                <img
-                  src={`/logos/${link.logo}`}
-                  alt={link.alt}
-                  className="max-w-[65%] max-h-[65%] object-contain relative z-10"
-                />
-              </a>
-            ))}
+          <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-cyan-500/50 scrollbar-track-transparent">
+            <div className="flex gap-5" style={{ minWidth: 'max-content' }}>
+              {[
+                { logo: '650000.png', href: 'https://www.brevets.gr', alt: 'ΛΕ.ΠΟ.Τ.Ε.' },
+                { logo: '659999.png', href: 'https://www.hellenic-autonomous-randonneur.com', alt: 'H.A.R.' },
+                { logo: '650031.png', href: 'https://www.blecyclingclub.gr', alt: 'BLE Cycling Club' },
+                { logo: '650001.png', href: 'https://www.pepa.gr', alt: 'ΠΕΠΑ' },
+                { logo: '990000.png', href: 'https://ptpns.eu', alt: 'PTPNS' },
+                { logo: '990001.png', href: 'https://www.facebook.com/groups/484265904937327/', alt: 'Facebook Group' },
+                { logo: '990002.png', href: 'https://www.facebook.com/people/Aridaia-Cycling-Club/61590540376483/', alt: 'Aridaia Cycling Club' },
+                { logo: '990003.png', href: 'https://www.facebook.com/groups/148751578649869', alt: 'Facebook Group' },
+                { logo: '650063.png', href: 'https://www.facebook.com/greekrandonneurs', alt: 'Greek Randonneurs' },
+              ].map((link) => (
+                <a
+                  key={link.logo}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={link.alt}
+                  className="relative flex-shrink-0 w-64 h-36 transition-transform duration-300 hover:scale-105 flex items-center justify-center"
+                >
+                  <img
+                    src={`/logos/${link.logo}`}
+                    alt={link.alt}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </div>
