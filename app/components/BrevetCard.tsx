@@ -54,7 +54,8 @@ export default function BrevetCard({ b, hasCoOrg, isFavorite, onToggleFavorite }
   return (
     <a
       href={`/brevets/${b.id}`}
-      className="group block no-underline"
+      className="group block no-underline transition-transform duration-200
+        hover:scale-[1.02] hover:z-20 focus-visible:scale-[1.02] focus-visible:z-20"
       style={{ position: 'relative' }}
     >
 
