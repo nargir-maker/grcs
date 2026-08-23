@@ -309,7 +309,7 @@ export default function Home() {
           </div>
 
           <div className="w-full overflow-hidden">
-            <div className="flex links-scroll gap-5 w-max px-6 py-8">
+            <div className="flex links-scroll gap-3 w-max px-6 py-8">
               {(() => {
                 const links = [
                   { logo: '650000.png', href: 'https://www.brevets.gr', alt: 'ΛΕ.ΠΟ.Τ.Ε.' },
