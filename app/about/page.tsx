@@ -139,28 +139,28 @@ export default function AboutPage() {
               <p className="text-white/70 leading-relaxed">
                 Μπορείτε να βρείτε περισσότερες πληροφορίες σχετικά με την διοργάνωση των brevet στην Ελλάδα από τους παρακάτω φορείς:
               </p>
-              <div className="flex items-center gap-6 pt-2">
+              <div className="flex flex-wrap items-center justify-center gap-8 pt-2">
                 <a
                   href="https://www.brevets.gr"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="ΛΕ.ΠΟ.Τ.Ε. — brevets.gr"
-                  className="flex items-center justify-center w-28 h-28 rounded-full
+                  className="flex items-center justify-center w-[336px] h-[336px] rounded-full
                     bg-white/5 border border-white/15 hover:border-cyan-500/50
                     hover:bg-white/10 transition-all duration-200"
                 >
-                  <img src="/logos/650000.png" alt="ΛΕ.ΠΟ.Τ.Ε." className="w-24 h-24 object-contain rounded-full" />
+                  <img src="/logos/650000.png" alt="ΛΕ.ΠΟ.Τ.Ε." className="w-72 h-72 object-contain rounded-full" />
                 </a>
                 <a
                   href="https://www.hellenic-autonomous-randonneur.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="H.A.R. — hellenic-autonomous-randonneur.com"
-                  className="flex items-center justify-center w-28 h-28 rounded-full
+                  className="flex items-center justify-center w-[336px] h-[336px] rounded-full
                     bg-white/5 border border-white/15 hover:border-cyan-500/50
                     hover:bg-white/10 transition-all duration-200"
                 >
-                  <img src="/logos/659999.png" alt="H.A.R." className="w-24 h-24 object-contain rounded-full" />
+                  <img src="/logos/659999.png" alt="H.A.R." className="w-72 h-72 object-contain rounded-full" />
                 </a>
               </div>
             </div>
