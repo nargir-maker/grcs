@@ -286,8 +286,21 @@ export default function Home() {
         />
 
         {/* ΧΡΗΣΙΜΟΙ ΣΥΝΔΕΣΜΟΙ */}
-        <div className="mb-16">
-          <div className="mb-4 flex items-center gap-3">
+        <div className="mb-16 -mx-6 overflow-hidden">
+          <style>{`
+            @keyframes linksScroll {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+            .links-scroll {
+              animation: linksScroll 30s linear infinite;
+            }
+            .links-scroll:hover {
+              animation-play-state: paused;
+            }
+          `}</style>
+
+          <div className="px-6 mb-4 flex items-center gap-3">
             <div className="h-px flex-1 bg-white/10" />
             <span className="text-white/70 text-sm font-bold tracking-widest uppercase flex items-center gap-2">
               🔗 Θέλω Περισσότερο Ποδήλατο
@@ -295,34 +308,37 @@ export default function Home() {
             <div className="h-px flex-1 bg-white/10" />
           </div>
 
-          <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-cyan-500/50 scrollbar-track-transparent">
-            <div className="flex gap-5" style={{ minWidth: 'max-content' }}>
-              {[
-                { logo: '650000.png', href: 'https://www.brevets.gr', alt: 'ΛΕ.ΠΟ.Τ.Ε.' },
-                { logo: '659999.png', href: 'https://www.hellenic-autonomous-randonneur.com', alt: 'H.A.R.' },
-                { logo: '650031.png', href: 'https://www.blecyclingclub.gr', alt: 'BLE Cycling Club' },
-                { logo: '650001.png', href: 'https://www.pepa.gr', alt: 'ΠΕΠΑ' },
-                { logo: '990000.png', href: 'https://ptpns.eu', alt: 'PTPNS' },
-                { logo: '990001.png', href: 'https://www.facebook.com/groups/484265904937327/', alt: 'Facebook Group' },
-                { logo: '990002.png', href: 'https://www.facebook.com/people/Aridaia-Cycling-Club/61590540376483/', alt: 'Aridaia Cycling Club' },
-                { logo: '990003.png', href: 'https://www.facebook.com/groups/148751578649869', alt: 'Facebook Group' },
-                { logo: '650063.png', href: 'https://www.facebook.com/greekrandonneurs', alt: 'Greek Randonneurs' },
-              ].map((link) => (
-                <a
-                  key={link.logo}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={link.alt}
-                  className="relative flex-shrink-0 w-64 h-36 transition-transform duration-300 hover:scale-105 flex items-center justify-center"
-                >
-                  <img
-                    src={`/logos/${link.logo}`}
-                    alt={link.alt}
-                    className="max-w-full max-h-full object-contain"
-                  />
-                </a>
-              ))}
+          <div className="w-full overflow-hidden">
+            <div className="flex links-scroll gap-5 w-max px-6 py-8">
+              {(() => {
+                const links = [
+                  { logo: '650000.png', href: 'https://www.brevets.gr', alt: 'ΛΕ.ΠΟ.Τ.Ε.' },
+                  { logo: '659999.png', href: 'https://www.hellenic-autonomous-randonneur.com', alt: 'H.A.R.' },
+                  { logo: '650031.png', href: 'https://www.blecyclingclub.gr', alt: 'BLE Cycling Club' },
+                  { logo: '650001.png', href: 'https://www.pepa.gr', alt: 'ΠΕΠΑ' },
+                  { logo: '990000.png', href: 'https://ptpns.eu', alt: 'PTPNS' },
+                  { logo: '990001.png', href: 'https://www.facebook.com/groups/484265904937327/', alt: 'Facebook Group' },
+                  { logo: '990002.png', href: 'https://www.facebook.com/people/Aridaia-Cycling-Club/61590540376483/', alt: 'Aridaia Cycling Club' },
+                  { logo: '990003.png', href: 'https://www.facebook.com/groups/148751578649869', alt: 'Facebook Group' },
+                  { logo: '650063.png', href: 'https://www.facebook.com/greekrandonneurs', alt: 'Greek Randonneurs' },
+                ];
+                return [...links, ...links].map((link, i) => (
+                  <a
+                    key={`${link.logo}-${i}`}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={link.alt}
+                    className="relative flex-shrink-0 w-64 h-36 transition-transform duration-300 hover:scale-105 flex items-center justify-center"
+                  >
+                    <img
+                      src={`/logos/${link.logo}`}
+                      alt={link.alt}
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </a>
+                ));
+              })()}
             </div>
           </div>
         </div>
