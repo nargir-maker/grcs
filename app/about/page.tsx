@@ -145,22 +145,22 @@ export default function AboutPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="ΛΕ.ΠΟ.Τ.Ε. — brevets.gr"
-                  className="flex items-center justify-center w-[336px] h-[336px] rounded-full
+                  className="flex items-center justify-center w-64 h-64 rounded-full
                     bg-white/5 border border-white/15 hover:border-cyan-500/50
                     hover:bg-white/10 transition-all duration-200"
                 >
-                  <img src="/logos/650000.png" alt="ΛΕ.ΠΟ.Τ.Ε." className="w-72 h-72 object-contain rounded-full" />
+                  <img src="/logos/650000.png" alt="ΛΕ.ΠΟ.Τ.Ε." className="w-56 h-56 object-contain rounded-full" />
                 </a>
                 <a
                   href="https://www.hellenic-autonomous-randonneur.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="H.A.R. — hellenic-autonomous-randonneur.com"
-                  className="flex items-center justify-center w-[336px] h-[336px] rounded-full
+                  className="flex items-center justify-center w-64 h-64 rounded-full
                     bg-white/5 border border-white/15 hover:border-cyan-500/50
                     hover:bg-white/10 transition-all duration-200"
                 >
-                  <img src="/logos/659999.png" alt="H.A.R." className="w-72 h-72 object-contain rounded-full" />
+                  <img src="/logos/659999.png" alt="H.A.R." className="w-56 h-56 object-contain rounded-full" />
                 </a>
               </div>
             </div>
@@ -180,13 +180,24 @@ export default function AboutPage() {
               { value: '500+', label: 'ενεργοί αναβάτες' },
               { value: '30+', label: 'σύλλογοι' },
               { value: '∞', label: 'χιλιόμετρα μπροστά' },
-            ].map((s) => (
-              <div key={s.label}
-                className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
-                <div className="text-cyan-400 font-bold text-2xl mb-1">{s.value}</div>
-                <div className="text-white/40 text-xs">{s.label}</div>
-              </div>
-            ))}
+            ].map((s) => {
+              const isInfinite = s.value === '∞';
+              return (
+                <div key={s.label}
+                  className={`rounded-xl p-4 text-center ${
+                    isInfinite
+                      ? 'bg-amber-500/10 border border-amber-400/25'
+                      : 'bg-white/5 border border-white/10'
+                  }`}>
+                  <div className={isInfinite
+                    ? 'text-amber-300 font-bold text-4xl mb-1 leading-none'
+                    : 'text-cyan-400 font-bold text-2xl mb-1'}>
+                    {s.value}
+                  </div>
+                  <div className="text-white/40 text-xs">{s.label}</div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
