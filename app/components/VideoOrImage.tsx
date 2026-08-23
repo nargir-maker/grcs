@@ -23,8 +23,8 @@ export default function VideoOrImage({ videoSrc, imageSrc, minHeight = 260 }: Pr
           style={{ opacity: showImage ? 0 : 1 }}
           autoPlay
           muted
+          loop
           playsInline
-          onEnded={() => setShowImage(true)}
           onError={() => setShowImage(true)}
         >
           <source src={videoSrc} type="video/mp4" />

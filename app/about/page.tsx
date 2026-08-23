@@ -145,22 +145,22 @@ export default function AboutPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="ΛΕ.ΠΟ.Τ.Ε. — brevets.gr"
-                  className="flex items-center justify-center w-16 h-16 rounded-full
+                  className="flex items-center justify-center w-28 h-28 rounded-full
                     bg-white/5 border border-white/15 hover:border-cyan-500/50
                     hover:bg-white/10 transition-all duration-200"
                 >
-                  <img src="/logos/650000.png" alt="ΛΕ.ΠΟ.Τ.Ε." className="w-11 h-11 object-contain rounded-full" />
+                  <img src="/logos/650000.png" alt="ΛΕ.ΠΟ.Τ.Ε." className="w-24 h-24 object-contain rounded-full" />
                 </a>
                 <a
                   href="https://www.hellenic-autonomous-randonneur.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="H.A.R. — hellenic-autonomous-randonneur.com"
-                  className="flex items-center justify-center w-16 h-16 rounded-full
+                  className="flex items-center justify-center w-28 h-28 rounded-full
                     bg-white/5 border border-white/15 hover:border-cyan-500/50
                     hover:bg-white/10 transition-all duration-200"
                 >
-                  <img src="/logos/659999.png" alt="H.A.R." className="w-11 h-11 object-contain rounded-full" />
+                  <img src="/logos/659999.png" alt="H.A.R." className="w-24 h-24 object-contain rounded-full" />
                 </a>
               </div>
             </div>
