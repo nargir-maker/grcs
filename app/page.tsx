@@ -68,10 +68,26 @@ let cachedLogos: Record<string, string> = {};
 let cacheTimestamp = 0;
 const CACHE_TTL = 10 * 60 * 1000;
 
+// ── HERO VIDEOS (τυχαία επιλογή σε κάθε φόρτωση) ───────────────
+const HERO_VIDEOS = [
+  { webm: '/hero.webm', mp4: '/hero.mp4', poster: '/hero-poster.jpg' },
+  { webm: '/hero-2.webm', mp4: '/hero-2.mp4', poster: '/hero-2-poster.jpg' },
+  { webm: '/hero-3.webm', mp4: '/hero-3.mp4', poster: '/hero-3-poster.jpg' },
+  { webm: '/hero-4.webm', mp4: '/hero-4.mp4', poster: '/hero-4-poster.jpg' },
+  { webm: '/hero-5.webm', mp4: '/hero-5.mp4', poster: '/hero-5-poster.jpg' },
+];
+
 export default function Home() {
   const [liveBrevets, setLiveBrevets] = useState<Brevet[]>([]);
   const [upcomingBrevets, setUpcomingBrevets] = useState<Brevet[]>([]);
   const [loading, setLoading] = useState(true);
+  const [heroIndex, setHeroIndex] = useState(0);
+
+  // Επιλογή τυχαίου hero video μετά το mount (client-only, ώστε να μη
+  // διαφέρει το server-rendered HTML από το πρώτο client render)
+  useEffect(() => {
+    setHeroIndex(Math.floor(Math.random() * HERO_VIDEOS.length));
+  }, []);
 
   useEffect(() => {
     async function fetchAndFilter() {
@@ -246,9 +262,9 @@ export default function Home() {
     <div className="min-h-screen bg-[#0A1628] font-sans">
       {/* HERO (παραμένει ίδιο) */}
       <section className="relative w-full h-screen flex items-center justify-center overflow-hidden">
-        <video autoPlay muted loop playsInline poster="/hero-poster.jpg" className="absolute inset-0 w-full h-full object-cover">
-          <source src="/hero.webm" type="video/webm" />
-          <source src="/hero.mp4" type="video/mp4" />
+        <video key={heroIndex} autoPlay muted loop playsInline poster={HERO_VIDEOS[heroIndex].poster} className="absolute inset-0 w-full h-full object-cover">
+          <source src={HERO_VIDEOS[heroIndex].webm} type="video/webm" />
+          <source src={HERO_VIDEOS[heroIndex].mp4} type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-gradient-to-b from-[#0A1628]/60 via-[#0A1628]/40 to-[#0A1628]" />
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`, backgroundRepeat: 'repeat', backgroundSize: '128px' }} />

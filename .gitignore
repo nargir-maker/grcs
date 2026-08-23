@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw/uncompressed hero video sources (only the compressed public/hero-*.mp4|webm ship)
+/public/hero-candidates/
