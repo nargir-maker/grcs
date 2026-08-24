@@ -412,7 +412,7 @@ export default function BrevetsPage() {
             }}
           >
             <style>{globeButtonStyle}</style>
-            <span className="relative w-5 h-5 flex-shrink-0 overflow-hidden rounded-full">
+            <span className="relative w-9 h-9 flex-shrink-0 overflow-hidden rounded-full">
               <img src="/hellas.png" alt="" className="globe-spin-img w-full h-full object-contain" />
               <span className="globe-shine" />
             </span>
