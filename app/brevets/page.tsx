@@ -403,7 +403,7 @@ export default function BrevetsPage() {
           </div>
           <a
             href="/brevets/overview"
-            className="flex items-center gap-2 text-xs font-bold px-3.5 py-2.5 rounded-xl
+            className="flex flex-col items-center gap-1.5 text-xs font-bold px-4 py-3 rounded-xl
               transition-all hover:bg-cyan-500/20 no-underline"
             style={{
               color: '#06b6d4',
@@ -412,7 +412,7 @@ export default function BrevetsPage() {
             }}
           >
             <style>{globeButtonStyle}</style>
-            <span className="relative w-9 h-9 flex-shrink-0 overflow-hidden rounded-full">
+            <span className="relative w-[72px] h-[72px] flex-shrink-0 overflow-hidden rounded-full">
               <img src="/hellas.png" alt="" className="globe-spin-img w-full h-full object-contain" />
               <span className="globe-shine" />
             </span>
