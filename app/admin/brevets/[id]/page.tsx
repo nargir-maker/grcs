@@ -3,7 +3,7 @@
 // app/admin/brevets/[id]/page.tsx
 // Edit a single brevet — all fields
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import {
@@ -59,6 +59,94 @@ const EMPTY: BrevetData = {
   controlsJson:'[]',
 };
 
+// ── UI helpers ─────────────────────────────────────────────────────
+// Hoisted to module scope (NOT defined inside EditBrevetPage) so they keep a
+// stable component identity across re-renders. When they used to be nested
+// functions, every keystroke re-rendered EditBrevetPage, which redefined
+// these as brand-new function references — React then treated each one as a
+// different component type and remounted its whole subtree, killing focus
+// (and any DOM-only state) on every keystroke.
+function Field({ label, value, onChange, type = 'text', placeholder = '' }: {
+  label: string; value: string; onChange: (val: string) => void;
+  type?: string; placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="text-white/50 text-xs font-semibold uppercase
+        tracking-wider mb-1.5 block">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full bg-white/5 border border-white/10 text-white
+          rounded-xl px-4 py-2.5 text-sm focus:outline-none
+          focus:border-cyan-500/50 placeholder-white/20"
+      />
+    </div>
+  );
+}
+
+function SelectField({ label, value, onChange, options }: {
+  label: string; value: string; onChange: (val: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <div>
+      <label className="text-white/50 text-xs font-semibold uppercase
+        tracking-wider mb-1.5 block">{label}</label>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full bg-white/5 border border-white/10 text-white
+          rounded-xl px-4 py-2.5 text-sm focus:outline-none
+          focus:border-cyan-500/50 [&>option]:bg-slate-800"
+      >
+        {options.map(o => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function Toggle({ label, value, onChange }: {
+  label: string; value: boolean; onChange: (val: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!value)}
+      className="flex items-center justify-between w-full bg-white/5 border
+        border-white/10 rounded-xl px-4 py-2.5 text-left"
+    >
+      <span className="text-white/70 text-sm">{label}</span>
+      <span
+        className="w-10 h-6 rounded-full relative transition-colors shrink-0 ml-3"
+        style={{ background: value ? '#06b6d4' : 'rgba(255,255,255,0.15)' }}
+      >
+        <span
+          className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform"
+          style={{ transform: value ? 'translateX(18px)' : 'translateX(2px)' }}
+        />
+      </span>
+    </button>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden mb-4">
+      <div className="px-5 py-3 border-b border-white/10 bg-white/3">
+        <h2 className="text-white font-semibold text-sm">{title}</h2>
+      </div>
+      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function EditBrevetPage() {
   const { data: session, status } = useSession();
   const router  = useRouter();
@@ -72,11 +160,19 @@ export default function EditBrevetPage() {
   const [saving,     setSaving]     = useState(false);
   const [saved,      setSaved]      = useState(false);
   const [error,      setError]      = useState('');
+  const initializedRef = useRef(false);
 
   // ── Auth check ─────────────────────────────────────────────────────
+  // NextAuth's useSession() refetches on window focus by default, which
+  // hands us a new `session` object every time the tab regains focus and
+  // re-fires this effect. Without the ref guard below, that re-ran
+  // checkAdmin → loadBrevet and silently overwrote any unsaved edits with
+  // the last-saved Firestore data — the "switch tabs, my text disappears" bug.
   useEffect(() => {
     if (status === 'loading') return;
     if (!session?.user?.email) { router.replace('/'); return; }
+    if (initializedRef.current) return;
+    initializedRef.current = true;
     checkAdmin(session.user.email);
   }, [session, status]);
 
@@ -187,87 +283,6 @@ export default function EditBrevetPage() {
     setSaved(false);
   }
 
-  // ── UI helpers ─────────────────────────────────────────────────────
-  function Field({ label, field, type = 'text', placeholder = '' }: {
-    label: string; field: StringField;
-    type?: string; placeholder?: string;
-  }) {
-    return (
-      <div>
-        <label className="text-white/50 text-xs font-semibold uppercase
-          tracking-wider mb-1.5 block">{label}</label>
-        <input
-          type={type}
-          value={form[field]}
-          onChange={e => set(field, e.target.value)}
-          placeholder={placeholder}
-          className="w-full bg-white/5 border border-white/10 text-white
-            rounded-xl px-4 py-2.5 text-sm focus:outline-none
-            focus:border-cyan-500/50 placeholder-white/20"
-        />
-      </div>
-    );
-  }
-
-  function SelectField({ label, field, options }: {
-    label: string; field: StringField;
-    options: { value: string; label: string }[];
-  }) {
-    return (
-      <div>
-        <label className="text-white/50 text-xs font-semibold uppercase
-          tracking-wider mb-1.5 block">{label}</label>
-        <select
-          value={form[field]}
-          onChange={e => set(field, e.target.value)}
-          className="w-full bg-white/5 border border-white/10 text-white
-            rounded-xl px-4 py-2.5 text-sm focus:outline-none
-            focus:border-cyan-500/50 [&>option]:bg-slate-800"
-        >
-          {options.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-      </div>
-    );
-  }
-
-  function Toggle({ label, field }: { label: string; field: BoolField }) {
-    const value = form[field];
-    return (
-      <button
-        type="button"
-        onClick={() => setBool(field, !value)}
-        className="flex items-center justify-between w-full bg-white/5 border
-          border-white/10 rounded-xl px-4 py-2.5 text-left"
-      >
-        <span className="text-white/70 text-sm">{label}</span>
-        <span
-          className="w-10 h-6 rounded-full relative transition-colors shrink-0 ml-3"
-          style={{ background: value ? '#06b6d4' : 'rgba(255,255,255,0.15)' }}
-        >
-          <span
-            className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform"
-            style={{ transform: value ? 'translateX(18px)' : 'translateX(2px)' }}
-          />
-        </span>
-      </button>
-    );
-  }
-
-  function Section({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden mb-4">
-        <div className="px-5 py-3 border-b border-white/10 bg-white/3">
-          <h2 className="text-white font-semibold text-sm">{title}</h2>
-        </div>
-        <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {children}
-        </div>
-      </div>
-    );
-  }
-
   // ── Render ─────────────────────────────────────────────────────────
   if (checking || status === 'loading') return (
     <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
@@ -323,10 +338,10 @@ export default function EditBrevetPage() {
           <>
             {/* ── INFO ── */}
             <Section title="📋 Βασικά Στοιχεία">
-              <Field label="Τίτλος" field="title" placeholder="ΝΕΜΕΑ" />
-              <Field label="Ημερομηνία" field="date" type="datetime-local" />
-              <Field label="Απόσταση (km)" field="distance" type="number" placeholder="200" />
-              <SelectField label="Τύπος" field="type" options={[
+              <Field label="Τίτλος" value={form.title} onChange={v => set('title', v)} placeholder="ΝΕΜΕΑ" />
+              <Field label="Ημερομηνία" value={form.date} onChange={v => set('date', v)} type="datetime-local" />
+              <Field label="Απόσταση (km)" value={form.distance} onChange={v => set('distance', v)} type="number" placeholder="200" />
+              <SelectField label="Τύπος" value={form.type} onChange={v => set('type', v)} options={[
                 { value:'BRM',   label:'BRM' },
                 { value:'LRM',   label:'LRM' },
                 { value:'FLC',   label:'Flèche' },
@@ -334,39 +349,39 @@ export default function EditBrevetPage() {
                 { value:'SRE',   label:'SRe' },
                 { value:'BRM-100YEARS', label:'100 Years BRM' },
               ]} />
-              <SelectField label="Πιστοποίηση" field="certification" options={[
+              <SelectField label="Πιστοποίηση" value={form.certification} onChange={v => set('certification', v)} options={[
                 { value:'A.C.P.',       label:'A.C.P.' },
                 { value:'H.A.R.',       label:'H.A.R.' },
                 { value:'A.C.P./H.A.R.',label:'A.C.P. + H.A.R.' },
               ]} />
-              <Field label="Organizer ID" field="organizerId" placeholder="650001" />
-              <Field label="Co-Organizer ID" field="coOrganizerId" placeholder="(προαιρετικό)" />
+              <Field label="Organizer ID" value={form.organizerId} onChange={v => set('organizerId', v)} placeholder="650001" />
+              <Field label="Co-Organizer ID" value={form.coOrganizerId} onChange={v => set('coOrganizerId', v)} placeholder="(προαιρετικό)" />
             </Section>
 
             {/* ── ROUTE ── */}
             <Section title="🗺️ Διαδρομή">
-              <Field label="Εκκίνηση" field="start" placeholder="ΕΛΕΥΣΙΝΑ" />
-              <Field label="Τερματισμός" field="finish" placeholder="ΕΛΕΥΣΙΝΑ" />
-              <Field label="Ανάβαση (m)" field="ascent" type="number" placeholder="1526" />
-              <Field label="Κατάβαση (m)" field="descent" type="number" placeholder="0" />
-              <Field label="Μέγιστος χρόνος" field="duration" placeholder="13:30" />
-              <Field label="GPX URL" field="gpxUrl" placeholder="https://..." />
+              <Field label="Εκκίνηση" value={form.start} onChange={v => set('start', v)} placeholder="ΕΛΕΥΣΙΝΑ" />
+              <Field label="Τερματισμός" value={form.finish} onChange={v => set('finish', v)} placeholder="ΕΛΕΥΣΙΝΑ" />
+              <Field label="Ανάβαση (m)" value={form.ascent} onChange={v => set('ascent', v)} type="number" placeholder="1526" />
+              <Field label="Κατάβαση (m)" value={form.descent} onChange={v => set('descent', v)} type="number" placeholder="0" />
+              <Field label="Μέγιστος χρόνος" value={form.duration} onChange={v => set('duration', v)} placeholder="13:30" />
+              <Field label="GPX URL" value={form.gpxUrl} onChange={v => set('gpxUrl', v)} placeholder="https://..." />
               <div className="sm:col-span-2">
-                <Field label="Map URL (RideWithGPS / Komoot)" field="mapUrl" placeholder="https://ridewithgps.com/routes/..." />
+                <Field label="Map URL (RideWithGPS / Komoot)" value={form.mapUrl} onChange={v => set('mapUrl', v)} placeholder="https://ridewithgps.com/routes/..." />
               </div>
             </Section>
 
             {/* ── EXTRA ── */}
             <Section title="📸 Επιπλέον Στοιχεία">
               <div className="sm:col-span-2">
-                <Field label="Image URL" field="imageUrl" placeholder="https://i.ibb.co/..." />
+                <Field label="Image URL" value={form.imageUrl} onChange={v => set('imageUrl', v)} placeholder="https://i.ibb.co/..." />
                 {form.imageUrl && (
                   <img src={form.imageUrl} alt="preview"
                     className="mt-2 h-24 w-full object-cover rounded-lg opacity-70" />
                 )}
               </div>
-              <Field label="Registration URL / Link" field="registration" placeholder="https://forms.gle/..." />
-              <Field label="Λήξη εγγραφών (ISO)" field="closeTimeIso" placeholder="2026-02-11T23:59:00+02:00" />
+              <Field label="Registration URL / Link" value={form.registration} onChange={v => set('registration', v)} placeholder="https://forms.gle/..." />
+              <Field label="Λήξη εγγραφών (ISO)" value={form.closeTimeIso} onChange={v => set('closeTimeIso', v)} placeholder="2026-02-11T23:59:00+02:00" />
               <div className="sm:col-span-2">
                 <label className="text-white/50 text-xs font-semibold uppercase
                   tracking-wider mb-1.5 block">Περιγραφή</label>
@@ -383,10 +398,10 @@ export default function EditBrevetPage() {
 
             {/* ── RIDE WINDOW ── */}
             <Section title="🚦 Pre/Post-ride">
-              <Toggle label="Επιτρέπεται Pre-ride (πριν την επίσημη ημερομηνία)" field="allowPreRide" />
-              <Toggle label="Επιτρέπεται Post-ride (μετά τη λήξη)" field="allowPostRide" />
+              <Toggle label="Επιτρέπεται Pre-ride (πριν την επίσημη ημερομηνία)" value={form.allowPreRide} onChange={v => setBool('allowPreRide', v)} />
+              <Toggle label="Επιτρέπεται Post-ride (μετά τη λήξη)" value={form.allowPostRide} onChange={v => setBool('allowPostRide', v)} />
               <div className="sm:col-span-2">
-                <Toggle label="Ελεύθερη αφετηρία/τερματισμός (μόνο H.A.R., όχι A.C.P.)" field="allowCustomStart" />
+                <Toggle label="Ελεύθερη αφετηρία/τερματισμός (μόνο H.A.R., όχι A.C.P.)" value={form.allowCustomStart} onChange={v => setBool('allowCustomStart', v)} />
               </div>
             </Section>
 
