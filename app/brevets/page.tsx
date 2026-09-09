@@ -314,10 +314,14 @@ export default function BrevetsPage() {
                 <div className="flex brevet-scroll gap-4 w-max px-6 py-11">
                   {doubled.map((b, i) => {
                     const hasImage = b.imageUrl && b.imageUrl.length > 0;
-                    const dateStr  = b.date
-                      ? new Date(b.date).toLocaleDateString('el-GR', {
+                    const dateObj  = b.date ? new Date(b.date) : null;
+                    const dateStr  = dateObj
+                      ? dateObj.toLocaleDateString('el-GR', {
                           day: 'numeric', month: 'short',
                         })
+                      : '';
+                    const timeStr  = dateObj && !isNaN(dateObj.getTime())
+                      ? dateObj.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })
                       : '';
 
                     return (
@@ -378,7 +382,9 @@ export default function BrevetsPage() {
                             {b.title}
                           </div>
                           <div className="flex items-center justify-between mt-1">
-                            <span className="text-white/50 text-xs">{dateStr}</span>
+                            <span className="text-white/50 text-xs">
+                              {dateStr}{timeStr && `, 🕐 ${timeStr}`}
+                            </span>
                             <span className="text-white/40 text-xs">📍 {b.start}</span>
                           </div>
                         </div>

@@ -49,6 +49,9 @@ export default function BrevetCard({ b, hasCoOrg, isFavorite, onToggleFavorite }
         day: 'numeric', month: 'long', year: 'numeric',
       })
     : '—';
+  const timeStr = dateObj && !isNaN(dateObj.getTime())
+    ? dateObj.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })
+    : null;
   const isNight = !!dateObj && !isNaN(dateObj.getTime()) && isNightStart(dateObj);
 
   return (
@@ -223,6 +226,7 @@ export default function BrevetCard({ b, hasCoOrg, isFavorite, onToggleFavorite }
           >
             <span className="text-white/45 text-xs flex items-center gap-1.5">
               📅 {dateStr}
+              {timeStr && <>🕐 {timeStr}</>}
               {isNight && (
                 <img
                   src="/logos/moon.png"

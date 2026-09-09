@@ -703,6 +703,9 @@ export default function BrevetDetailPage() {
             {startDate && (
               <span>📅 {startDate.toLocaleDateString('el-GR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
             )}
+            {startDate && (
+              <span>🕐 {startDate.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}</span>
+            )}
             <span>🏷️ {brevet.certification} {brevet.type}</span>
             {brevet.allowPreRide && (
               <span className="text-indigo-400 bg-indigo-500/10 border border-indigo-500/25
