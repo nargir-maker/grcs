@@ -275,6 +275,7 @@ export default function FriendlyRidePage() {
   const [unreadCount, setUnreadCount]     = useState(0);
   const [lastSeenTs, setLastSeenTs]       = useState(Date.now());
   const [viewerName, setViewerName]       = useState<string | null>(null);
+  const [showRiderList, setShowRiderList] = useState(false);
 
   // Φόρτωσε αποθηκευμένο όνομα από localStorage
   useEffect(() => {
@@ -411,10 +412,48 @@ export default function FriendlyRidePage() {
               />
             </div>
 
-            {/* STAT CHIPS — top left */}
-            <div className="absolute top-3 left-3 z-[1000] flex flex-wrap gap-2">
-              <Chip value={activeRiders.length} label="🚴 Σε βόλτα" color="#22c55e" />
-              <Chip value={riders.length}       label="👥 Σύνολο"   color="white"   />
+            {/* STAT CHIPS — top left, offset clear of the Leaflet zoom controls */}
+            <div className="absolute top-3 z-[1000]" style={{ left: 54 }}>
+              <div
+                onClick={() => setShowRiderList(v => !v)}
+                className="flex flex-wrap items-center gap-2 cursor-pointer select-none"
+                title="Λίστα αναβατών"
+              >
+                <Chip value={activeRiders.length} label="🚴 Σε βόλτα" color="#22c55e" />
+                <Chip value={riders.length}       label="👥 Σύνολο"   color="white"   />
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
+                  {showRiderList ? '▲' : '▼'}
+                </span>
+              </div>
+
+              {showRiderList && (
+                <div className="mt-2 rounded-xl overflow-hidden border border-white/10"
+                  style={{
+                    background: 'rgba(10,22,40,0.92)', backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    minWidth: 200, maxHeight: 256, overflowY: 'auto',
+                  }}>
+                  {riders.length === 0 ? (
+                    <p className="text-white/40 text-xs px-4 py-3">Κανένας αναβάτης</p>
+                  ) : (
+                    riders.map(rider => (
+                      <button
+                        key={rider.id}
+                        onClick={() => {
+                          setSelectedRider(selectedRider === rider.id ? null : rider.id);
+                          setShowRiderList(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2
+                          hover:bg-white/10 transition-colors ${
+                          selectedRider === rider.id ? 'bg-green-500/15' : ''}`}
+                      >
+                        <span>{rider.gender === 'F' ? '👩' : '👨'}</span>
+                        <span className="text-white truncate">{rider.fullName}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
 
             {/* TIME INFO — top right */}

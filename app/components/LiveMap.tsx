@@ -207,6 +207,7 @@ export default function LiveMap({
   const kmLayerRef   = useRef<any[]>([]);
   const parsedCoords = useRef<ParsedCoord[]>([]);
   const tileLayerRef = useRef<any>(null);
+  const zoomedRiderId = useRef<string | null>(null);
   const [L, setL]    = useState<any>(null);
   const [activeStyle, setActiveStyle] = useState<string>(DEFAULT_STYLE);
 
@@ -386,12 +387,21 @@ export default function LiveMap({
       }
     });
 
-    // Pan to selected rider
+    // Pan/zoom to selected rider — zoom in on first selection, just pan afterwards
+    // so later position updates don't fight a manual zoom-out.
     if (selectedRiderId) {
       const rider = riders.find(r => r.id === selectedRiderId);
       if (rider?.lat && rider?.lng) {
-        map.panTo([rider.lat, rider.lng], { animate: true });
+        if (zoomedRiderId.current !== selectedRiderId) {
+          zoomedRiderId.current = selectedRiderId;
+          const targetZoom = Math.max(map.getZoom(), 15);
+          map.setView([rider.lat, rider.lng], targetZoom, { animate: true });
+        } else {
+          map.panTo([rider.lat, rider.lng], { animate: true });
+        }
       }
+    } else {
+      zoomedRiderId.current = null;
     }
   }, [riders, selectedRiderId, L]);
 
