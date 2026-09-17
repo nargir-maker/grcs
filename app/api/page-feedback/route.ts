@@ -3,7 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from '@/app/lib/firebaseAdmin';
 
 const VALID_PAGES = [
-  'randonneuring', 'guide', 'acp-guide',
+  'randonneuring', 'guide', 'acp-guide', 'har-guide',
   'home', 'about', 'brevet-history', 'community', 'members', 'results',
   'pantheon', 'brevet-universe', 'organizer-universe', 'brevets', 'live',
   'brevets-overview',
