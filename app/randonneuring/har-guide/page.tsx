@@ -181,8 +181,20 @@ const TOPICS: Topic[] = [
 
 export default function HarGuidePage() {
   return (
-    <div className="min-h-screen bg-[#0A1628] px-4 py-12">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-[#0A1628] px-4 py-12 relative overflow-hidden">
+      {/* Ghosted H.A.R. logo watermark — same treatment as the app */}
+      <div
+        aria-hidden
+        className="pointer-events-none select-none fixed inset-0 flex justify-center z-0"
+      >
+        <img
+          src="/logos/har_logo3.png"
+          alt=""
+          className="mt-16 w-[90vw] max-w-[640px] opacity-[0.07]"
+        />
+      </div>
+
+      <div className="max-w-3xl mx-auto relative z-10">
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-white/30 mb-8">
