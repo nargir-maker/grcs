@@ -139,7 +139,7 @@ const TOPICS: Topic[] = [
     id: 'challenge',
     icon: '🌟',
     color: '#AB47BC',
-    title: 'H.A.R. Challenge 2026',
+    title: 'H.A.R. Challenge',
     shortDesc: '3 κατηγορίες ετήσιας διάκρισης: χιλιόμετρα, ανάβαση, συμμετοχές',
     content:
       'Το Challenge είναι ο ετήσιος θεσμός βράβευσης της H.A.R., με τρεις κατηγορίες ' +
