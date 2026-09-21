@@ -11,6 +11,14 @@ interface BrevetsEntry { name: string; totalBrevets: number; lepoteId: string; h
 interface SrEntry      { name: string; srCount:      number; lepoteId: string; harId: string }
 interface MilestoneEntry { name: string; count: number }
 
+interface ClubPantheon {
+  kmRanking:      KmEntry[];
+  brevetsRanking: BrevetsEntry[];
+  srRanking:      SrEntry[];
+  mostSrName:     string;
+  mostSrCount:    number;
+}
+
 interface PantheonData {
   totalRiders:  number;
   totalKm:      number;
@@ -22,9 +30,11 @@ interface PantheonData {
   brevetsRanking: BrevetsEntry[];
   srRanking:      SrEntry[];
   milestoneLists: Record<string, MilestoneEntry[]>;
+  byClub: { ACP: ClubPantheon; HAR: ClubPantheon };
 }
 
 type TabId = 'km' | 'brevets' | 'sr' | 'milestones';
+type ClubId = 'ALL' | 'ACP' | 'HAR';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -131,6 +141,7 @@ export default function PantheonPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
   const [tab, setTab]         = useState<TabId>('km');
+  const [club, setClub]       = useState<ClubId>('ALL');
   const [search, setSearch]   = useState('');
   const [milThreshold, setMilThreshold] = useState(10);
 
@@ -141,23 +152,29 @@ export default function PantheonPage() {
       .catch(() => { setError('Σφάλμα φόρτωσης.'); setLoading(false); });
   }, []);
 
+  const activeData = useMemo(() => {
+    if (!data) return null;
+    if (club === 'ALL') return { kmRanking: data.kmRanking, brevetsRanking: data.brevetsRanking, srRanking: data.srRanking };
+    return data.byClub[club];
+  }, [data, club]);
+
   const filteredKm = useMemo(() => {
-    if (!data) return [];
+    if (!activeData) return [];
     const q = search.toLowerCase();
-    return data.kmRanking.filter(m => !q || m.name.toLowerCase().includes(q) || m.lepoteId.includes(q));
-  }, [data, search]);
+    return activeData.kmRanking.filter(m => !q || m.name.toLowerCase().includes(q) || m.lepoteId.includes(q));
+  }, [activeData, search]);
 
   const filteredBrevets = useMemo(() => {
-    if (!data) return [];
+    if (!activeData) return [];
     const q = search.toLowerCase();
-    return data.brevetsRanking.filter(m => !q || m.name.toLowerCase().includes(q) || m.lepoteId.includes(q));
-  }, [data, search]);
+    return activeData.brevetsRanking.filter(m => !q || m.name.toLowerCase().includes(q) || m.lepoteId.includes(q));
+  }, [activeData, search]);
 
   const filteredSr = useMemo(() => {
-    if (!data) return [];
+    if (!activeData) return [];
     const q = search.toLowerCase();
-    return data.srRanking.filter(m => !q || m.name.toLowerCase().includes(q) || m.lepoteId.includes(q));
-  }, [data, search]);
+    return activeData.srRanking.filter(m => !q || m.name.toLowerCase().includes(q) || m.lepoteId.includes(q));
+  }, [activeData, search]);
 
   const filteredMilestones = useMemo(() => {
     if (!data) return [];
@@ -211,9 +228,21 @@ export default function PantheonPage() {
           <RecordChip emoji="🔥" title="Ρεκόρ Streak"
             value={data.streakHolderName}
             sub={`${data.streakRecordYears} διαδοχικά χρόνια`} />
-          <RecordChip emoji="⭐" title="Περισσότερα SR"
-            value={data.mostSrName}
-            sub={`${data.mostSrCount} Super Randonneur${data.mostSrCount !== 1 ? 's' : ''}`} />
+          <RecordChip emoji="⭐" title={`Περισσότερα SR${club !== 'ALL' ? ` (${club === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'})` : ''}`}
+            value={(club === 'ALL' ? data.mostSrName : data.byClub[club].mostSrName) || '—'}
+            sub={`${club === 'ALL' ? data.mostSrCount : data.byClub[club].mostSrCount} Super Randonneur${(club === 'ALL' ? data.mostSrCount : data.byClub[club].mostSrCount) !== 1 ? 's' : ''}`} />
+        </div>
+
+        {/* Club filter */}
+        <div className="flex gap-2">
+          {(['ALL', 'ACP', 'HAR'] as const).map(c => (
+            <button key={c} onClick={() => setClub(c)}
+              className={`flex-1 px-3 py-2 rounded-full text-xs font-bold transition-all ${
+                club === c ? 'bg-white text-[#0A1628]' : 'text-white/40 hover:text-white/60 border border-white/10'
+              }`}>
+              {c === 'ALL' ? 'Όλοι' : c === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'}
+            </button>
+          ))}
         </div>
 
         {/* Tabs */}
@@ -252,7 +281,7 @@ export default function PantheonPage() {
               {filteredKm.length === 0
                 ? <div className="py-8 text-center text-white/30 text-sm">Δεν βρέθηκαν αποτελέσματα</div>
                 : filteredKm.map((m, i) => {
-                    const realRank = search ? data.kmRanking.indexOf(m) + 1 : i + 1;
+                    const realRank = search ? activeData!.kmRanking.indexOf(m) + 1 : i + 1;
                     return (
                       <RankRow key={i} rank={realRank} name={m.name}
                         value={`${fmt(Math.round(m.totalKm))} km`} unit="χλμ."
@@ -268,7 +297,7 @@ export default function PantheonPage() {
               {filteredBrevets.length === 0
                 ? <div className="py-8 text-center text-white/30 text-sm">Δεν βρέθηκαν αποτελέσματα</div>
                 : filteredBrevets.map((m, i) => {
-                    const realRank = search ? data.brevetsRanking.indexOf(m) + 1 : i + 1;
+                    const realRank = search ? activeData!.brevetsRanking.indexOf(m) + 1 : i + 1;
                     return (
                       <RankRow key={i} rank={realRank} name={m.name}
                         value={String(m.totalBrevets)} unit="brevets"
@@ -284,7 +313,7 @@ export default function PantheonPage() {
               {filteredSr.length === 0
                 ? <div className="py-8 text-center text-white/30 text-sm">Κανένας SR</div>
                 : filteredSr.map((m, i) => {
-                    const realRank = search ? data.srRanking.indexOf(m) + 1 : i + 1;
+                    const realRank = search ? activeData!.srRanking.indexOf(m) + 1 : i + 1;
                     return <SrRow key={i} rank={realRank} entry={m} />;
                   })}
             </div>

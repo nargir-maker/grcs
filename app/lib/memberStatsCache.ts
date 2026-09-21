@@ -22,6 +22,13 @@ function parseMonth(dt: string): number | null {
   return null;
 }
 
+// An event's `acp`/`har` field holds that club's homologation number, "" if none.
+// Same truthiness rule used elsewhere in the app (ProfileDashboard's `ok()`).
+function isCertified(s: unknown): boolean {
+  const v = (s ?? '').toString();
+  return v !== '' && v !== 'null' && v !== '---';
+}
+
 function resolveLastBrevet(hist: Record<string, any>): { name: string; year: string } {
   const sortedYrs = Object.keys(hist).sort((a, b) => b.localeCompare(a));
   for (const y of sortedYrs) {
@@ -65,10 +72,16 @@ async function computeAllStats() {
   // ── Pantheon accumulators ─────────────────────────────────────────────────
   let totalKm = 0, totalBrevets = 0, totalRiders = 0;
   const ridersByYear: Record<string, number> = {};
+  // Combined (ACP + HAR) SR achievement count per member — each club's SR years
+  // counted separately, never mixing one club's 200 with another's 300/400/600.
   const srCounts:     Record<string, number> = {};
+  const srCountsAcp:  Record<string, number> = {};
+  const srCountsHar:  Record<string, number> = {};
 
   type MemberEntry = { uid: string; name: string; totalKm: number; totalBrevets: number; lepoteId: string; harId: string };
-  const members: MemberEntry[] = [];
+  const members:    MemberEntry[] = [];
+  const membersAcp: MemberEntry[] = [];
+  const membersHar: MemberEntry[] = [];
 
   // ── Shared accumulators ───────────────────────────────────────────────────
   const memberYearSets:    Record<string, Set<string>> = {};
@@ -119,6 +132,12 @@ async function computeAllStats() {
     const memberDistances = new Set<number>();
     const yearsWithEvents: string[] = [];
 
+    // Per-club (ACP / HAR) totals — an event only counts toward a club if that
+    // club's homologation field on it is certified, per AGENTS.md club rules.
+    let acpKm = 0, acpBrevets = 0;
+    let harKm = 0, harBrevets = 0;
+    let acpSrCount = 0, harSrCount = 0;
+
     for (const [year, data] of Object.entries(history)) {
       const events: any[] = Array.isArray((data as any)?.events) ? (data as any).events : [];
       if (events.length === 0) continue;
@@ -132,10 +151,14 @@ async function computeAllStats() {
       memberEventCounts[uid] = (memberEventCounts[uid] ?? 0) + events.length;
 
       const yearDists = new Set<number>();
+      const acpYearDists = new Set<number>();
+      const harYearDists = new Set<number>();
       for (const ev of events) {
         const d = parseInt(ev.d?.toString() ?? '0') || 0;
         memberDistances.add(d);
         yearDists.add(d);
+        if (isCertified(ev.acp)) { acpKm += d; acpBrevets++; acpYearDists.add(d); }
+        if (isCertified(ev.har)) { harKm += d; harBrevets++; harYearDists.add(d); }
 
         const month = parseMonth(ev.dt?.toString() ?? '');
         if (month !== null) {
@@ -184,10 +207,15 @@ async function computeAllStats() {
         }
       }
 
-      if ([200, 300, 400, 600].every(d => yearDists.has(d))) {
+      // SR requires all four distances certified by the SAME club in the same
+      // year (AGENTS.md: SR is computed per club, never mixing ACP with HAR).
+      const isAcpSrYear = [200, 300, 400, 600].every(dd => acpYearDists.has(dd));
+      const isHarSrYear = [200, 300, 400, 600].every(dd => harYearDists.has(dd));
+      if (isAcpSrYear) acpSrCount++;
+      if (isHarSrYear) harSrCount++;
+      if (isAcpSrYear || isHarSrYear) {
         if (gender === 'F') womenSrByUid[uid] = (womenSrByUid[uid] ?? 0) + 1;
         else                menSrByUid[uid]   = (menSrByUid[uid]   ?? 0) + 1;
-        srCounts[uid] = (srCounts[uid] ?? 0) + 1;
       }
     }
 
@@ -198,6 +226,11 @@ async function computeAllStats() {
     totalKm      += km;
     totalBrevets += brevets;
     members.push({ uid, name: displayName, totalKm: km, totalBrevets: brevets, lepoteId, harId });
+    if (acpBrevets > 0) membersAcp.push({ uid, name: displayName, totalKm: acpKm, totalBrevets: acpBrevets, lepoteId, harId });
+    if (harBrevets > 0) membersHar.push({ uid, name: displayName, totalKm: harKm, totalBrevets: harBrevets, lepoteId, harId });
+    if (acpSrCount > 0) srCountsAcp[uid] = acpSrCount;
+    if (harSrCount > 0) srCountsHar[uid] = harSrCount;
+    if (acpSrCount > 0 || harSrCount > 0) srCounts[uid] = acpSrCount + harSrCount;
 
     for (const d of memberDistances) {
       if (gender === 'F') (womenPerDist[d] ??= new Set<string>()).add(uid);
@@ -290,15 +323,22 @@ async function computeAllStats() {
     if (maxStreak > streakRecordYears) { streakRecordYears = maxStreak; streakHolderName = memberNames[uid] ?? ''; }
   }
 
-  const srRanking = members
-    .filter(m => (srCounts[m.uid] ?? 0) > 0)
-    .map(m => ({ name: m.name, lepoteId: m.lepoteId, harId: m.harId, srCount: srCounts[m.uid] ?? 0 }))
-    .sort((a, b) => b.srCount - a.srCount);
+  function buildRankings(clubMembers: MemberEntry[], clubSrCounts: Record<string, number>) {
+    const srRanking = clubMembers
+      .filter(m => (clubSrCounts[m.uid] ?? 0) > 0)
+      .map(m => ({ name: m.name, lepoteId: m.lepoteId, harId: m.harId, srCount: clubSrCounts[m.uid] ?? 0 }))
+      .sort((a, b) => b.srCount - a.srCount);
+    const kmRanking = [...clubMembers].sort((a, b) => b.totalKm - a.totalKm)
+      .map(m => ({ name: m.name, totalKm: m.totalKm, lepoteId: m.lepoteId, harId: m.harId }));
+    const brevetsRanking = [...clubMembers].sort((a, b) => b.totalBrevets - a.totalBrevets)
+      .map(m => ({ name: m.name, totalBrevets: m.totalBrevets, lepoteId: m.lepoteId, harId: m.harId }));
+    return { kmRanking, brevetsRanking, srRanking };
+  }
 
-  const kmRanking = [...members].sort((a, b) => b.totalKm - a.totalKm)
-    .map(m => ({ name: m.name, totalKm: m.totalKm, lepoteId: m.lepoteId, harId: m.harId }));
-  const brevetsRanking = [...members].sort((a, b) => b.totalBrevets - a.totalBrevets)
-    .map(m => ({ name: m.name, totalBrevets: m.totalBrevets, lepoteId: m.lepoteId, harId: m.harId }));
+  const allRankings = buildRankings(members, srCounts);
+  const acpRankings = buildRankings(membersAcp, srCountsAcp);
+  const harRankings = buildRankings(membersHar, srCountsHar);
+  const { kmRanking, brevetsRanking, srRanking } = allRankings;
 
   const milestoneLists: Record<number, Array<{ name: string; count: number }>> = {};
   for (const t of [10, 25, 50, 100, 200]) {
@@ -368,6 +408,18 @@ async function computeAllStats() {
       mostSrName:  srRanking[0]?.name    ?? '',
       mostSrCount: srRanking[0]?.srCount ?? 0,
       kmRanking, brevetsRanking, srRanking, milestoneLists,
+      byClub: {
+        ACP: {
+          kmRanking: acpRankings.kmRanking, brevetsRanking: acpRankings.brevetsRanking, srRanking: acpRankings.srRanking,
+          mostSrName:  acpRankings.srRanking[0]?.name    ?? '',
+          mostSrCount: acpRankings.srRanking[0]?.srCount ?? 0,
+        },
+        HAR: {
+          kmRanking: harRankings.kmRanking, brevetsRanking: harRankings.brevetsRanking, srRanking: harRankings.srRanking,
+          mostSrName:  harRankings.srRanking[0]?.name    ?? '',
+          mostSrCount: harRankings.srRanking[0]?.srCount ?? 0,
+        },
+      },
     },
     organizerUniverse: {
       totalOrganizers:    organizerRanking.length,
