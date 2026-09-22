@@ -29,6 +29,36 @@ function isCertified(s: unknown): boolean {
   return v !== '' && v !== 'null' && v !== '---';
 }
 
+// Fond de Culotte hours-in-saddle for one event — mirrors Flutter's
+// _RankStats.compute and the web's own FondDeCulotteCard exactly: real
+// finish time (`rt`, "HH:MM") when recorded, else a 15km/h estimate.
+// Club-agnostic — every event counts, same as the profile's own FdC card.
+function fdcHoursFromEvent(ev: any): number {
+  const d = parseFloat(ev.d?.toString() ?? '0') || 0;
+  const rt = (ev.rt ?? '').toString().trim();
+  if (rt && rt.includes(':')) {
+    const [h, m] = rt.split(':');
+    return (parseFloat(h) || 0) + (parseFloat(m) || 0) / 60;
+  }
+  return d > 0 ? d / 15 : 0;
+}
+
+type YearClubAgg = {
+  km:      Record<string, number>;
+  ascent:  Record<string, number>;
+  brevets: Record<string, number>;
+  srHit:   Set<string>;
+};
+function mkYearClubAgg(): YearClubAgg {
+  return { km: {}, ascent: {}, brevets: {}, srHit: new Set<string>() };
+}
+type YearClubRankings = {
+  kmRanking:      { name: string; totalKm: number; lepoteId: string; harId: string }[];
+  ascentRanking:  { name: string; totalAscent: number; lepoteId: string; harId: string }[];
+  brevetsRanking: { name: string; totalBrevets: number; lepoteId: string; harId: string }[];
+  srRanking:      { name: string; lepoteId: string; harId: string; srCount: number }[];
+};
+
 function resolveLastBrevet(hist: Record<string, any>): { name: string; year: string } {
   const sortedYrs = Object.keys(hist).sort((a, b) => b.localeCompare(a));
   for (const y of sortedYrs) {
@@ -78,15 +108,29 @@ async function computeAllStats() {
   const srCountsAcp:  Record<string, number> = {};
   const srCountsHar:  Record<string, number> = {};
 
-  type MemberEntry = { uid: string; name: string; totalKm: number; totalBrevets: number; lepoteId: string; harId: string };
+  type MemberEntry = { uid: string; name: string; totalKm: number; totalAscent: number; totalBrevets: number; lepoteId: string; harId: string };
   const members:    MemberEntry[] = [];
   const membersAcp: MemberEntry[] = [];
   const membersHar: MemberEntry[] = [];
+
+  // FdC hours-in-saddle ranking — club-agnostic, all-time (no per-club split,
+  // matches the profile's own FondDeCulotteCard which always uses full history).
+  type FdcMemberEntry = { uid: string; name: string; totalFdcHours: number; lepoteId: string; harId: string };
+  const fdcMembers: FdcMemberEntry[] = [];
+
+  // Per-year × per-club (ALL/ACP/HAR) rankings — powers the Πάνθεον year
+  // selector. ALL sums every event regardless of certification (mirrors the
+  // all-time "ALL" ranking's use of the raw Firestore totals); ACP/HAR only
+  // count events certified by that club. SR per year/club follows the same
+  // club-separation rule as the all-time SR fix — never a blended distance set.
+  const yearClubAgg: Record<string, { ALL: YearClubAgg; ACP: YearClubAgg; HAR: YearClubAgg }> = {};
 
   // ── Shared accumulators ───────────────────────────────────────────────────
   const memberYearSets:    Record<string, Set<string>> = {};
   const memberEventCounts: Record<string, number>      = {};
   const memberNames:       Record<string, string>      = {};
+  const memberLepoteId:    Record<string, string>      = {};
+  const memberHarId:       Record<string, string>      = {};
 
   // ── Universe accumulators ─────────────────────────────────────────────────
   const ogParticipants:   Record<string, number>      = {};
@@ -118,7 +162,9 @@ async function computeAllStats() {
     const harId       = raw.reg_har?.id?.toString()    ?? '';
     const lastInitial = lastName.length > 0 ? `${lastName[0]}.` : '';
     const displayName = `${firstName} ${lastInitial}`.trim();
-    memberNames[uid]  = displayName;
+    memberNames[uid]    = displayName;
+    memberLepoteId[uid] = lepoteId;
+    memberHarId[uid]    = harId;
 
     let history: Record<string, any> = {};
     try {
@@ -134,9 +180,13 @@ async function computeAllStats() {
 
     // Per-club (ACP / HAR) totals — an event only counts toward a club if that
     // club's homologation field on it is certified, per AGENTS.md club rules.
-    let acpKm = 0, acpBrevets = 0;
-    let harKm = 0, harBrevets = 0;
+    let acpKm = 0, acpBrevets = 0, acpAscent = 0;
+    let harKm = 0, harBrevets = 0, harAscent = 0;
     let acpSrCount = 0, harSrCount = 0;
+    // Ascent has no precomputed backend total (unlike total_km/total_brm), so
+    // it's always summed from the raw events — same as Flutter's _RankStats.
+    let allAscent = 0;
+    let fdcHoursTotal = 0;
 
     for (const [year, data] of Object.entries(history)) {
       const events: any[] = Array.isArray((data as any)?.events) ? (data as any).events : [];
@@ -153,12 +203,19 @@ async function computeAllStats() {
       const yearDists = new Set<number>();
       const acpYearDists = new Set<number>();
       const harYearDists = new Set<number>();
+      let yearKmAll = 0, yearAscAll = 0, yearBrevetsAll = 0;
+      let yearKmAcp = 0, yearAscAcp = 0, yearBrevetsAcp = 0;
+      let yearKmHar = 0, yearAscHar = 0, yearBrevetsHar = 0;
       for (const ev of events) {
-        const d = parseInt(ev.d?.toString() ?? '0') || 0;
+        const d   = parseInt(ev.d?.toString() ?? '0') || 0;
+        const asc = parseFloat(ev.as?.toString() ?? '0') || 0;
         memberDistances.add(d);
         yearDists.add(d);
-        if (isCertified(ev.acp)) { acpKm += d; acpBrevets++; acpYearDists.add(d); }
-        if (isCertified(ev.har)) { harKm += d; harBrevets++; harYearDists.add(d); }
+        allAscent += asc;
+        fdcHoursTotal += fdcHoursFromEvent(ev);
+        yearKmAll += d; yearAscAll += asc; yearBrevetsAll++;
+        if (isCertified(ev.acp)) { acpKm += d; acpAscent += asc; acpBrevets++; acpYearDists.add(d); yearKmAcp += d; yearAscAcp += asc; yearBrevetsAcp++; }
+        if (isCertified(ev.har)) { harKm += d; harAscent += asc; harBrevets++; harYearDists.add(d); yearKmHar += d; yearAscHar += asc; yearBrevetsHar++; }
 
         const month = parseMonth(ev.dt?.toString() ?? '');
         if (month !== null) {
@@ -217,6 +274,26 @@ async function computeAllStats() {
         if (gender === 'F') womenSrByUid[uid] = (womenSrByUid[uid] ?? 0) + 1;
         else                menSrByUid[uid]   = (menSrByUid[uid]   ?? 0) + 1;
       }
+
+      const yAgg = (yearClubAgg[year] ??= { ALL: mkYearClubAgg(), ACP: mkYearClubAgg(), HAR: mkYearClubAgg() });
+      if (yearBrevetsAll > 0) {
+        yAgg.ALL.km[uid]      = (yAgg.ALL.km[uid]      ?? 0) + yearKmAll;
+        yAgg.ALL.ascent[uid]  = (yAgg.ALL.ascent[uid]  ?? 0) + yearAscAll;
+        yAgg.ALL.brevets[uid] = (yAgg.ALL.brevets[uid] ?? 0) + yearBrevetsAll;
+      }
+      if (yearBrevetsAcp > 0) {
+        yAgg.ACP.km[uid]      = (yAgg.ACP.km[uid]      ?? 0) + yearKmAcp;
+        yAgg.ACP.ascent[uid]  = (yAgg.ACP.ascent[uid]  ?? 0) + yearAscAcp;
+        yAgg.ACP.brevets[uid] = (yAgg.ACP.brevets[uid] ?? 0) + yearBrevetsAcp;
+      }
+      if (yearBrevetsHar > 0) {
+        yAgg.HAR.km[uid]      = (yAgg.HAR.km[uid]      ?? 0) + yearKmHar;
+        yAgg.HAR.ascent[uid]  = (yAgg.HAR.ascent[uid]  ?? 0) + yearAscHar;
+        yAgg.HAR.brevets[uid] = (yAgg.HAR.brevets[uid] ?? 0) + yearBrevetsHar;
+      }
+      if (isAcpSrYear) yAgg.ACP.srHit.add(uid);
+      if (isHarSrYear) yAgg.HAR.srHit.add(uid);
+      if (isAcpSrYear || isHarSrYear) yAgg.ALL.srHit.add(uid);
     }
 
     if (!memberHasEvents) continue;
@@ -225,12 +302,13 @@ async function computeAllStats() {
     totalRiders++;
     totalKm      += km;
     totalBrevets += brevets;
-    members.push({ uid, name: displayName, totalKm: km, totalBrevets: brevets, lepoteId, harId });
-    if (acpBrevets > 0) membersAcp.push({ uid, name: displayName, totalKm: acpKm, totalBrevets: acpBrevets, lepoteId, harId });
-    if (harBrevets > 0) membersHar.push({ uid, name: displayName, totalKm: harKm, totalBrevets: harBrevets, lepoteId, harId });
+    members.push({ uid, name: displayName, totalKm: km, totalAscent: allAscent, totalBrevets: brevets, lepoteId, harId });
+    if (acpBrevets > 0) membersAcp.push({ uid, name: displayName, totalKm: acpKm, totalAscent: acpAscent, totalBrevets: acpBrevets, lepoteId, harId });
+    if (harBrevets > 0) membersHar.push({ uid, name: displayName, totalKm: harKm, totalAscent: harAscent, totalBrevets: harBrevets, lepoteId, harId });
     if (acpSrCount > 0) srCountsAcp[uid] = acpSrCount;
     if (harSrCount > 0) srCountsHar[uid] = harSrCount;
     if (acpSrCount > 0 || harSrCount > 0) srCounts[uid] = acpSrCount + harSrCount;
+    if (fdcHoursTotal > 0) fdcMembers.push({ uid, name: displayName, totalFdcHours: fdcHoursTotal, lepoteId, harId });
 
     for (const d of memberDistances) {
       if (gender === 'F') (womenPerDist[d] ??= new Set<string>()).add(uid);
@@ -330,15 +408,51 @@ async function computeAllStats() {
       .sort((a, b) => b.srCount - a.srCount);
     const kmRanking = [...clubMembers].sort((a, b) => b.totalKm - a.totalKm)
       .map(m => ({ name: m.name, totalKm: m.totalKm, lepoteId: m.lepoteId, harId: m.harId }));
+    const ascentRanking = [...clubMembers].sort((a, b) => b.totalAscent - a.totalAscent)
+      .map(m => ({ name: m.name, totalAscent: m.totalAscent, lepoteId: m.lepoteId, harId: m.harId }));
     const brevetsRanking = [...clubMembers].sort((a, b) => b.totalBrevets - a.totalBrevets)
       .map(m => ({ name: m.name, totalBrevets: m.totalBrevets, lepoteId: m.lepoteId, harId: m.harId }));
-    return { kmRanking, brevetsRanking, srRanking };
+    return { kmRanking, ascentRanking, brevetsRanking, srRanking };
   }
 
   const allRankings = buildRankings(members, srCounts);
   const acpRankings = buildRankings(membersAcp, srCountsAcp);
   const harRankings = buildRankings(membersHar, srCountsHar);
-  const { kmRanking, brevetsRanking, srRanking } = allRankings;
+  const { kmRanking, ascentRanking, brevetsRanking, srRanking } = allRankings;
+
+  const fdcRanking = [...fdcMembers].sort((a, b) => b.totalFdcHours - a.totalFdcHours)
+    .map(m => ({ name: m.name, totalFdcHours: Math.round(m.totalFdcHours * 10) / 10, lepoteId: m.lepoteId, harId: m.harId }));
+
+  // ── Post-processing: Πάνθεον year selector ────────────────────────────────
+  function buildYearClubRankings(agg: YearClubAgg): YearClubRankings {
+    const byKm  = Object.entries(agg.km).sort((a, b) => b[1] - a[1]);
+    const byAsc = Object.entries(agg.ascent).sort((a, b) => b[1] - a[1]);
+    const byBrv = Object.entries(agg.brevets).sort((a, b) => b[1] - a[1]);
+    const srRanking = [...agg.srHit]
+      .map(uid => ({ name: memberNames[uid] ?? '', lepoteId: memberLepoteId[uid] ?? '', harId: memberHarId[uid] ?? '', srCount: 1 }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'el'));
+    return {
+      kmRanking:      byKm.map(([uid, v])  => ({ name: memberNames[uid] ?? '', totalKm: v,      lepoteId: memberLepoteId[uid] ?? '', harId: memberHarId[uid] ?? '' })),
+      ascentRanking:  byAsc.map(([uid, v]) => ({ name: memberNames[uid] ?? '', totalAscent: v,  lepoteId: memberLepoteId[uid] ?? '', harId: memberHarId[uid] ?? '' })),
+      brevetsRanking: byBrv.map(([uid, v]) => ({ name: memberNames[uid] ?? '', totalBrevets: v, lepoteId: memberLepoteId[uid] ?? '', harId: memberHarId[uid] ?? '' })),
+      srRanking,
+    };
+  }
+
+  const byYearClub: Record<string, {
+    totalRiders: number; totalKm: number; totalBrevets: number;
+    ALL: YearClubRankings; ACP: YearClubRankings; HAR: YearClubRankings;
+  }> = {};
+  for (const [year, agg] of Object.entries(yearClubAgg)) {
+    byYearClub[year] = {
+      totalRiders:  Object.keys(agg.ALL.brevets).length,
+      totalKm:      Math.round(Object.values(agg.ALL.km).reduce((a, b) => a + b, 0)),
+      totalBrevets: Object.values(agg.ALL.brevets).reduce((a, b) => a + b, 0),
+      ALL: buildYearClubRankings(agg.ALL),
+      ACP: buildYearClubRankings(agg.ACP),
+      HAR: buildYearClubRankings(agg.HAR),
+    };
+  }
 
   const milestoneLists: Record<number, Array<{ name: string; count: number }>> = {};
   for (const t of [10, 25, 50, 100, 200]) {
@@ -407,19 +521,20 @@ async function computeAllStats() {
       streakHolderName, streakRecordYears,
       mostSrName:  srRanking[0]?.name    ?? '',
       mostSrCount: srRanking[0]?.srCount ?? 0,
-      kmRanking, brevetsRanking, srRanking, milestoneLists,
+      kmRanking, ascentRanking, brevetsRanking, srRanking, milestoneLists, fdcRanking,
       byClub: {
         ACP: {
-          kmRanking: acpRankings.kmRanking, brevetsRanking: acpRankings.brevetsRanking, srRanking: acpRankings.srRanking,
+          kmRanking: acpRankings.kmRanking, ascentRanking: acpRankings.ascentRanking, brevetsRanking: acpRankings.brevetsRanking, srRanking: acpRankings.srRanking,
           mostSrName:  acpRankings.srRanking[0]?.name    ?? '',
           mostSrCount: acpRankings.srRanking[0]?.srCount ?? 0,
         },
         HAR: {
-          kmRanking: harRankings.kmRanking, brevetsRanking: harRankings.brevetsRanking, srRanking: harRankings.srRanking,
+          kmRanking: harRankings.kmRanking, ascentRanking: harRankings.ascentRanking, brevetsRanking: harRankings.brevetsRanking, srRanking: harRankings.srRanking,
           mostSrName:  harRankings.srRanking[0]?.name    ?? '',
           mostSrCount: harRankings.srRanking[0]?.srCount ?? 0,
         },
       },
+      byYearClub,
     },
     organizerUniverse: {
       totalOrganizers:    organizerRanking.length,

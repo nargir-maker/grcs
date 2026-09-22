@@ -52,6 +52,33 @@ interface MemberProfile {
 
 type Club = 'ALL' | 'ACP' | 'HAR';
 
+// ── Πάνθεον ranking types (subset of /api/pantheon response) ───────────────────
+interface RankEntry { name: string; lepoteId: string; harId: string }
+interface KmRankEntry      extends RankEntry { totalKm: number }
+interface AscentRankEntry  extends RankEntry { totalAscent: number }
+interface BrevetsRankEntry extends RankEntry { totalBrevets: number }
+interface FdcRankEntry     extends RankEntry { totalFdcHours: number }
+interface ClubRankings {
+  kmRanking: KmRankEntry[]; ascentRanking: AscentRankEntry[]; brevetsRanking: BrevetsRankEntry[];
+}
+interface PantheonBrief {
+  kmRanking: KmRankEntry[]; ascentRanking: AscentRankEntry[]; brevetsRanking: BrevetsRankEntry[];
+  fdcRanking: FdcRankEntry[];
+  byClub: { ACP: ClubRankings; HAR: ClubRankings };
+}
+
+// Finds "me" in a sorted ranking array by matching lepoteId/harId — mirrors
+// Flutter's _RankStats rank lookup (1-based position, or null if not present
+// in this ranking, e.g. no brevets certified by the currently active club).
+function findRank<T extends RankEntry>(arr: T[], lepoteId: string, harId: string): { rank: number; total: number } | null {
+  const hasLepote = !!lepoteId && lepoteId !== '0';
+  const hasHar    = !!harId    && harId    !== '0';
+  if (!hasLepote && !hasHar) return null;
+  const idx = arr.findIndex(m =>
+    (hasLepote && m.lepoteId === lepoteId) || (hasHar && m.harId === harId));
+  return idx === -1 ? null : { rank: idx + 1, total: arr.length };
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtNum(n: number) {
   return n.toLocaleString('el-GR');
@@ -319,6 +346,51 @@ function DistanceProfileCard({ b200, b300, b400, b6, b10, total }: {
   );
 }
 
+// ── Dual-club balance bar ──────────────────────────────────────────────────────
+// Shown only for riders certified by BOTH clubs — mirrors Flutter's dualClub
+// balance scene (ACP km share vs HAR km share, real club logos).
+function DualClubBalanceCard({ acpKm, harKm }: { acpKm: number; harKm: number }) {
+  if (acpKm <= 0 || harKm <= 0) return null;
+  const total   = acpKm + harKm;
+  const acpPct  = Math.round(acpKm / total * 100);
+  const harPct  = 100 - acpPct;
+  const acpColor = '#1a3a7a', harColor = '#4a148c';
+  return (
+    <div style={{
+      width: '100%', padding: '12px 14px 13px', borderRadius: 12,
+      border: '1px solid rgba(167,139,250,0.4)', background: 'rgba(74,20,140,0.08)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 11 }}>
+        <span style={{ fontSize: 17 }}>⚖️</span>
+        <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: '#a78bfa' }}>Ισορροπία φορέων</span>
+        <span style={{ padding: '3px 12px', borderRadius: 20, border: '1px solid rgba(167,139,250,0.6)', background: 'rgba(167,139,250,0.15)', fontSize: 12, fontWeight: 700, color: '#a78bfa' }}>
+          {acpPct}% / {harPct}%
+        </span>
+      </div>
+      <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', height: 12, marginBottom: 11 }}>
+        <div style={{ flex: acpPct, background: acpColor }} />
+        <div style={{ flex: harPct, background: harColor }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src="/logos/650000.png" alt="ΛΕ.ΠΟ.Τ.Ε." style={{ width: 22, height: 22, objectFit: 'contain' }}
+            onError={ev => { (ev.target as HTMLImageElement).style.display = 'none'; }} />
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>
+            ΛΕ.ΠΟ.Τ.Ε. · {fmtNum(Math.round(acpKm))} km
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>
+            H.A.R. · {fmtNum(Math.round(harKm))} km
+          </span>
+          <img src="/logos/659999.png" alt="H.A.R." style={{ width: 22, height: 22, objectFit: 'contain' }}
+            onError={ev => { (ev.target as HTMLImageElement).style.display = 'none'; }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // B) RIDER IDENTITY (formerly Activity Cardiograph)
 // Matches Flutter _buildActivityCardiograph with new KPI layout
@@ -330,7 +402,12 @@ const KPI_INFO = [
   { emoji: '🛣️', color: '#1976D2', title: 'Προφίλ απόστασης',   text: 'Η κατανομή των brevets σου ανά απόσταση: Sprinter (200), Cruiser (300–400), Hardcore (600), Legendary (1000+ — μαζί 1000/1200/1400, PBP, LRM).' },
 ];
 
-function ActivityCardiograph({ history }: { history: Record<string, YearData> }) {
+function ActivityCardiograph({ history, member, activeClub, pantheon }: {
+  history: Record<string, YearData>;
+  member: MemberProfile;
+  activeClub: Club;
+  pantheon: PantheonBrief | null;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [tooltip, setTooltip] = useState<{x:number;y:number;year:number;count:number}|null>(null);
   const [showInfo, setShowInfo] = useState(false);
@@ -422,6 +499,23 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
            e.some(x => String(x.d) === '400' && ok(x.har)) &&
            e.some(x => String(x.d) === '600' && ok(x.har));
   }).length;
+
+  // National rankings (km/ascent/brevets for the active club filter, FdC hours
+  // club-agnostic) — mirrors Flutter's _RankStats.compute() rank lookup.
+  const clubRankings = useMemo(() => {
+    if (!pantheon) return null;
+    return activeClub === 'ALL'
+      ? { kmRanking: pantheon.kmRanking, ascentRanking: pantheon.ascentRanking, brevetsRanking: pantheon.brevetsRanking }
+      : pantheon.byClub[activeClub];
+  }, [pantheon, activeClub]);
+  const kmRank      = useMemo(() => clubRankings ? findRank(clubRankings.kmRanking, member.lepoteId, member.harId) : null, [clubRankings, member.lepoteId, member.harId]);
+  const ascentRank   = useMemo(() => clubRankings ? findRank(clubRankings.ascentRanking, member.lepoteId, member.harId) : null, [clubRankings, member.lepoteId, member.harId]);
+  const brevetsRank = useMemo(() => clubRankings ? findRank(clubRankings.brevetsRanking, member.lepoteId, member.harId) : null, [clubRankings, member.lepoteId, member.harId]);
+  const fdcRank      = useMemo(() => pantheon ? findRank(pantheon.fdcRanking, member.lepoteId, member.harId) : null, [pantheon, member.lepoteId, member.harId]);
+
+  // Dual-club balance — always computed from the FULL unfiltered history
+  const acpKmForBalance = useMemo(() => totalKm(filterHistory(member.history, 'ACP')), [member.history]);
+  const harKmForBalance = useMemo(() => totalKm(filterHistory(member.history, 'HAR')), [member.history]);
 
   // Most recent brevet in the last active year, sorted by full date
   const lastBrevetInfo = (() => {
@@ -659,6 +753,31 @@ function ActivityCardiograph({ history }: { history: Record<string, YearData> })
             : 'έτη με πλήρη σειρά SR'}
           progress={activeYrs > 0 ? srYears / activeYrs : 0}
         />
+        {kmRank && (
+          <KpiRow emoji="🗺️" title="Εθνική κατάταξη · Χιλιόμετρα" badge={`#${kmRank.rank}`} color="#06b6d4"
+            value={`${kmRank.rank}η θέση`}
+            sub={`από ${kmRank.total} αναβάτες${activeClub !== 'ALL' ? ` (${activeClub === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'})` : ''}`}
+            progress={kmRank.total > 1 ? 1 - (kmRank.rank - 1) / (kmRank.total - 1) : 1} />
+        )}
+        {ascentRank && (
+          <KpiRow emoji="⛰️" title="Εθνική κατάταξη · Ανάβαση" badge={`#${ascentRank.rank}`} color="#a78bfa"
+            value={`${ascentRank.rank}η θέση`}
+            sub={`από ${ascentRank.total} αναβάτες${activeClub !== 'ALL' ? ` (${activeClub === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'})` : ''}`}
+            progress={ascentRank.total > 1 ? 1 - (ascentRank.rank - 1) / (ascentRank.total - 1) : 1} />
+        )}
+        {brevetsRank && (
+          <KpiRow emoji="🏁" title="Εθνική κατάταξη · Brevets" badge={`#${brevetsRank.rank}`} color="#f59e0b"
+            value={`${brevetsRank.rank}η θέση`}
+            sub={`από ${brevetsRank.total} αναβάτες${activeClub !== 'ALL' ? ` (${activeClub === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'})` : ''}`}
+            progress={brevetsRank.total > 1 ? 1 - (brevetsRank.rank - 1) / (brevetsRank.total - 1) : 1} />
+        )}
+        {fdcRank && (
+          <KpiRow emoji="🍑" title="Fond de Culotte · Κατάταξη" badge={`#${fdcRank.rank}`} color="#ec4899"
+            value={`${fdcRank.rank}η θέση`}
+            sub={`από ${fdcRank.total} αναβάτες · ώρες σέλας`}
+            progress={fdcRank.total > 1 ? 1 - (fdcRank.rank - 1) / (fdcRank.total - 1) : 1} />
+        )}
+        <DualClubBalanceCard acpKm={acpKmForBalance} harKm={harKmForBalance} />
       </div>
 
       {/* Chart label */}
@@ -972,6 +1091,14 @@ function HistoryAnalysis({ history }: { history: Record<string, YearData> }) {
 // ══════════════════════════════════════════════════════════════════════════════
 export function FilteredProfile({ member }: { member: MemberProfile }) {
   const [activeClub, setActiveClub] = useState<Club>('ALL');
+  const [pantheon, setPantheon] = useState<PantheonBrief | null>(null);
+
+  useEffect(() => {
+    fetch('/api/pantheon')
+      .then(r => r.json())
+      .then(d => setPantheon(d))
+      .catch(() => setPantheon(null));
+  }, []);
 
   function handleToggle(club: Club) {
     setActiveClub(prev => prev === club ? 'ALL' : club);
@@ -1020,7 +1147,7 @@ export function FilteredProfile({ member }: { member: MemberProfile }) {
       <TaksidiXrono member={filteredMember} />
 
       {/* Cardiograph — filtered */}
-      <ActivityCardiograph history={filtered} />
+      <ActivityCardiograph history={filtered} member={member} activeClub={activeClub} pantheon={pantheon} />
 
       {/* Fond de Culotte — always uses full unfiltered history (same as Flutter) */}
       <FondDeCulotteCard member={member} />
