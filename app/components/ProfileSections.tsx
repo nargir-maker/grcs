@@ -600,17 +600,29 @@ export function FondDeCulotteCard({ member }: { member: MemberProfile }) {
   function statTile(icon: string, value: string, unit: string, sub: string, tileColor: string) {
     return (
       <div style={{
-        flex: 1, background: `${tileColor}12`,
+        flex: 1, position: 'relative', overflow: 'hidden',
+        background: `${tileColor}12`,
         border: `1px solid ${tileColor}30`, borderRadius: 12,
-        padding: '12px 10px', textAlign: 'center',
+        padding: '14px 10px', textAlign: 'center',
       }}>
-        <div style={{ fontSize: 24, marginBottom: 4 }}>{icon}</div>
+        {/* Background watermark icon — fills the chip */}
         <div style={{
-          color: tileColor, fontWeight: 800, fontSize: 19,
-          fontFamily: 'Courier New, monospace', lineHeight: 1,
-        }}>{value}</div>
-        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 3 }}>{unit}</div>
-        {sub && <div style={{ color: tileColor, fontSize: 10, marginTop: 4, opacity: 0.75 }}>{sub}</div>}
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 64, lineHeight: 1, opacity: 0.28, pointerEvents: 'none',
+        }}>
+          {icon}
+        </div>
+        {/* Numbers on top */}
+        <div style={{ position: 'relative' }}>
+          <div style={{
+            color: tileColor, fontWeight: 800, fontSize: 19,
+            fontFamily: 'Courier New, monospace', lineHeight: 1,
+            textShadow: `0 0 10px ${tileColor}88`,
+          }}>{value}</div>
+          <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 3, fontWeight: 600 }}>{unit}</div>
+          {sub && <div style={{ color: tileColor, fontSize: 10, marginTop: 5, opacity: 0.9, fontWeight: 600 }}>{sub}</div>}
+        </div>
       </div>
     );
   }
@@ -683,17 +695,17 @@ export function FondDeCulotteCard({ member }: { member: MemberProfile }) {
           '#CE93D8',
         )}
         {statTile(
-          '🛣️',
+          '🌍',
           Math.round(fdcKm).toLocaleString('el-GR'),
           'km',
-          earthTimes >= 0.1 ? `${earthTimes.toFixed(1)}× 🌍` : '',
+          earthTimes >= 0.1 ? `${earthTimes.toFixed(1)}× ο γύρος της Γης 🌍` : '',
           '#80DEEA',
         )}
         {statTile(
           '⛰️',
           Math.round(fdcElevation).toLocaleString('el-GR'),
           'm υψομετρικά',
-          everestTimes >= 0.1 ? `${everestTimes.toFixed(1)}× 🏔️` : '',
+          everestTimes >= 0.1 ? `${everestTimes.toFixed(1)}× το Έβερεστ 🏔` : '',
           '#80CBC4',
         )}
       </div>
