@@ -160,8 +160,7 @@ async function computeAllStats() {
     const brevets     = parseInt(stats.total_brm  ?? '0') || 0;
     const lepoteId    = raw.reg_lepote?.id?.toString() ?? '';
     const harId       = raw.reg_har?.id?.toString()    ?? '';
-    const lastInitial = lastName.length > 0 ? `${lastName[0]}.` : '';
-    const displayName = `${firstName} ${lastInitial}`.trim();
+    const displayName = lastName ? `${lastName} ${firstName}`.trim() : firstName;
     memberNames[uid]    = displayName;
     memberLepoteId[uid] = lepoteId;
     memberHarId[uid]    = harId;

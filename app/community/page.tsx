@@ -58,7 +58,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 function GenderPill({ gender, count, pct, color }: { gender: string; count: number; pct: number; color: string }) {
   return (
     <div className="flex-1 rounded-xl p-4 border" style={{ borderColor: `${color}33`, background: `${color}11` }}>
-      <div className="text-2xl mb-1">{gender === 'F' ? '👩' : '👨'}</div>
+      <div className="text-3xl font-bold mb-1" style={{ color }}>{gender === 'F' ? '♀' : '♂'}</div>
       <div className="font-bold text-xl" style={{ color }}>{count.toLocaleString('el-GR')}</div>
       <div className="text-white/50 text-xs mt-0.5">{gender === 'F' ? 'Γυναίκες' : 'Άνδρες'} · {pct.toFixed(1)}%</div>
       <div className="mt-2 h-1.5 rounded-full bg-white/10">
@@ -93,7 +93,7 @@ function PioneerCard({ name, year, firstEvent, lastBrevetName, lastBrevetYear, g
   const color = gender === 'F' ? '#ec4899' : '#60a5fa';
   return (
     <div className="flex-1 rounded-xl border p-4" style={{ borderColor: `${color}33`, background: `${color}0A` }}>
-      <div className="text-2xl mb-2">{gender === 'F' ? '👩' : '👨'}</div>
+      <div className="text-3xl font-bold mb-2" style={{ color }}>{gender === 'F' ? '♀' : '♂'}</div>
       <div className="font-bold" style={{ color }}>{name || '—'}</div>
       <div className="text-white/40 text-xs mt-1">Πρώτο Brevet: {year}</div>
       {firstEvent && <div className="text-white/60 text-xs mt-0.5 truncate">{firstEvent}</div>}
