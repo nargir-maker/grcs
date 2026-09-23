@@ -67,12 +67,21 @@ function allEventsSorted(history: Record<string, YearData>): BrevetEvent[] {
 // ── Calculate milestones (same logic as Flutter _calculateMilestones) ─────────
 interface MilestoneMap { [key: string]: BrevetEvent }
 
-function calcMilestones(history: Record<string, YearData>): MilestoneMap {
+function calcMilestones(history: Record<string, YearData>, activeClub: 'ALL' | 'ACP' | 'HAR' = 'ALL'): MilestoneMap {
   const all = allEventsSorted(history);
   const result: MilestoneMap = {};
   if (!all.length) return result;
 
   result['first_ever'] = all[0];
+
+  if (activeClub !== 'ACP') {
+    const firstAcp = all.find(e => (e.acp ?? '').toString().trim() !== '');
+    if (firstAcp) result['first_acp'] = firstAcp;
+  }
+  if (activeClub !== 'HAR') {
+    const firstHar = all.find(e => (e.har ?? '').toString().trim() !== '');
+    if (firstHar) result['first_har'] = firstHar;
+  }
 
   for (const dist of ['200','300','400','600','1000','1200','1400']) {
     const found = all.find(e => String(e.d) === dist);
@@ -340,6 +349,7 @@ export function OrosimaDiadomon({ member }: { member: MemberProfile }) {
 function milestoneLabel(key: string): string {
   const map: Record<string,string> = {
     first_ever: '1ο Brevet',
+    first_acp: '1ο ACP Brevet', first_har: '1ο H.A.R. Brevet',
     '200': '1ο 200άρι', '300': '1ο 300άρι',
     '400': '1ο 400άρι', '600': '1ο 600άρι',
     '1000': '1ο 1000άρι', '1200': '1ο 1200άρι',
@@ -350,7 +360,8 @@ function milestoneLabel(key: string): string {
 
 function milestoneColor(key: string): string {
   const map: Record<string,string> = {
-    first_ever: '#4ade80', '200': '#06b6d4', '300': '#38bdf8',
+    first_ever: '#4ade80', first_acp: '#1A237E', first_har: '#4A148C',
+    '200': '#06b6d4', '300': '#38bdf8',
     '400': '#818cf8', '600': '#a78bfa', '1000': '#f472b6',
     '1200': '#fb7185', PBP: '#fbbf24', LRM: '#c084fc', FLECHE: '#fb923c',
   };
@@ -359,14 +370,15 @@ function milestoneColor(key: string): string {
 
 function milestoneEmoji(key: string): string {
   const map: Record<string,string> = {
-    first_ever:'🏁', '200':'🚴', '300':'🚴', '400':'🚴', '600':'🏆',
+    first_ever:'🏁', first_acp:'🔵', first_har:'🟣',
+    '200':'🚴', '300':'🚴', '400':'🚴', '600':'🏆',
     '1000':'⭐', '1200':'🌟', PBP:'🗼', LRM:'🌍', FLECHE:'⚡',
   };
   return map[key] ?? '📍';
 }
 
-export function TaksidiXrono({ member }: { member: MemberProfile }) {
-  const milestones = calcMilestones(member.history);
+export function TaksidiXrono({ member, activeClub = 'ALL' }: { member: MemberProfile; activeClub?: 'ALL' | 'ACP' | 'HAR' }) {
+  const milestones = calcMilestones(member.history, activeClub);
   const entries = Object.entries(milestones).sort((a, b) => {
     // Most recent first (reversed, "journey back in time")
     return getYear(b[1].dt) - getYear(a[1].dt);

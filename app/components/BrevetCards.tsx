@@ -68,9 +68,12 @@ export function ClubsProvider({ children }: { children: React.ReactNode }) {
 
   function findClub(og: string): ClubEntry | undefined {
     if (!og || !clubs.length) return undefined;
+    // 0. Direct match — og is the club's Firestore doc id (organizer-submitted brevets store the id, not a name)
+    let match = clubs.find(c => c.id === og.trim());
+    if (match) return match;
     const ogN = norm(og);
     // 1. Exact match on any name field
-    let match = clubs.find(c =>
+    match = clubs.find(c =>
       norm(c.shortNameGr) === ogN ||
       norm(c.shortNameEn) === ogN ||
       norm(c.fullNameGr)  === ogN

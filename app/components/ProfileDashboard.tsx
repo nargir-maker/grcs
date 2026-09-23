@@ -1144,7 +1144,7 @@ export function FilteredProfile({ member }: { member: MemberProfile }) {
       <OrosimaDiadomon member={filteredMember} />
 
       {/* Ταξίδι πίσω στο Χρόνο — filtered */}
-      <TaksidiXrono member={filteredMember} />
+      <TaksidiXrono member={filteredMember} activeClub={activeClub} />
 
       {/* Cardiograph — filtered */}
       <ActivityCardiograph history={filtered} member={member} activeClub={activeClub} pantheon={pantheon} />
