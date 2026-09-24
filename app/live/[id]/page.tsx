@@ -41,6 +41,7 @@ interface Rider {
   timestamp: number;
   gender: string;
   checkpoints: Record<string, string>;
+  rideMode: string;
 }
 
 interface BrevetInfo {
@@ -142,6 +143,7 @@ export default function LiveBrevetPage() {
         timestamp:   val.timestamp ?? 0,
         gender:      val.gender ?? 'M',
         checkpoints: val.checkpoints ?? {},
+        rideMode:    val.rideMode ?? '',
       }));
       setRiders(riderList);
       setLastUpdate(new Date());
@@ -323,8 +325,20 @@ export default function LiveBrevetPage() {
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-medium truncate">
+                    <p className="text-white text-sm font-medium truncate flex items-center gap-1.5">
                       {rider.fullName}
+                      {rider.rideMode === 'pre' && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full
+                          bg-blue-500/20 text-blue-400 border border-blue-500/30 shrink-0">
+                          🌙 PRE
+                        </span>
+                      )}
+                      {rider.rideMode === 'post' && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full
+                          bg-purple-500/20 text-purple-400 border border-purple-500/30 shrink-0">
+                          🌗 POST
+                        </span>
+                      )}
                     </p>
                     <p className={`text-xs ${statusColor(rider.status)}`}>
                       {statusLabel(rider.status)}

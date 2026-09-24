@@ -38,6 +38,8 @@ interface BrevetEvent {
   har: string;
   mt: string;  // time limit
   rt: string;  // ride time
+  rm?: string; // 'pre' | 'post' ride mode (self-recorded pre/post-ride)
+  ds?: string; // legacy Preride/Postride convention
 }
 
 interface MemberProfile {
@@ -112,6 +114,8 @@ const events = (val.events ?? []).map((e: any) => ({
   har: e.har ?? '',
   mt:  e.mt ?? '',
   rt:  e.rt ?? '',
+  rm:  e.rm ?? '',
+  ds:  e.ds ?? '',
 }));
 
 history[year] = {

@@ -13,6 +13,7 @@ interface Rider {
   avgSpeed: string;
   currentKm: string;
   gender: string;
+  rideMode?: string;
 }
 
 interface LiveMapProps {
@@ -89,6 +90,7 @@ function svgRiderMarker(
   fullName: string,
   registryId: string,
   labelMode: 'brevet' | 'friendly',
+  rideMode?: string,
 ): string {
   const bg = isDNF      ? '#616161'
            : isFinished ? '#388E3C'
@@ -100,13 +102,16 @@ function svgRiderMarker(
   const sqSize   = isSelected ? 40 : 32;
   const fontSize = isSelected ? 22 : 17;
 
+  // Mirrors Flutter's organizer_map_screen.dart rideModeBadge convention.
+  const rideModeBadge = rideMode === 'pre' ? ' 🌙PRE' : rideMode === 'post' ? ' 🌗POST' : '';
+
   const parts      = fullName.trim().split(' ');
   const firstName  = parts[0] ?? fullName;
   const lastName   = parts.slice(1).join(' ');
   const firstInitial = firstName.length > 0 ? firstName[0] + '.' : '';
-  const chipLabel  = labelMode === 'brevet' && registryId && registryId !== '-'
+  const chipLabel  = (labelMode === 'brevet' && registryId && registryId !== '-'
     ? `${registryId}-${firstInitial} ${lastName}`.trim()
-    : firstName;
+    : firstName) + rideModeBadge;
   const chipW = Math.max(56, chipLabel.length * 8.5 + 18);
   const chipH = 24, gap = 4;
   const totalW = sqSize + gap + chipW;
@@ -349,7 +354,7 @@ export default function LiveMap({
 
       const icon = L.divIcon({
         html: svgRiderMarker(rider.gender, isDNF, isFinished, isSelected,
-          rider.fullName, rider.registryId ?? '', riderLabelMode),
+          rider.fullName, rider.registryId ?? '', riderLabelMode, rider.rideMode),
         className: '',
         iconAnchor: [sqSize / 2, sqSize / 2],
       });
@@ -366,7 +371,10 @@ export default function LiveMap({
           .addTo(map)
           .bindPopup(`
             <div style="min-width:160px;font-family:Arial,sans-serif;">
-              <strong>${rider.fullName}</strong><br/>
+              <strong>${rider.fullName}</strong>
+              ${rider.rideMode === 'pre' ? '<span style="color:#60a5fa;font-weight:bold;"> · 🌙 Pre-ride</span>'
+                : rider.rideMode === 'post' ? '<span style="color:#c084fc;font-weight:bold;"> · 🌗 Post-ride</span>' : ''}
+              <br/>
               <span style="color:${isDNF ? '#ef4444' : isFinished ? '#22c55e' : '#06b6d4'}">
                 ${isFinished ? '🏁 Τερμάτισε' : isDNF ? '❌ DNF' : '🚴 Σε πορεία'}
               </span><br/>

@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ref, onValue, off, get } from 'firebase/database';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db, rtdb } from '@/app/lib/firebase';
 import PageViews from '@/app/components/PageViews';
 
@@ -56,6 +56,7 @@ export default function LivePage() {
         const snap = await getDocs(q);
 
         const liveList: LiveBrevet[] = [];
+        const seenIds = new Set<string>();
 
         for (const docSnap of snap.docs) {
           const d = docSnap.data();
@@ -71,6 +72,48 @@ export default function LivePage() {
             finishedRiders: 0,
             dnfRiders:     0,
           });
+          seenIds.add(docSnap.id);
+        }
+
+        // Pre/post rides (Preride/Postride) run outside the brevet's official
+        // date window by design, so the date-range query above never sees
+        // them. Fall back to RTDB: any brevet with a live_events participant
+        // updated in the last 24h is genuinely "live" right now regardless
+        // of how far its official date is from today.
+        try {
+          const liveEventsSnap = await get(ref(rtdb, 'live_events'));
+          if (liveEventsSnap.exists()) {
+            const eventsData = liveEventsSnap.val() as Record<string, any>;
+            const staleCutoff = Date.now() - 24 * 3600000;
+
+            for (const [brevetId, eventNode] of Object.entries(eventsData)) {
+              if (seenIds.has(brevetId)) continue;
+              const participants = Object.values(eventNode?.participants ?? {}) as any[];
+              const hasRecentActivity = participants.some(
+                p => typeof p?.timestamp === 'number' && p.timestamp > staleCutoff
+              );
+              if (!hasRecentActivity) continue;
+
+              const brevetSnap = await getDoc(doc(db, 'all_brevets', brevetId));
+              if (!brevetSnap.exists()) continue;
+              const d = brevetSnap.data();
+              const info = d.info || {};
+              liveList.push({
+                id:             brevetId,
+                title:          info.title?.toString() ?? brevetId,
+                distance:       parseInt(info.distance?.toString() ?? '0') || 0,
+                date:           info.date?.toString() ?? '',
+                organizerId:    info.organizerId?.toString() ?? '',
+                riderCount:     0,
+                activeRiders:   0,
+                finishedRiders: 0,
+                dnfRiders:      0,
+              });
+              seenIds.add(brevetId);
+            }
+          }
+        } catch (e) {
+          console.error('Pre/post-ride live scan error:', e);
         }
 
         setBrevets(liveList);

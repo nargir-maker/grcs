@@ -36,6 +36,7 @@ interface BrevetEvent {
   n: string; d: number; t: string; as: number;
   dt: string; og: string; acp: string; har: string;
   mt: string; rt: string; pc?: number;
+  rm?: string; ds?: string;
 }
 interface YearData { km: number; brevets: number; events: BrevetEvent[]; }
 interface MemberProfile {

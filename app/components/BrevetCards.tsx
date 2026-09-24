@@ -17,7 +17,7 @@
 //   acp_hom.png | har_stamp390.png | lrm_stamp.png | sre_logo.png | sre_medal2.png
 //   fleche_medal.png | (200|300|400|600|1000|1200)-100YEARS.png
 
-import { useRef, useState, useCallback, useEffect, createContext, useContext } from 'react';
+import { useRef, useState, useCallback, useEffect, createContext, useContext, type ReactElement } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
 
@@ -131,6 +131,8 @@ interface BrevetEvent {
   rt:   string;
   pc?:  number;
   eid?: string;
+  rm?:  string;   // 'pre' | 'post' — written by BrevetHistoryService.recordFinish()
+  ds?:  string;   // legacy Preride/Postride convention (see rideModeOf)
 }
 
 interface YearData {
@@ -206,6 +208,19 @@ function formatShortDate(dt: string): string {
 
 function isEmpty(v: string | undefined | null) {
   return !v || v === 'null' || v === '---' || v.trim() === '';
+}
+
+// Mirrors Flutter's brevets_history_screen.dart _rideModeOf(): checks the
+// new 'rm' field first, then falls back to the legacy convention where
+// older/Sheets-imported HAR records carry a literal "preride"/"PostRide"
+// string in 'ds' (descent) instead of a numeric value.
+function rideModeOf(e: BrevetEvent): 'pre' | 'post' | 'official' {
+  const rm = (e.rm ?? '').trim();
+  if (rm === 'pre' || rm === 'post') return rm;
+  const ds = (e.ds ?? '').trim().toUpperCase();
+  if (ds.startsWith('PRERIDE'))  return 'pre';
+  if (ds.startsWith('POSTRIDE')) return 'post';
+  return 'official';
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -871,13 +886,33 @@ function BrevetCard({ e }: { e: BrevetEvent }) {
   const acpOk = !isEmpty(e.acp);
   const harOk = !isEmpty(e.har);
 
-  if (type === 'PBP')                             return <PbpCard e={e} />;
-  if (name.includes('FLECHE') || type === 'FLC') return <FlecheCard e={e} />;
-  if (type === 'SRE')                             return <SreCard e={e} />;
-  if (type === 'BRM-100YEARS')                    return <AnniversaryCard e={e} />;
-  if (acpOk && harOk)                             return <DualCard e={e} />;
-  if (harOk && !acpOk)                            return <HarCard e={e} />;
-  return <BrmCard e={e} />;
+  let content: ReactElement;
+  if (type === 'PBP')                                  content = <PbpCard e={e} />;
+  else if (name.includes('FLECHE') || type === 'FLC')  content = <FlecheCard e={e} />;
+  else if (type === 'SRE')                             content = <SreCard e={e} />;
+  else if (type === 'BRM-100YEARS')                    content = <AnniversaryCard e={e} />;
+  else if (acpOk && harOk)                             content = <DualCard e={e} />;
+  else if (harOk && !acpOk)                            content = <HarCard e={e} />;
+  else                                                  content = <BrmCard e={e} />;
+
+  const rideMode = rideModeOf(e);
+
+  return (
+    <div style={{ position:'relative', height:'100%' }}>
+      {content}
+      {rideMode !== 'official' && (
+        <div style={{
+          position:'absolute', top:8, left:8, zIndex:2,
+          background: rideMode === 'pre' ? 'rgba(96,165,250,0.94)' : 'rgba(192,132,252,0.94)',
+          color:'#000', fontSize:9, fontWeight:900, letterSpacing:0.4,
+          padding:'3px 8px', borderRadius:999,
+          boxShadow:'0 2px 6px rgba(0,0,0,0.4)',
+        }}>
+          {rideMode === 'pre' ? '🌙 PRERIDE' : '🌗 POSTRIDE'}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
