@@ -34,7 +34,7 @@ export default function Cop31Banner() {
   return (
     <div className="bg-gradient-to-r from-emerald-600 via-cyan-600 to-emerald-600 border-b border-white/10">
       <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center gap-3">
-        <span className="text-xl shrink-0" aria-hidden>🚴🌍</span>
+        <img src="/cop31-logo.png" alt="" className="w-7 h-7 shrink-0 rounded-full" aria-hidden />
         <div className="flex-1 min-w-0 text-white text-xs sm:text-sm leading-snug">
           <span className="font-bold">{t('title')}</span>{' '}
           <span className="text-white/90">

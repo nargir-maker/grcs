@@ -33,6 +33,11 @@ export default async function Cop31Page({
 
         {/* ── HERO ── */}
         <div className="mb-16 text-center">
+          <img
+            src="/cop31-logo.png"
+            alt="COP31 Bike Ride"
+            className="w-28 h-28 mx-auto mb-6 object-contain drop-shadow-[0_0_25px_rgba(16,185,129,0.35)]"
+          />
           <p className="text-emerald-400 text-sm font-bold uppercase tracking-widest mb-3">
             {t('heroKicker')}
           </p>
