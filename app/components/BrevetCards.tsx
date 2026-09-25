@@ -18,6 +18,7 @@
 //   fleche_medal.png | (200|300|400|600|1000|1200)-100YEARS.png
 
 import { useRef, useState, useCallback, useEffect, createContext, useContext, type ReactElement } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
 
@@ -151,12 +152,12 @@ function logo(name: string) {
   return `/logos/${name}`;
 }
 
-function formatDate(dt: string): string {
+function formatDate(dt: string, dateLocale: string = 'el-GR'): string {
   if (!dt || dt === 'null') return '';
   try {
     const d = new Date(dt);
     if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString('el-GR', { day:'2-digit', month:'2-digit', year:'numeric' });
+      return d.toLocaleDateString(dateLocale, { day:'2-digit', month:'2-digit', year:'numeric' });
     }
   } catch {}
   const parts = dt.split(' ');
@@ -171,15 +172,11 @@ function formatDate(dt: string): string {
   return dt;
 }
 
-// Short date for selector buttons: "Κυρ 01", "Σαβ 15" etc.
+// Short date for selector buttons: "Κυρ 01", "Sun 01" etc.
 // Handles Greek date strings: "Κυρ Φεβ 01 2026 00:00:00 GMT+0200"
 // and ISO strings: "2026-02-01T08:00:00+02:00"
-function formatShortDate(dt: string): string {
+function formatShortDate(dt: string, dayNames: Record<number, string>): string {
   if (!dt || dt === 'null') return '';
-
-  const dayNames: Record<number, string> = {
-    0:'Κυρ', 1:'Δευ', 2:'Τρί', 3:'Τετ', 4:'Πέμ', 5:'Παρ', 6:'Σαβ',
-  };
 
   // 1. Try standard ISO / parseable format
   try {
@@ -248,6 +245,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function FinishBadge({ rt, isLRM }: { rt: string; isLRM?: boolean }) {
+  const t = useTranslations('brevetCards');
   if (!rt || rt === '00:00' || rt === '--:--') return null;
   const isDNF = rt === 'DNF';
   const isOut = rt === 'ΕΚΤΟΣ ΧΡΟΝΟΥ';
@@ -255,7 +253,7 @@ function FinishBadge({ rt, isLRM }: { rt: string; isLRM?: boolean }) {
   return (
     <div style={{ display:'inline-block', transform:'rotate(-11deg)', border:`2px solid ${col}`, borderRadius:3, padding:'2px 6px' }}>
       <span style={{ color:col, fontWeight:700, fontSize:isDNF?13:9, letterSpacing:isDNF?2:1 }}>
-        {isDNF ? 'DNF' : isOut ? 'ΕΚΤΟΣ ΧΡΟΝΟΥ' : 'ΕΝΤΟΣ ΧΡΟΝΟΥ'}
+        {isDNF ? 'DNF' : isOut ? t('outOfTime') : t('withinTime')}
       </span>
     </div>
   );
@@ -929,6 +927,13 @@ function SelectorButton({
   onClick: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
+  const t = useTranslations('brevetCards');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
+  const dayNames: Record<number, string> = {
+    0: t('dayShortSun'), 1: t('dayShortMon'), 2: t('dayShortTue'), 3: t('dayShortWed'),
+    4: t('dayShortThu'), 5: t('dayShortFri'), 6: t('dayShortSat'),
+  };
 
   // Card-type colour for the badge accent
   const type  = (event.t ?? '').toUpperCase();
@@ -952,7 +957,7 @@ function SelectorButton({
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      title={`${event.d}km · ${formatDate(event.dt)}`}
+      title={`${event.d}km · ${formatDate(event.dt, dateLocale)}`}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -1005,7 +1010,7 @@ function SelectorButton({
         whiteSpace: 'nowrap',
         letterSpacing: 0.3,
       }}>
-        {formatShortDate(event.dt)}
+        {formatShortDate(event.dt, dayNames)}
       </div>
     </button>
   );
@@ -1148,6 +1153,9 @@ function EventsScrollRail({ events }: { events: BrevetEvent[] }) {
 // ══════════════════════════════════════════════════════════════════════════════
 export function YearCard({ year, data }: { year: string; data: YearData }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations('brevetCards');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const yearlyElevation = data.events.reduce((s, e) => s + (parseFloat(String(e.as)) || 0), 0);
 
   // SR·ACP: 200+300+400+600 all with acp non-empty (exact distance match, like Flutter)
@@ -1220,9 +1228,9 @@ export function YearCard({ year, data }: { year: string; data: YearData }) {
             <div style={{ color:'#06b6d4', fontWeight:700, fontSize:18, lineHeight:1 }}>{year}</div>
           </div>
           <div style={{ textAlign:'left' }}>
-            <div style={{ color:'#fff', fontWeight:700 }}>{data.km.toLocaleString('el-GR')}km</div>
+            <div style={{ color:'#fff', fontWeight:700 }}>{data.km.toLocaleString(dateLocale)}km</div>
             {yearlyElevation > 0 && (
-              <div style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>⛰️ {Math.round(yearlyElevation).toLocaleString('el-GR')}m</div>
+              <div style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>⛰️ {Math.round(yearlyElevation).toLocaleString(dateLocale)}m</div>
             )}
             <div style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>{data.brevets} brevets</div>
           </div>
@@ -1256,7 +1264,7 @@ export function YearCard({ year, data }: { year: string; data: YearData }) {
         }}>
           {data.events.length === 0 ? (
             <p style={{ padding:'0 20px', color:'rgba(255,255,255,0.3)', fontSize:13 }}>
-              Δεν βρέθηκαν brevets.
+              {t('noBrevetsFound')}
             </p>
           ) : (
             <EventsScrollRail events={data.events} />

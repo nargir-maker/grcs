@@ -14,6 +14,7 @@ import {
 import { db } from '@/app/lib/firebase';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 import PageViews from '@/app/components/PageViews';
+import { useTranslations } from 'next-intl';
 
 const PAGE_SIZE = 12;
 // Unicode sentinel for Firestore prefix range queries
@@ -93,6 +94,7 @@ function parseMemberDoc(d: QueryDocumentSnapshot<DocumentData>): PublicMember | 
 
 // ── Member Card ──────────────────────────────────────────────────────
 function MemberCard({ m }: { m: PublicMember }) {
+  const t = useTranslations('members');
   const hasLepote   = m.lepoteId && m.lepoteId !== '0';
   const hasHar      = m.harId    && m.harId    !== '0';
   const yearsActive = m.firstYear > 0 ? new Date().getFullYear() - m.firstYear + 1 : 0;
@@ -131,7 +133,7 @@ function MemberCard({ m }: { m: PublicMember }) {
           </div>
           {m.firstYear > 0 && (
             <div className="text-white/40 text-xs mt-0.5">
-              Από το {m.firstYear} · {yearsActive} χρόνια
+              {t('memberSince', { year: m.firstYear, years: yearsActive })}
             </div>
           )}
           {/* Registry ID chips */}
@@ -154,21 +156,21 @@ function MemberCard({ m }: { m: PublicMember }) {
         <div className="flex gap-3 w-full justify-center">
           <div className="text-center flex-1">
             <div className="text-cyan-400 font-bold text-lg leading-none">{m.totalBrevets}</div>
-            <div className="text-white/30 text-xs mt-1">brevets</div>
+            <div className="text-white/30 text-xs mt-1">{t('statBrevets')}</div>
           </div>
           <div className="w-px bg-white/10" />
           <div className="text-center flex-1">
             <div className="text-cyan-400 font-bold text-lg leading-none">
               {m.totalKm >= 1000 ? `${(m.totalKm / 1000).toFixed(1)}k` : m.totalKm}
             </div>
-            <div className="text-white/30 text-xs mt-1">km</div>
+            <div className="text-white/30 text-xs mt-1">{t('statKm')}</div>
           </div>
           {m.srCount > 0 && (
             <>
               <div className="w-px bg-white/10" />
               <div className="text-center flex-1">
                 <div className="text-amber-400 font-bold text-lg leading-none">{m.srCount}</div>
-                <div className="text-white/30 text-xs mt-1">SR</div>
+                <div className="text-white/30 text-xs mt-1">{t('statSr')}</div>
               </div>
             </>
           )}
@@ -204,6 +206,7 @@ export default function MembersPage() {
   const { data: session, status } = useSession();
   const router  = useRouter();
   const enabled = usePageEnabled('members');
+  const t = useTranslations('members');
 
   const [members,     setMembers]     = useState<PublicMember[]>([]);
   const [loading,     setLoading]     = useState(false);
@@ -310,12 +313,12 @@ export default function MembersPage() {
     </div>
   );
   if (!session)          return null;
-  if (enabled === false) return <ComingSoon label="Αναβάτες" />;
+  if (enabled === false) return <ComingSoon label={t('comingSoonLabel')} />;
 
   const placeholder =
-    searchMode === 'lepote' ? 'Αριθμός μητρώου ΛΕ.ΠΟ.Τ.Ε.' :
-    searchMode === 'har'    ? 'Αριθμός μητρώου H.A.R.' :
-                              'Αναζήτηση με επώνυμο...';
+    searchMode === 'lepote' ? t('placeholderLepote') :
+    searchMode === 'har'    ? t('placeholderHar') :
+                              t('placeholderSurname');
 
   return (
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
@@ -323,9 +326,9 @@ export default function MembersPage() {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">🏆 Hall of Fame</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">{t('heading')}</h1>
           <p className="text-white/40 text-sm">
-            Αναβάτες που έχουν επιλέξει να μοιραστούν το ιστορικό τους
+            {t('subheading')}
           </p>
         </div>
 
@@ -342,7 +345,7 @@ export default function MembersPage() {
                   : 'text-white/50 hover:text-white'
               }`}
             >
-              Επώνυμο
+              {t('modeSurname')}
             </button>
             <button
               onClick={() => { setSearchMode('lepote'); setSearch(''); }}
@@ -351,7 +354,7 @@ export default function MembersPage() {
                   ? 'bg-white/20 ring-2 ring-cyan-500'
                   : 'hover:bg-white/10 opacity-60 hover:opacity-100'
               }`}
-              title="Αναζήτηση με μητρώο ΛΕ.ΠΟ.Τ.Ε."
+              title={t('modeLepoteTitle')}
             >
               <img src="/logos/650000.png" alt="ΛΕ.ΠΟ.Τ.Ε."
                 className="w-8 h-8 object-contain rounded-full"
@@ -364,7 +367,7 @@ export default function MembersPage() {
                   ? 'bg-white/20 ring-2 ring-cyan-500'
                   : 'hover:bg-white/10 opacity-60 hover:opacity-100'
               }`}
-              title="Αναζήτηση με μητρώο H.A.R."
+              title={t('modeHarTitle')}
             >
               <img src="/logos/659999.png" alt="H.A.R."
                 className="w-8 h-8 object-contain rounded-full"
@@ -387,7 +390,7 @@ export default function MembersPage() {
         {/* Count */}
         {!loading && members.length > 0 && (
           <p className="text-white/30 text-xs mb-6">
-            {members.length} αναβάτες{hasMore ? '+' : ''}
+            {t('countRiders', { count: members.length })}{hasMore ? '+' : ''}
           </p>
         )}
 
@@ -400,7 +403,7 @@ export default function MembersPage() {
           <div className="text-center py-24">
             <div className="text-5xl mb-4">🚴</div>
             <p className="text-white/30">
-              {search ? 'Δεν βρέθηκαν αναβάτες' : 'Κανένα δημόσιο προφίλ ακόμα'}
+              {search ? t('noRidersFound') : t('noPublicProfilesYet')}
             </p>
           </div>
         ) : (
@@ -421,7 +424,7 @@ export default function MembersPage() {
                   {loadingMore
                     ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                     : null}
-                  {loadingMore ? 'Φόρτωση...' : `Επόμενοι ${PAGE_SIZE}`}
+                  {loadingMore ? t('loadingMore') : t('nextPage', { count: PAGE_SIZE })}
                 </button>
               </div>
             )}

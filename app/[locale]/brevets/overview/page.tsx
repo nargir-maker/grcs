@@ -5,6 +5,8 @@
 // with a clickable route list that highlights a single route on the map.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
 import { db } from '@/app/lib/firebase';
 import { collection, getDocs, query, where, documentId } from 'firebase/firestore';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
@@ -90,8 +92,8 @@ function homologationBadge(club: Club, certification: string): { logo: string; l
   return                       { logo: '/logos/650000.png', label: certification || 'A.C.P.' };
 }
 
-const CLUB_FILTERS: { id: 'all' | 'har' | 'lepote'; label: string }[] = [
-  { id: 'all',    label: 'Όλα' },
+const CLUB_FILTERS: { id: 'all' | 'har' | 'lepote'; label: string | null }[] = [
+  { id: 'all',    label: null },
   { id: 'lepote', label: 'ΛΕ.ΠΟ.Τ.Ε.' },
   { id: 'har',    label: 'HAR' },
 ];
@@ -104,20 +106,20 @@ function matchesClubFilter(club: Club, filter: 'all' | 'har' | 'lepote'): boolea
 
 // The 13 official Greek administrative regions (Περιφέρειες), north-to-south /
 // west-to-east. `id` matches the "name" property in the bundled boundary GeoJSON.
-const REGIONS: { id: string; label: string }[] = [
-  { id: 'East Macedonia and Thrace', label: 'Αν. Μακεδονία - Θράκη' },
-  { id: 'Central Macedonia',         label: 'Κεντρική Μακεδονία' },
-  { id: 'West Macedonia',            label: 'Δυτική Μακεδονία' },
-  { id: 'Epirus',                    label: 'Ήπειρος' },
-  { id: 'Thessaly',                  label: 'Θεσσαλία' },
-  { id: 'Ionian Islands',            label: 'Ιόνια Νησιά' },
-  { id: 'Western Greece',            label: 'Δυτική Ελλάδα' },
-  { id: 'Central Greece',            label: 'Στερεά Ελλάδα' },
-  { id: 'Attica',                    label: 'Αττική' },
-  { id: 'Peloponnese',               label: 'Πελοπόννησος' },
-  { id: 'North Aegean',              label: 'Βόρειο Αιγαίο' },
-  { id: 'South Aegean',              label: 'Νότιο Αιγαίο' },
-  { id: 'Crete',                     label: 'Κρήτη' },
+const REGIONS: { id: string; key: string }[] = [
+  { id: 'East Macedonia and Thrace', key: 'regionEastMacedoniaThrace' },
+  { id: 'Central Macedonia',         key: 'regionCentralMacedonia' },
+  { id: 'West Macedonia',            key: 'regionWestMacedonia' },
+  { id: 'Epirus',                    key: 'regionEpirus' },
+  { id: 'Thessaly',                  key: 'regionThessaly' },
+  { id: 'Ionian Islands',            key: 'regionIonianIslands' },
+  { id: 'Western Greece',            key: 'regionWesternGreece' },
+  { id: 'Central Greece',            key: 'regionCentralGreece' },
+  { id: 'Attica',                    key: 'regionAttica' },
+  { id: 'Peloponnese',               key: 'regionPeloponnese' },
+  { id: 'North Aegean',              key: 'regionNorthAegean' },
+  { id: 'South Aegean',              key: 'regionSouthAegean' },
+  { id: 'Crete',                     key: 'regionCrete' },
 ];
 
 function matchesRegionFilter(region: string | null, filter: string): boolean {
@@ -203,6 +205,7 @@ async function fetchRouteCoords(gpxUrl: string): Promise<[number, number][]> {
 }
 
 export default function BrevetsOverviewPage() {
+  const t = useTranslations('brevetsOverview');
   const mapDivRef      = useRef<HTMLDivElement>(null);
   const mapRef         = useRef<any>(null);
   const LRef           = useRef<any>(null);
@@ -497,7 +500,7 @@ export default function BrevetsOverviewPage() {
       <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
-  if (enabled === false) return <ComingSoon label="Χάρτης διαδρομών" />;
+  if (enabled === false) return <ComingSoon label={t('comingSoonLabel')} />;
 
   const filteredRoutes = routes.filter(matchesFilters);
   const anyFilterActive = clubFilter !== 'all' || regionFilter !== 'all';
@@ -509,7 +512,7 @@ export default function BrevetsOverviewPage() {
   const selectedRoute = selectedId ? routes.find(r => r.id === selectedId) ?? null : null;
   const isCoOrg = !!(selectedRoute && selectedRoute.coOrganizerId && selectedRoute.coOrganizerId !== '0');
   const organizerLogo = isCoOrg ? '/logos/both.png' : `/logos/${selectedRoute?.organizerId}.png`;
-  const organizerName = isCoOrg ? 'Συνδιοργάνωση' : (clubNames[selectedRoute?.organizerId ?? ''] ?? selectedRoute?.organizerId ?? '');
+  const organizerName = isCoOrg ? t('coOrganized') : (clubNames[selectedRoute?.organizerId ?? ''] ?? selectedRoute?.organizerId ?? '');
   const badge = selectedRoute ? homologationBadge(selectedRoute.club, selectedRoute.certification) : null;
 
   return (
@@ -519,16 +522,16 @@ export default function BrevetsOverviewPage() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <a href="/brevets" className="text-cyan-400/70 text-xs font-bold no-underline hover:text-cyan-400">
-              ← Πίσω στο ημερολόγιο
-            </a>
+            <Link href="/brevets" className="text-cyan-400/70 text-xs font-bold no-underline hover:text-cyan-400">
+              {t('backToCalendar')}
+            </Link>
             <h1 className="text-3xl font-bold text-white mt-2 mb-1">
-              🗺️ Όλες οι διαδρομές {YEAR}
+              {t('heading', { year: YEAR })}
             </h1>
             <p className="text-white/50 text-sm">
               {routes.length > 0
-                ? `${anyFilterActive ? filteredRoutes.length : routes.length} brevets · ${pending > 0 ? `φόρτωση ${routes.length - pending}/${routes.length}…` : 'όλες οι διαδρομές φορτώθηκαν'}`
-                : 'Φόρτωση διαδρομών…'}
+                ? `${t('brevetsCount', { count: anyFilterActive ? filteredRoutes.length : routes.length })} · ${pending > 0 ? t('loadingProgress', { loaded: routes.length - pending, total: routes.length }) : t('allLoaded')}`
+                : t('loadingRoutes')}
             </p>
           </div>
         </div>
@@ -560,7 +563,7 @@ export default function BrevetsOverviewPage() {
                     color:      clubFilter === f.id ? '#06b6d4' : 'rgba(255,255,255,0.5)',
                   }}
                 >
-                  {f.label}
+                  {f.label ?? t('filterAll')}
                 </button>
               ))}
             </div>
@@ -575,7 +578,7 @@ export default function BrevetsOverviewPage() {
                   color:      regionFilter === 'all' ? '#06b6d4' : 'rgba(255,255,255,0.5)',
                 }}
               >
-                Όλες οι περιοχές
+                {t('allRegions')}
               </button>
               {REGIONS.map(reg => (
                 <button
@@ -587,7 +590,7 @@ export default function BrevetsOverviewPage() {
                     color:      regionFilter === reg.id ? '#06b6d4' : 'rgba(255,255,255,0.5)',
                   }}
                 >
-                  {reg.label}
+                  {t(reg.key)}
                 </button>
               ))}
             </div>
@@ -597,7 +600,7 @@ export default function BrevetsOverviewPage() {
                 onClick={() => setSelectedId(null)}
                 className="text-xs font-bold px-4 py-3 text-left text-cyan-400 hover:bg-cyan-500/10 border-b border-white/10"
               >
-                ✕ Καθαρισμός επιλογής — εμφάνιση όλων
+                {t('clearSelection')}
               </button>
             )}
             <div className="overflow-y-auto flex-1">
@@ -652,7 +655,7 @@ export default function BrevetsOverviewPage() {
 
               <button
                 onClick={() => setIsFullscreen(f => !f)}
-                title={isFullscreen ? 'Έξοδος από πλήρη οθόνη (Esc)' : 'Πλήρης οθόνη'}
+                title={isFullscreen ? t('fullscreenExitTitle') : t('fullscreenEnterTitle')}
                 className="flex items-center gap-1.5 px-2.5 py-1.5
                   rounded-lg text-xs font-bold border backdrop-blur-sm transition-all hover:brightness-110"
                 style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)', color: '#06b6d4' }}
@@ -670,7 +673,7 @@ export default function BrevetsOverviewPage() {
                       d="M4 8V4m0 0h4M4 4l5 5M20 8V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5M20 16v4m0 0h-4m4 0l-5-5" />
                   </svg>
                 )}
-                {isFullscreen ? 'Έξοδος' : 'Πλήρης οθόνη'}
+                {isFullscreen ? t('fullscreenExit') : t('fullscreenEnter')}
               </button>
             </div>
 
@@ -691,7 +694,7 @@ export default function BrevetsOverviewPage() {
                       onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                     />
                     <div className="leading-tight">
-                      <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Διοργανωτής</div>
+                      <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide">{t('organizerLabel')}</div>
                       <div className="text-xs font-semibold text-white truncate max-w-[160px]">{organizerName}</div>
                     </div>
                   </div>
@@ -706,7 +709,7 @@ export default function BrevetsOverviewPage() {
                       onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                     />
                     <div className="leading-tight">
-                      <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide">Φορέας</div>
+                      <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide">{t('certifyingBodyLabel')}</div>
                       <div className="text-xs font-semibold text-white truncate max-w-[160px]">{badge.label}</div>
                     </div>
                   </div>
@@ -717,14 +720,14 @@ export default function BrevetsOverviewPage() {
                   className="rounded-lg border backdrop-blur-sm px-3 py-2"
                   style={{ backgroundColor: 'rgba(10,22,40,0.85)', borderColor: 'rgba(6,182,212,0.4)' }}
                 >
-                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1">Συμμετέχοντες</div>
+                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1">{t('participantsLabel')}</div>
                   {!publicMembers ? (
-                    <div className="text-xs text-white/40">Φόρτωση…</div>
+                    <div className="text-xs text-white/40">{t('loadingEllipsis')}</div>
                   ) : !routeParticipants || routeParticipants.count === 0 ? (
-                    <div className="text-xs text-white/40">Δεν υπάρχουν διαθέσιμα δεδομένα</div>
+                    <div className="text-xs text-white/40">{t('noDataAvailable')}</div>
                   ) : (
                     <>
-                      <div className="text-xs font-semibold text-cyan-400 mb-1">{routeParticipants.count} συμμετέχοντες</div>
+                      <div className="text-xs font-semibold text-cyan-400 mb-1">{t('participantsCount', { count: routeParticipants.count })}</div>
                       <div className="text-[11px] text-white/70 leading-relaxed max-h-48 overflow-y-auto">
                         {routeParticipants.names.map((name, i) => <div key={i}>{name}</div>)}
                       </div>
@@ -738,7 +741,7 @@ export default function BrevetsOverviewPage() {
 
         {/* ── Legend ── */}
         <div className="flex flex-wrap items-center gap-3 mt-4 text-xs text-white/50">
-          <span className="text-white/30 font-semibold">Απόσταση:</span>
+          <span className="text-white/30 font-semibold">{t('distanceLegendLabel')}</span>
           {DISTANCE_COLORS.map(b => (
             <span key={b.label} className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: b.color }} />

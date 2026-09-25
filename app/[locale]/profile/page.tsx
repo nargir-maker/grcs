@@ -9,6 +9,7 @@
 //   4. If no link → show member ID form → link → display profile
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter } from '@/i18n/navigation';
 import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
@@ -229,6 +230,8 @@ function StatCard({ emoji, value, label, unit, color }: {
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function ProfilePage() {
+  const t = useTranslations('profile');
+  const tfdc = useTranslations('profileSections');
   const { data: session, status } = useSession();
     const router = useRouter();
 
@@ -305,7 +308,7 @@ export default function ProfilePage() {
   async function handleLink() {
     if (!session?.user?.email) return;
     if (!lepoteInput.trim() && !harInput.trim()) {
-      setLinkError('Εισήγαγε τουλάχιστον έναν αριθμό μητρώου.');
+      setLinkError(t('linkErrorNoInput'));
       return;
     }
 
@@ -334,7 +337,7 @@ export default function ProfilePage() {
       }
 
       if (!memberSnap) {
-        setLinkError('Δεν βρέθηκε μέλος με αυτά τα στοιχεία.');
+        setLinkError(t('linkErrorNotFound'));
         setLinking(false);
         return;
       }
@@ -353,10 +356,7 @@ export default function ProfilePage() {
         if (claimDoc.exists()) {
           const existingEmail = claimDoc.data().googleEmail ?? '';
           if (existingEmail !== email) {
-            setLinkError(
-              'Αυτό το μητρώο έχει ήδη συνδεθεί με άλλο λογαριασμό.\n' +
-              'Επικοινώνησε μαζί μας: gbt.app.support@gmail.com'
-            );
+            setLinkError(t('linkErrorAlreadyClaimed'));
             setLinking(false);
             return;
           }
@@ -400,7 +400,7 @@ export default function ProfilePage() {
       setNeedsLink(false);
     } catch (e) {
       console.error('Link error:', e);
-      setLinkError('Σφάλμα σύνδεσης. Δοκίμασε ξανά.');
+      setLinkError(t('linkErrorGeneric'));
     } finally {
       setLinking(false);
     }
@@ -412,16 +412,16 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-[#0A1628] flex items-center justify-center px-6">
         <div className="text-center max-w-sm">
           <div className="text-5xl mb-4">🚴</div>
-          <h1 className="text-white font-bold text-xl mb-2">Το Προφίλ μου</h1>
+          <h1 className="text-white font-bold text-xl mb-2">{t('notLoggedInTitle')}</h1>
           <p className="text-white/50 text-sm mb-6">
-            Συνδέσου με Google για να δεις το προφίλ σου
+            {t('notLoggedInSubtitle')}
           </p>
           <button
             onClick={() => signIn('google', {}, { prompt: 'select_account' })}
             className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold
               px-6 py-3 rounded-full transition-colors"
           >
-            Σύνδεση με Google
+            {t('signInWithGoogle')}
           </button>
         </div>
       </div>
@@ -435,7 +435,7 @@ export default function ProfilePage() {
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent
             rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-white/50 text-sm">Φόρτωση προφίλ...</p>
+          <p className="text-white/50 text-sm">{t('loadingProfile')}</p>
         </div>
       </div>
     );
@@ -449,10 +449,10 @@ export default function ProfilePage() {
           <div className="text-center mb-8">
             <div className="text-5xl mb-4">🔗</div>
             <h1 className="text-white font-bold text-xl mb-2">
-              Σύνδεση Μητρώου
+              {t('linkTitle')}
             </h1>
             <p className="text-white/50 text-sm">
-              Εισήγαγε τον αριθμό μητρώου σου για να συνδέσεις το προφίλ σου
+              {t('linkSubtitle')}
             </p>
           </div>
 
@@ -460,13 +460,13 @@ export default function ProfilePage() {
             <div>
               <label className="text-white/60 text-xs font-semibold uppercase
                 tracking-wider mb-1.5 block">
-                ΛΕ.ΠΟ.Τ.Ε. Αριθμός Μέλους
+                {t('lepoteIdLabel')}
               </label>
               <input
                 type="number"
                 value={lepoteInput}
                 onChange={e => setLepoteInput(e.target.value)}
-                placeholder="π.χ. 3557"
+                placeholder={t('lepotePlaceholder')}
                 className="w-full bg-white/10 border border-white/20 text-white
                   rounded-xl px-4 py-3 text-sm focus:outline-none
                   focus:border-cyan-500/50 placeholder-white/30"
@@ -475,13 +475,13 @@ export default function ProfilePage() {
             <div>
               <label className="text-white/60 text-xs font-semibold uppercase
                 tracking-wider mb-1.5 block">
-                H.A.R. Αριθμός Μέλους
+                {t('harIdLabel')}
               </label>
               <input
                 type="number"
                 value={harInput}
                 onChange={e => setHarInput(e.target.value)}
-                placeholder="π.χ. 352"
+                placeholder={t('harPlaceholder')}
                 className="w-full bg-white/10 border border-white/20 text-white
                   rounded-xl px-4 py-3 text-sm focus:outline-none
                   focus:border-cyan-500/50 placeholder-white/30"
@@ -507,11 +507,11 @@ export default function ProfilePage() {
                 <div className="w-4 h-4 border-2 border-black/30
                   border-t-black rounded-full animate-spin" />
               ) : null}
-              {linking ? 'Αναζήτηση...' : 'Σύνδεση Προφίλ →'}
+              {linking ? t('searching') : t('linkProfileButton')}
             </button>
 
             <p className="text-white/25 text-xs text-center">
-              Αρκεί ένας από τους δύο αριθμούς
+              {t('eitherNumberHint')}
             </p>
           </div>
         </div>
@@ -557,19 +557,19 @@ export default function ProfilePage() {
   const isFemale = member.gender === 'F';
   let tier = 'VOYAGER';
   let tierColor = '#90CAF9';
-  let tierNickname = isFemale ? 'Η Ταξιδεύτρια' : 'Ο Ταξιδευτής';
+  let tierNickname = isFemale ? t('tierNicknameVoyagerF') : t('tierNicknameVoyagerM');
   let maxBucket = b200;
-  if (b300r > maxBucket) { maxBucket = b300r; tier = 'CRUISER';    tierColor = '#66BB6A'; tierNickname = isFemale ? 'Η Χιλιομετροφάγος' : 'Ο Χιλιομετραφάγος'; }
-  if (b400r > maxBucket) { maxBucket = b400r; tier = 'NIGHTRIDER'; tierColor = '#7986CB'; tierNickname = isFemale ? 'Η Νυχτερινή'        : 'Ο Νυχτερινός'; }
-  if (b6r   > maxBucket) { maxBucket = b6r;   tier = 'HARDCORE';   tierColor = '#FF7043'; tierNickname = isFemale ? 'Η Αλύγιστη'         : 'Ο Αλύγιστος'; }
-  if (b10r  > maxBucket) {                     tier = 'LEGENDARY';  tierColor = '#CE93D8'; tierNickname = isFemale ? 'Η Μυθική'           : 'Ο Μυθικός'; }
-  const fdcLabel = fdcHours < 20 ? 'Ακόμα Νωπό'
-    : fdcHours < 80   ? 'Σε Διαμόρφωση'
-    : fdcHours < 200  ? 'Δουλεμένο'
-    : fdcHours < 500  ? 'Γαλλικής Κοπής'
-    : fdcHours < 750  ? 'Ατσάλινο'
-    : fdcHours < 1000 ? 'Σφυρήλατο'
-    : 'Αδιαπέραστο';
+  if (b300r > maxBucket) { maxBucket = b300r; tier = 'CRUISER';    tierColor = '#66BB6A'; tierNickname = isFemale ? t('tierNicknameCruiserF') : t('tierNicknameCruiserM'); }
+  if (b400r > maxBucket) { maxBucket = b400r; tier = 'NIGHTRIDER'; tierColor = '#7986CB'; tierNickname = isFemale ? t('tierNicknameNightriderF') : t('tierNicknameNightriderM'); }
+  if (b6r   > maxBucket) { maxBucket = b6r;   tier = 'HARDCORE';   tierColor = '#FF7043'; tierNickname = isFemale ? t('tierNicknameHardcoreF') : t('tierNicknameHardcoreM'); }
+  if (b10r  > maxBucket) {                     tier = 'LEGENDARY';  tierColor = '#CE93D8'; tierNickname = isFemale ? t('tierNicknameLegendaryF') : t('tierNicknameLegendaryM'); }
+  const fdcLabel = fdcHours < 20 ? tfdc('fdcAkomaNowo')
+    : fdcHours < 80   ? tfdc('fdcSeDiamorfosi')
+    : fdcHours < 200  ? tfdc('fdcDoulemeno')
+    : fdcHours < 500  ? tfdc('fdcGallikisKopis')
+    : fdcHours < 750  ? tfdc('fdcAtsalino')
+    : fdcHours < 1000 ? tfdc('fdcSfyrilato')
+    : tfdc('fdcAdiaperato');
 
   return (
     <div className="min-h-screen bg-[#0A1628] px-6 py-12">
@@ -625,7 +625,7 @@ export default function ProfilePage() {
       {member.firstName} {member.lastName}
     </h1>
     {member.fatherNameEl && (
-      <p className="text-white/40 text-sm mt-1">του {member.fatherNameEl}</p>
+      <p className="text-white/40 text-sm mt-1">{t('patronymicPrefix', { name: member.fatherNameEl })}</p>
     )}
 
     {/* Rider Tier + Fond de Culotte */}
@@ -664,7 +664,7 @@ export default function ProfilePage() {
           ? 'bg-green-500/10 border-green-500/30 text-green-400'
           : 'bg-red-500/10 border-red-500/30 text-red-400'
       }`}>
-        {member.isInsured ? '🛡️ Ασφαλισμένος' : '⚠️ Ανασφάλιστος'}
+        {member.isInsured ? t('insuredBadge') : t('uninsuredBadge')}
       </span>
       {/* Privacy toggle — only show on own profile */}
 <button
@@ -689,7 +689,7 @@ export default function ProfilePage() {
       : 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
   }`}
 >
-  {member.profileType === 'public' ? '🌍 Δημόσιο' : '🔒 Ιδιωτικό'}
+  {member.profileType === 'public' ? t('publicBadge') : t('privateBadge')}
 </button>
     </div>
   </div>

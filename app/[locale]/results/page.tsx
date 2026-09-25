@@ -4,6 +4,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
@@ -17,6 +18,8 @@ import {
 } from 'recharts';
 
 // ── Types ─────────────────────────────────────────────────────────
+type TFunc = ReturnType<typeof useTranslations>;
+
 interface RawEvent { d: number; t: string; as: number; acp: string; har: string; og: string; eid: string; }
 
 interface YearStats { year: number; completions: number; km: number; ascent: number; activeRiders: number; srEarners: number; }
@@ -48,18 +51,32 @@ const C = { cyan: '#06b6d4', blue: '#3b82f6', purple: '#a855f7', amber: '#f59e0b
 const PIE_PAL = [C.cyan, C.blue, C.purple, C.amber, C.green, C.rose];
 
 const CHARTS = [
-  { id: 'participations', icon: '🚴', label: 'Συμμετοχές\nανά έτος',  color: C.cyan,   title: 'Ολοκληρώσεις brevet ανά έτος' },
-  { id: 'km',             icon: '🗺️', label: 'Χιλιόμετρα\nανά έτος', color: C.blue,   title: 'Συνολικά χλμ. κοινότητας ανά έτος' },
-  { id: 'ascent',         icon: '⛰️', label: 'Υψομετρικά\nανά έτος', color: C.purple, title: 'Σύνολο ανόδου ανά έτος' },
-  { id: 'riders',         icon: '👥', label: 'Ενεργοί\nαναβάτες',     color: C.green,  title: 'Μοναδικοί αναβάτες ανά έτος' },
-  { id: 'distances',      icon: '📏', label: 'Κατανομή\nαποστάσεων',  color: C.amber,  title: 'Ολοκληρώσεις ανά κατηγορία απόστασης' },
-  { id: 'cert',           icon: '🏅', label: 'ACP vs HAR',            color: C.orange, title: 'Κατανομή πιστοποιήσεων' },
-  { id: 'types',          icon: '🏷️', label: 'Τύποι\nbrevet',        color: C.indigo, title: 'BRM / LRM / FLC / PBP' },
-  { id: 'organizers',     icon: '🏛️', label: 'Ανά\nσύλλογο',         color: C.amber,  title: 'Ολοκληρώσεις ανά διοργανωτή' },
-  { id: 'sr',             icon: '⭐', label: 'Super\nRandonneurs',    color: C.rose,   title: 'SR τίτλοι ανά έτος' },
+  { id: 'participations', icon: '🚴', color: C.cyan },
+  { id: 'km',             icon: '🗺️', color: C.blue },
+  { id: 'ascent',         icon: '⛰️', color: C.purple },
+  { id: 'riders',         icon: '👥', color: C.green },
+  { id: 'distances',      icon: '📏', color: C.amber },
+  { id: 'cert',           icon: '🏅', color: C.orange },
+  { id: 'types',          icon: '🏷️', color: C.indigo },
+  { id: 'organizers',     icon: '🏛️', color: C.amber },
+  { id: 'sr',             icon: '⭐', color: C.rose },
 ] as const;
 
 type ChartId = typeof CHARTS[number]['id'];
+
+function chartInfo(id: ChartId, t: TFunc): { label: string; title: string } {
+  switch (id) {
+    case 'participations': return { label: t('chartParticipationsLabel'), title: t('chartParticipationsTitle') };
+    case 'km':             return { label: t('chartKmLabel'),             title: t('chartKmTitle') };
+    case 'ascent':          return { label: t('chartAscentLabel'),         title: t('chartAscentTitle') };
+    case 'riders':          return { label: t('chartRidersLabel'),         title: t('chartRidersTitle') };
+    case 'distances':       return { label: t('chartDistancesLabel'),      title: t('chartDistancesTitle') };
+    case 'cert':            return { label: t('chartCertLabel'),           title: t('chartCertTitle') };
+    case 'types':           return { label: t('chartTypesLabel'),          title: t('chartTypesTitle') };
+    case 'organizers':      return { label: t('chartOrganizersLabel'),     title: t('chartOrganizersTitle') };
+    case 'sr':              return { label: t('chartSrLabel'),             title: t('chartSrTitle') };
+  }
+}
 
 // ── Recharts helpers ──────────────────────────────────────────────
 const axisStyle = { fill: 'rgba(255,255,255,0.28)', fontSize: 11 };
@@ -72,7 +89,7 @@ function fmtLarge(v: number) {
 }
 
 // ── computeStats ──────────────────────────────────────────────────
-function computeStats(docs: any[]): CommunityStats {
+function computeStats(docs: any[], t: TFunc): CommunityStats {
   const yearMemberMap = new Map<number, Map<string, RawEvent[]>>();
   const distMap  = new Map<number, number>();
   const typeMap  = new Map<string, number>();
@@ -118,7 +135,7 @@ function computeStats(docs: any[]): CommunityStats {
       for (const evt of events) {
         const d = Number(evt.d) || 0;
         const type = evt.t || 'BRM';
-        const org = (evt.og || 'Άλλος').slice(0, 22);
+        const org = (evt.og || t('otherOrganizer')).slice(0, 22);
         const hasA = !!(evt.acp && evt.acp !== '');
         const hasH = !!(evt.har && evt.har !== '' && evt.har !== 'AUR0');
 
@@ -242,12 +259,12 @@ function DarkTooltip({ active, payload, label, fmt }: { active?: boolean; payloa
   );
 }
 
-// Μειωμένα HeroStat για καλύτερο χώρο
-function HeroStat({ target, label, suffix = '', color, enabled }: { target: number; label: string; suffix?: string; color: string; enabled: boolean; }) {
+// Reduced HeroStat for tighter layout
+function HeroStat({ target, label, suffix = '', color, enabled, dateLocale }: { target: number; label: string; suffix?: string; color: string; enabled: boolean; dateLocale: string; }) {
   const v = useCountUp(target, 1800, enabled);
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col gap-1">
-      <div className="text-xl sm:text-2xl font-bold tabular-nums" style={{ color }}>{v.toLocaleString('el-GR')}{suffix}</div>
+      <div className="text-xl sm:text-2xl font-bold tabular-nums" style={{ color }}>{v.toLocaleString(dateLocale)}{suffix}</div>
       <div className="text-white/45 text-[10px] sm:text-xs leading-snug">{label}</div>
     </div>
   );
@@ -276,8 +293,8 @@ function ChartBtn({ icon, label, color, active, onClick }: { icon: string; label
 }
 
 // ── Chart renderer ────────────────────────────────────────────────
-function renderChart(id: ChartId, stats: CommunityStats, openDD: (dd: DrillDown) => void) {
-  const tt = (fmt?: (v: number) => string) => (props: any) => <DarkTooltip {...props} fmt={fmt} />;
+function renderChart(id: ChartId, stats: CommunityStats, openDD: (dd: DrillDown) => void, t: TFunc, dateLocale: string) {
+  const tt = (fmt?: (v: number) => string) => (props: any) => <DarkTooltip {...props} fmt={fmt ?? (v => v.toLocaleString(dateLocale))} />;
   const leg = (v: string) => <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>{v}</span>;
 
   switch (id) {
@@ -289,7 +306,7 @@ function renderChart(id: ChartId, stats: CommunityStats, openDD: (dd: DrillDown)
             <XAxis dataKey="year" tick={axisStyle} axisLine={false} tickLine={false} />
             <YAxis tick={axisStyle} axisLine={false} tickLine={false} />
             <Tooltip content={tt()} />
-            <Bar dataKey="completions" name="Ολοκληρώσεις" fill={C.cyan} radius={[4,4,0,0]}
+            <Bar dataKey="completions" name={t('seriesCompletions')} fill={C.cyan} radius={[4,4,0,0]}
               style={{ cursor: 'pointer' }}
               onClick={(d: any) => openDD({ type: 'year', year: d.year })} />
           </BarChart>
@@ -311,8 +328,8 @@ function renderChart(id: ChartId, stats: CommunityStats, openDD: (dd: DrillDown)
             <CartesianGrid {...gridStyle} vertical={false} />
             <XAxis dataKey="year" tick={axisStyle} axisLine={false} tickLine={false} />
             <YAxis tick={axisStyle} axisLine={false} tickLine={false} tickFormatter={fmtLarge} />
-            <Tooltip content={tt(v => `${v.toLocaleString('el-GR')} km`)} />
-            <Area type="monotone" dataKey="km" name="Χιλιόμετρα" stroke={C.blue} strokeWidth={2.5} fill="url(#gKm)"
+            <Tooltip content={tt(v => `${v.toLocaleString(dateLocale)} km`)} />
+            <Area type="monotone" dataKey="km" name={t('seriesKm')} stroke={C.blue} strokeWidth={2.5} fill="url(#gKm)"
               dot={{ fill: C.blue, r: 4, strokeWidth: 0, cursor: 'pointer' }}
               activeDot={{ r: 7, fill: C.blue }} />
           </AreaChart>
@@ -326,8 +343,8 @@ function renderChart(id: ChartId, stats: CommunityStats, openDD: (dd: DrillDown)
             <CartesianGrid {...gridStyle} vertical={false} />
             <XAxis dataKey="year" tick={axisStyle} axisLine={false} tickLine={false} />
             <YAxis tick={axisStyle} axisLine={false} tickLine={false} tickFormatter={fmtLarge} />
-            <Tooltip content={tt(v => `${v.toLocaleString('el-GR')} m`)} />
-            <Bar dataKey="ascent" name="Υψομετρικά (m)" fill={C.purple} radius={[4,4,0,0]}
+            <Tooltip content={tt(v => `${v.toLocaleString(dateLocale)} m`)} />
+            <Bar dataKey="ascent" name={t('seriesAscent')} fill={C.purple} radius={[4,4,0,0]}
               style={{ cursor: 'pointer' }}
               onClick={(d: any) => openDD({ type: 'year', year: d.year })} />
           </BarChart>
@@ -344,7 +361,7 @@ function renderChart(id: ChartId, stats: CommunityStats, openDD: (dd: DrillDown)
             <XAxis dataKey="year" tick={axisStyle} axisLine={false} tickLine={false} />
             <YAxis tick={axisStyle} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip content={tt()} />
-            <Line type="monotone" dataKey="activeRiders" name="Αναβάτες" stroke={C.green} strokeWidth={3}
+            <Line type="monotone" dataKey="activeRiders" name={t('seriesRiders')} stroke={C.green} strokeWidth={3}
               dot={{ fill: C.green, r: 4, strokeWidth: 0, cursor: 'pointer' }}
               activeDot={{ r: 7, fill: C.green }} />
           </LineChart>
@@ -404,7 +421,7 @@ function renderChart(id: ChartId, stats: CommunityStats, openDD: (dd: DrillDown)
             <XAxis type="number" tick={axisStyle} axisLine={false} tickLine={false} />
             <YAxis type="category" dataKey="name" width={115} tick={{ ...axisStyle, textAnchor: 'end' }} axisLine={false} tickLine={false} />
             <Tooltip content={tt()} />
-            <Bar dataKey="value" name="Συμμετοχές" fill={C.amber} radius={[0,4,4,0]}
+            <Bar dataKey="value" name={t('seriesOrganizerCompletions')} fill={C.amber} radius={[0,4,4,0]}
               style={{ cursor: 'pointer' }}
               onClick={(d: any) => openDD({ type: 'organizer', org: d.name })} />
           </BarChart>
@@ -419,7 +436,7 @@ function renderChart(id: ChartId, stats: CommunityStats, openDD: (dd: DrillDown)
             <XAxis dataKey="year" tick={axisStyle} axisLine={false} tickLine={false} />
             <YAxis tick={axisStyle} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip content={tt()} />
-            <Bar dataKey="srEarners" name="Super Randonneurs" fill={C.rose} radius={[4,4,0,0]}
+            <Bar dataKey="srEarners" name={t('seriesSr')} fill={C.rose} radius={[4,4,0,0]}
               style={{ cursor: 'pointer' }}
               onClick={(d: any) => openDD({ type: 'year', year: d.year })} />
           </BarChart>
@@ -429,20 +446,20 @@ function renderChart(id: ChartId, stats: CommunityStats, openDD: (dd: DrillDown)
 }
 
 // ── Drill-down helpers ────────────────────────────────────────────
-function getDDTitle(dd: DrillDown): string {
+function getDDTitle(dd: DrillDown, t: TFunc): string {
   switch (dd.type) {
-    case 'year':       return `Ανάλυση έτους ${dd.year}`;
-    case 'distance':   return `Τάση ${dd.dist} ανά έτος`;
-    case 'cert':       return `Πιστοποιήσεις ${dd.cert} ανά έτος`;
-    case 'btype':      return `Τύπος "${dd.btype}" ανά έτος`;
-    case 'organizer':  return `${dd.org} — ιστορικό συμμετοχών`;
+    case 'year':       return t('ddYearTitle', { year: dd.year });
+    case 'distance':   return t('ddDistanceTitle', { dist: dd.dist });
+    case 'cert':       return t('ddCertTitle', { cert: dd.cert });
+    case 'btype':      return t('ddBtypeTitle', { btype: dd.btype });
+    case 'organizer':  return t('ddOrganizerTitle', { org: dd.org });
   }
 }
 
-function renderDrillChart(dd: DrillDown, stats: CommunityStats) {
-  const tt = (fmt?: (v: number) => string) => (props: any) => <DarkTooltip {...props} fmt={fmt} />;
+function renderDrillChart(dd: DrillDown, stats: CommunityStats, t: TFunc, dateLocale: string) {
+  const tt = (fmt?: (v: number) => string) => (props: any) => <DarkTooltip {...props} fmt={fmt ?? (v => v.toLocaleString(dateLocale))} />;
   const leg = (v: string) => <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>{v}</span>;
-  const noData = <p className="text-white/30 text-sm text-center py-8">Δεν υπάρχουν δεδομένα</p>;
+  const noData = <p className="text-white/30 text-sm text-center py-8">{t('noData')}</p>;
 
   switch (dd.type) {
     case 'year': {
@@ -453,16 +470,16 @@ function renderDrillChart(dd: DrillDown, stats: CommunityStats) {
         <div>
           {yearData && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              <MiniStat label="Ολοκληρώσεις" value={yearData.completions.toLocaleString('el-GR')} color={C.cyan} />
-              <MiniStat label="Χιλιόμετρα"   value={`${yearData.km.toLocaleString('el-GR')} km`}   color={C.blue} />
-              <MiniStat label="Αναβάτες"      value={yearData.activeRiders.toString()}               color={C.green} />
-              <MiniStat label="SR τίτλοι"     value={yearData.srEarners.toString()}                  color={C.rose} />
+              <MiniStat label={t('seriesCompletions')} value={yearData.completions.toLocaleString(dateLocale)} color={C.cyan} />
+              <MiniStat label={t('seriesKm')}          value={`${yearData.km.toLocaleString(dateLocale)} km`}   color={C.blue} />
+              <MiniStat label={t('seriesRiders')}      value={yearData.activeRiders.toString()}               color={C.green} />
+              <MiniStat label={t('ddSrTitles')}        value={yearData.srEarners.toString()}                  color={C.rose} />
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {detail.byDistance.length > 0 && (
               <div>
-                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-3">Κατανομή αποστάσεων</p>
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-3">{t('ddDistanceDistribution')}</p>
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
                     <Pie data={detail.byDistance} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value" nameKey="name">
@@ -476,13 +493,13 @@ function renderDrillChart(dd: DrillDown, stats: CommunityStats) {
             )}
             {detail.byOrganizer.length > 0 && (
               <div>
-                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-3">Ανά σύλλογο</p>
+                <p className="text-white/35 text-[10px] uppercase tracking-wider mb-3">{t('ddByOrganizer')}</p>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={detail.byOrganizer} layout="vertical" margin={{ top: 0, right: 10, left: 8, bottom: 0 }}>
                     <XAxis type="number" tick={{ ...axisStyle, fontSize: 10 }} axisLine={false} tickLine={false} />
                     <YAxis type="category" dataKey="name" width={100} tick={{ ...axisStyle, fontSize: 10 }} axisLine={false} tickLine={false} />
                     <Tooltip content={tt()} />
-                    <Bar dataKey="value" name="Συμμετοχές" fill={C.cyan} radius={[0,3,3,0]} />
+                    <Bar dataKey="value" name={t('seriesOrganizerCompletions')} fill={C.cyan} radius={[0,3,3,0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -502,7 +519,7 @@ function renderDrillChart(dd: DrillDown, stats: CommunityStats) {
             <XAxis dataKey="year" tick={axisStyle} axisLine={false} tickLine={false} />
             <YAxis tick={axisStyle} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip content={tt()} />
-            <Bar dataKey="value" name={`${dd.dist} ολοκληρώσεις`} fill={C.amber} radius={[4,4,0,0]} />
+            <Bar dataKey="value" name={t('ddDistanceCompletions', { dist: dd.dist })} fill={C.amber} radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       );
@@ -558,7 +575,7 @@ function renderDrillChart(dd: DrillDown, stats: CommunityStats) {
             <XAxis dataKey="year" tick={axisStyle} axisLine={false} tickLine={false} />
             <YAxis tick={axisStyle} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip content={tt()} />
-            <Area type="monotone" dataKey="value" name="Συμμετοχές" stroke={C.amber} strokeWidth={2.5} fill="url(#gOrg)" />
+            <Area type="monotone" dataKey="value" name={t('seriesOrganizerCompletions')} stroke={C.amber} strokeWidth={2.5} fill="url(#gOrg)" />
           </AreaChart>
         </ResponsiveContainer>
       );
@@ -571,6 +588,9 @@ export default function StatisticsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const enabled = usePageEnabled('results');
+  const t = useTranslations('results');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
 
   const [stats, setStats]             = useState<CommunityStats | null>(null);
   const [clubNameToId, setClubNameToId] = useState<Record<string, string>>({});
@@ -605,7 +625,7 @@ export default function StatisticsPage() {
         });
       });
       setClubNameToId(nameMap);
-      setStats(computeStats(docs));
+      setStats(computeStats(docs, t));
       setLoading(false);
       setTimeout(() => setReady(true), 80);
     }).catch(e => { console.error(e); setLoading(false); });
@@ -641,10 +661,11 @@ export default function StatisticsPage() {
     </div>
   );
   if (!session) return null;
-  if (enabled === false) return <ComingSoon label="Στατιστικά" />;
+  if (enabled === false) return <ComingSoon label={t('comingSoonLabel')} />;
 
   const at = stats?.allTime;
   const meta = CHARTS.find(c => c.id === activeChart)!;
+  const metaInfo = chartInfo(activeChart, t);
 
   return (
     <div className="min-h-screen bg-[#0A1628] px-4 py-10">
@@ -657,8 +678,8 @@ export default function StatisticsPage() {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Στατιστικά Κοινότητας</h1>
-          <p className="text-white/40 text-sm">Συγκεντρωτικά δεδομένα από δημόσια προφίλ αναβατών</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">{t('pageHeading')}</h1>
+          <p className="text-white/40 text-sm">{t('pageSubhead')}</p>
         </div>
 
         {/* Hero numbers */}
@@ -668,19 +689,19 @@ export default function StatisticsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-8">
-            <HeroStat target={at.uniqueRiders}                    label="Αναβάτες"                 color={C.cyan}   enabled={ready} />
-            <HeroStat target={at.totalCompletions}                label="Ολοκληρώσεις"              color={C.blue}   enabled={ready} />
-            <HeroStat target={at.totalKm}                         label="Χιλιόμετρα κοινότητας" suffix=" km" color={C.purple} enabled={ready} />
-            <HeroStat target={Math.round(at.totalAscent / 1000)} label="Χλμ. ανόδου"           suffix=" km" color={C.green}  enabled={ready} />
+            <HeroStat target={at.uniqueRiders}                    label={t('heroRiders')}       color={C.cyan}   enabled={ready} dateLocale={dateLocale} />
+            <HeroStat target={at.totalCompletions}                label={t('heroCompletions')}  color={C.blue}   enabled={ready} dateLocale={dateLocale} />
+            <HeroStat target={at.totalKm}                         label={t('heroKm')}       suffix=" km" color={C.purple} enabled={ready} dateLocale={dateLocale} />
+            <HeroStat target={Math.round(at.totalAscent / 1000)} label={t('heroAscentKm')} suffix=" km" color={C.green}  enabled={ready} dateLocale={dateLocale} />
           </div>
         )}
 
         {/* Chart buttons */}
         <div className="mb-5">
-          <p className="text-white/30 text-[11px] uppercase tracking-widest mb-3">Αναλυτικά</p>
+          <p className="text-white/30 text-[11px] uppercase tracking-widest mb-3">{t('analyticsLabel')}</p>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2">
             {CHARTS.map(c => (
-              <ChartBtn key={c.id} icon={c.icon} label={c.label} color={c.color}
+              <ChartBtn key={c.id} icon={c.icon} label={chartInfo(c.id, t).label} color={c.color}
                 active={activeChart === c.id} onClick={() => switchChart(c.id)} />
             ))}
           </div>
@@ -692,18 +713,18 @@ export default function StatisticsPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center h-64 gap-4">
               <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-white/30 text-sm">Ανάλυση δεδομένων...</p>
+              <p className="text-white/30 text-sm">{t('analyzingData')}</p>
             </div>
           ) : stats ? (
             <>
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2.5">
                   <span className="text-xl">{meta.icon}</span>
-                  <span className="text-white font-semibold text-sm sm:text-base">{meta.title}</span>
+                  <span className="text-white font-semibold text-sm sm:text-base">{metaInfo.title}</span>
                 </div>
-                <span className="text-white/20 text-[10px] hidden sm:block">Κλίκ σε στοιχείο για ανάλυση ↓</span>
+                <span className="text-white/20 text-[10px] hidden sm:block">{t('clickToAnalyze')}</span>
               </div>
-              {renderChart(activeChart, stats, openDD)}
+              {renderChart(activeChart, stats, openDD, t, dateLocale)}
             </>
           ) : null}
         </div>
@@ -737,13 +758,13 @@ export default function StatisticsPage() {
                   ${orgLogoId ? 'pt-14 pb-4' : 'py-4'}`}>
                   <button onClick={closeDD}
                     className="flex items-center gap-1.5 text-white/40 hover:text-white text-sm transition-colors shrink-0">
-                    ← Πίσω
+                    ← {t('back')}
                   </button>
                   <span className="text-white/15 shrink-0">|</span>
-                  <span className="text-white/75 text-sm font-semibold truncate">{getDDTitle(dd)}</span>
+                  <span className="text-white/75 text-sm font-semibold truncate">{getDDTitle(dd, t)}</span>
                 </div>
                 <div className="p-5 sm:p-6 bg-[#0A1628]">
-                  {stats && renderDrillChart(dd, stats)}
+                  {stats && renderDrillChart(dd, stats, t, dateLocale)}
                 </div>
               </div>
             </div>

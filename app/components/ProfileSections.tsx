@@ -17,6 +17,7 @@
 // All images from /public/logos/ — same filenames as the Flutter app assets.
 
 import { useRef, useState, useEffect } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 
 // ── Types (mirror what parseMember already produces) ──────────────────────────
 interface BrevetEvent {
@@ -35,12 +36,12 @@ interface MemberProfile {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function img(name: string) { return `/logos/${name}`; }
 
-function formatDate(dt: string): string {
+function formatDate(dt: string, dateLocale: string = 'el-GR'): string {
   if (!dt || dt === 'null') return '';
   try {
     const d = new Date(dt);
     if (!isNaN(d.getTime()))
-      return d.toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      return d.toLocaleDateString(dateLocale, { day: '2-digit', month: '2-digit', year: 'numeric' });
   } catch {}
   const parts = dt.split(' ');
   if (parts.length >= 4) {
@@ -309,6 +310,7 @@ function VDivider() {
 // 1. ΟΡΌΣΗΜΑ ΔΙΑΔΡΟΜΏΝ
 // ══════════════════════════════════════════════════════════════════════════════
 export function OrosimaDiadomon({ member }: { member: MemberProfile }) {
+  const t = useTranslations('profileSections');
   const total = totalBrevetsAllYears(member.history);
 
   // Anniversary completions (BRM 100 years — rode that distance in 2021)
@@ -319,7 +321,7 @@ export function OrosimaDiadomon({ member }: { member: MemberProfile }) {
   const hasAnyAnniversary = ann200 || ann300 || ann400 || ann600;
 
   return (
-    <SectionCard title="Ορόσημα Διαδρομών" icon="🏁" headerColor="rgba(205,127,50,0.85)">
+    <SectionCard title={t('orosimaTitle')} icon="🏁" headerColor="rgba(205,127,50,0.85)">
       <ScrollRail>
         {/* Anniversary medals */}
         {hasAnyAnniversary && (
@@ -346,16 +348,22 @@ export function OrosimaDiadomon({ member }: { member: MemberProfile }) {
 // 2. ΤΑΞΊΔΙ ΠΊΣΩ ΣΤΟ ΧΡΌΝΟ — milestone timeline
 // ══════════════════════════════════════════════════════════════════════════════
 
-function milestoneLabel(key: string): string {
-  const map: Record<string,string> = {
-    first_ever: '1ο Brevet',
-    first_acp: '1ο ACP Brevet', first_har: '1ο H.A.R. Brevet',
-    '200': '1ο 200άρι', '300': '1ο 300άρι',
-    '400': '1ο 400άρι', '600': '1ο 600άρι',
-    '1000': '1ο 1000άρι', '1200': '1ο 1200άρι',
-    PBP: '1ο PBP', LRM: '1ο LRM', FLECHE: '1ο Flèche',
-  };
-  return map[key] ?? `Ορόσημο ${key}`;
+function milestoneLabel(key: string, t: ReturnType<typeof useTranslations>): string {
+  switch (key) {
+    case 'first_ever': return t('msFirstEver');
+    case 'first_acp':  return t('msFirstAcp');
+    case 'first_har':  return t('msFirstHar');
+    case '200':  return t('ms200');
+    case '300':  return t('ms300');
+    case '400':  return t('ms400');
+    case '600':  return t('ms600');
+    case '1000': return t('ms1000');
+    case '1200': return t('ms1200');
+    case 'PBP':    return t('msPbp');
+    case 'LRM':    return t('msLrm');
+    case 'FLECHE': return t('msFleche');
+    default: return t('msFallback', { key });
+  }
 }
 
 function milestoneColor(key: string): string {
@@ -378,6 +386,9 @@ function milestoneEmoji(key: string): string {
 }
 
 export function TaksidiXrono({ member, activeClub = 'ALL' }: { member: MemberProfile; activeClub?: 'ALL' | 'ACP' | 'HAR' }) {
+  const t = useTranslations('profileSections');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const milestones = calcMilestones(member.history, activeClub);
   const entries = Object.entries(milestones).sort((a, b) => {
     // Most recent first (reversed, "journey back in time")
@@ -387,12 +398,12 @@ export function TaksidiXrono({ member, activeClub = 'ALL' }: { member: MemberPro
   if (!entries.length) return null;
 
   return (
-    <SectionCard title="◄ Ταξίδι πίσω στο Χρόνο" icon="🕰️" headerColor="rgba(74,20,140,0.9)">
+    <SectionCard title={t('taxidiTitle')} icon="🕰️" headerColor="rgba(74,20,140,0.9)">
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {entries.map(([key, event], i) => {
           const color  = milestoneColor(key);
           const emoji  = milestoneEmoji(key);
-          const label  = milestoneLabel(key);
+          const label  = milestoneLabel(key, t);
           const year   = getYear(event.dt) || '----';
           const isLast = i === entries.length - 1;
 
@@ -452,9 +463,9 @@ export function TaksidiXrono({ member, activeClub = 'ALL' }: { member: MemberPro
                   }}>
                     {event.d}km
                   </span>
-                  {formatDate(event.dt) && (
+                  {formatDate(event.dt, dateLocale) && (
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontFamily: 'Courier New' }}>
-                      {formatDate(event.dt)}
+                      {formatDate(event.dt, dateLocale)}
                     </span>
                   )}
                 </div>
@@ -476,12 +487,15 @@ export function TaksidiXrono({ member, activeClub = 'ALL' }: { member: MemberPro
 //   sreCount: parseInt(stats.sre ?? '0') || 0,
 // ══════════════════════════════════════════════════════════════════════════════
 export function Epiteugmata({ member }: { member: MemberProfile }) {
+  const t = useTranslations('profileSections');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const sr = srCount(member.history);
 
   // Each badge: always rendered (like Flutter StatBadge which shows 0 too),
   // but dimmed when count is 0 so the rider can see what's possible.
   const badges = [
-    { src: img('max_km_medal1.png'), label: '═╡►km◄╞═', value: member.maxDist.toLocaleString('el-GR'), unit: 'km',  color: '#06b6d4' },
+    { src: img('max_km_medal1.png'), label: '═╡►km◄╞═', value: member.maxDist.toLocaleString(dateLocale), unit: 'km',  color: '#06b6d4' },
     { src: img('pbp_medal.png'),     label: 'PBP',        value: String(member.pbpCount),                unit: '×',   color: '#fbbf24' },
     { src: img('lrm_medal.png'),     label: 'LRM',        value: String(member.lrmCount),                unit: '×',   color: '#c084fc' },
     { src: img('fleche_medal.png'),  label: 'Flèche',     value: String(member.flcCount),                unit: '×',   color: '#fb923c' },
@@ -509,7 +523,7 @@ export function Epiteugmata({ member }: { member: MemberProfile }) {
   if (!visible.length) return null;
 
   return (
-    <SectionCard title="Τα επιτεύγματά μου" icon="🎖️" headerColor="rgba(180,130,0,0.9)">
+    <SectionCard title={t('epiteugmataTitle')} icon="🎖️" headerColor="rgba(180,130,0,0.9)">
       <ScrollRail>
         {visible.map((b, i) => (
           <div key={i} style={{
@@ -548,6 +562,9 @@ export function Epiteugmata({ member }: { member: MemberProfile }) {
 // IMPORTANT: always uses ALL history — never filtered by club (Flutter does the same).
 // ══════════════════════════════════════════════════════════════════════════════
 export function FondDeCulotteCard({ member }: { member: MemberProfile }) {
+  const t = useTranslations('profileSections');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   // Compute from ALL history (not club-filtered)
   let fdcHours = 0, fdcKm = 0, fdcElevation = 0;
   Object.values(member.history).forEach(y => y.events.forEach(e => {
@@ -565,25 +582,25 @@ export function FondDeCulotteCard({ member }: { member: MemberProfile }) {
   }));
 
   // Level thresholds — mirrors Flutter _scene9 exactly
-  let emoji    = '🌱',  label = 'Ακόμα Νωπό',     desc = 'Μόλις ξεκινάς να το νιώθεις';
+  let emoji    = '🌱',  label = t('fdcAkomaNowo'),     desc = t('fdcDescAkomaNowo');
   let color    = '#4CAF50', progress = fdcHours / 20;
   if (fdcHours >= 1000) {
-    emoji = '💎'; label = 'Αδιαπέραστο';    desc = 'Θρυλική κατάσταση — κανείς δεν ρωτάει πια';
+    emoji = '💎'; label = t('fdcAdiaperato');    desc = t('fdcDescAdiaperato');
     color = '#FFD700'; progress = 1;
   } else if (fdcHours >= 750) {
-    emoji = '🔥'; label = 'Σφυρήλατο';      desc = 'Πλαστήκηκε από τα χιλιόμετρα — ο πόνος έγινε δύναμη';
+    emoji = '🔥'; label = t('fdcSfyrilato');      desc = t('fdcDescSfyrilato');
     color = '#FF6D00'; progress = (fdcHours - 750) / 250;
   } else if (fdcHours >= 500) {
-    emoji = '⚡'; label = 'Ατσάλινο';       desc = 'Εντυπωσιακό ακόμα και για παλιούς λύκους';
+    emoji = '⚡'; label = t('fdcAtsalino');       desc = t('fdcDescAtsalino');
     color = '#00BCD4'; progress = (fdcHours - 500) / 250;
   } else if (fdcHours >= 200) {
-    emoji = '🪨'; label = 'Γαλλικής Κοπής'; desc = 'Αναγνωρίσιμο fond de culotte — οι Γάλλοι θα σε σέβονταν';
+    emoji = '🪨'; label = t('fdcGallikisKopis'); desc = t('fdcDescGallikisKopis');
     color = '#9C27B0'; progress = (fdcHours - 200) / 300;
   } else if (fdcHours >= 80) {
-    emoji = '💪'; label = 'Δουλεμένο';      desc = 'Σοβαρές ώρες στη σέλα — το σώμα θυμάται';
+    emoji = '💪'; label = t('fdcDoulemeno');      desc = t('fdcDescDoulemeno');
     color = '#1976D2'; progress = (fdcHours - 80) / 120;
   } else if (fdcHours >= 20) {
-    emoji = '🔸'; label = 'Σε Διαμόρφωση';  desc = 'Το σώμα αρχίζει να καταλαβαίνει';
+    emoji = '🔸'; label = t('fdcSeDiamorfosi');  desc = t('fdcDescSeDiamorfosi');
     color = '#FF9800'; progress = (fdcHours - 20) / 60;
   }
   progress = Math.min(1, Math.max(0, progress));
@@ -658,7 +675,7 @@ export function FondDeCulotteCard({ member }: { member: MemberProfile }) {
               color, fontWeight: 800, fontSize: 15, lineHeight: 1,
               textShadow: `0 0 10px ${color}`,
             }}>{Math.round(fdcHours)}</span>
-            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, letterSpacing: 0.5 }}>ώρες</span>
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, letterSpacing: 0.5 }}>{t('fdcHoursUnit')}</span>
           </div>
         </div>
 
@@ -673,13 +690,14 @@ export function FondDeCulotteCard({ member }: { member: MemberProfile }) {
           </div>
           {fdcHours < 1000 ? (
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
-              Απομένουν{' '}
-              <span style={{ color, fontWeight: 700 }}>{remaining.toLocaleString('el-GR')}</span>
-              {' '}ώρες για 💎 Αδιαπέραστο
+              {t.rich('fdcRemaining', {
+                hours: remaining.toLocaleString(dateLocale),
+                b: (chunks) => <span style={{ color, fontWeight: 700 }}>{chunks}</span>,
+              })}
             </div>
           ) : (
             <div style={{ color: '#FFD700', fontSize: 13, fontWeight: 700 }}>
-              Το κορυφαίο επίπεδο! 🎉 Συγχαρητήρια!
+              {t('fdcTopLevelReached')}
             </div>
           )}
         </div>
@@ -689,23 +707,23 @@ export function FondDeCulotteCard({ member }: { member: MemberProfile }) {
       <div style={{ display: 'flex', gap: 10 }}>
         {statTile(
           '⏱️',
-          Math.round(fdcHours).toLocaleString('el-GR'),
-          'ώρες στη σέλα',
+          Math.round(fdcHours).toLocaleString(dateLocale),
+          t('fdcHoursInSaddle'),
           '',
           '#CE93D8',
         )}
         {statTile(
           '🌍',
-          Math.round(fdcKm).toLocaleString('el-GR'),
+          Math.round(fdcKm).toLocaleString(dateLocale),
           'km',
-          earthTimes >= 0.1 ? `${earthTimes.toFixed(1)}× ο γύρος της Γης 🌍` : '',
+          earthTimes >= 0.1 ? t('fdcEarthLaps', { times: earthTimes.toFixed(1) }) : '',
           '#80DEEA',
         )}
         {statTile(
           '⛰️',
-          Math.round(fdcElevation).toLocaleString('el-GR'),
-          'm υψομετρικά',
-          everestTimes >= 0.1 ? `${everestTimes.toFixed(1)}× το Έβερεστ 🏔` : '',
+          Math.round(fdcElevation).toLocaleString(dateLocale),
+          t('fdcElevationUnit'),
+          everestTimes >= 0.1 ? t('fdcEverestTimes', { times: everestTimes.toFixed(1) }) : '',
           '#80CBC4',
         )}
       </div>

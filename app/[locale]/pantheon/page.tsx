@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 import PageViews from '@/app/components/PageViews';
+import { useTranslations } from 'next-intl';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -167,13 +168,20 @@ function SrRow({ rank, entry }: { rank: number; entry: SrEntry }) {
 }
 
 const HAR_CATEGORIES = [
-  { id: 'km',      icon: '🚴', title: 'Χιλιομετροφάγος', unit: 'χλμ.' },
-  { id: 'ascent',  icon: '⛰️', title: 'Γητευτής των Βουνών', unit: 'm' },
-  { id: 'brevets', icon: '🧭', title: 'Ταξιδευτής', unit: 'brevets' },
+  { id: 'km',      icon: '🚴' },
+  { id: 'ascent',  icon: '⛰️' },
+  { id: 'brevets', icon: '🧭' },
 ] as const;
 
 function HarChallenge({ yearData, year }: { yearData: YearClubRankings; year: string }) {
+  const t = useTranslations('pantheon');
   const [open, setOpen] = useState<typeof HAR_CATEGORIES[number]['id'] | null>(null);
+
+  const catInfo = (id: typeof HAR_CATEGORIES[number]['id']) => {
+    if (id === 'km')     return { title: t('harCatKm'),     unit: t('harUnitKm') };
+    if (id === 'ascent') return { title: t('harCatAscent'), unit: t('harUnitAscent') };
+    return                      { title: t('harCatBrevets'), unit: t('harUnitBrevets') };
+  };
 
   const top3 = (id: typeof HAR_CATEGORIES[number]['id']) => {
     if (id === 'km')      return yearData.kmRanking.slice(0, 3).map(m => ({ name: m.name, value: `${fmt(Math.round(m.totalKm))}` }));
@@ -183,7 +191,7 @@ function HarChallenge({ yearData, year }: { yearData: YearClubRankings; year: st
 
   return (
     <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
-      <div className="text-amber-300 font-bold text-sm">🏆 H.A.R. Challenge {year}</div>
+      <div className="text-amber-300 font-bold text-sm">{t('harChallengeTitle', { year })}</div>
       <div className="flex gap-2">
         {HAR_CATEGORIES.map(c => (
           <button key={c.id} onClick={() => setOpen(open === c.id ? null : c.id)}
@@ -191,23 +199,24 @@ function HarChallenge({ yearData, year }: { yearData: YearClubRankings; year: st
               open === c.id ? 'border-amber-500/60 bg-amber-500/15' : 'border-white/10 bg-white/5 hover:border-white/20'
             }`}>
             <div className="text-lg">{c.icon}</div>
-            <div className="text-white/60 text-[10px] mt-0.5 leading-tight">{c.title}</div>
+            <div className="text-white/60 text-[10px] mt-0.5 leading-tight">{catInfo(c.id).title}</div>
           </button>
         ))}
       </div>
       {open && (() => {
         const cat = HAR_CATEGORIES.find(c => c.id === open)!;
+        const info = catInfo(open);
         const list = top3(open);
         return (
           <div className="rounded-xl bg-black/20 p-3 space-y-2">
-            <div className="text-white/50 text-xs font-bold">{cat.icon} {cat.title}</div>
+            <div className="text-white/50 text-xs font-bold">{cat.icon} {info.title}</div>
             {list.length === 0
-              ? <div className="text-white/30 text-xs py-2 text-center">Δεν υπάρχουν δεδομένα</div>
+              ? <div className="text-white/30 text-xs py-2 text-center">{t('noDataAvailable')}</div>
               : list.map((m, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm">
                   <span className="w-5">{medalFor(i + 1)}</span>
                   <span className="flex-1 text-white/80 truncate">{m.name}</span>
-                  <span className="text-amber-300 font-bold">{m.value} {cat.unit}</span>
+                  <span className="text-amber-300 font-bold">{m.value} {info.unit}</span>
                 </div>
               ))}
           </div>
@@ -221,6 +230,7 @@ function HarChallenge({ yearData, year }: { yearData: YearClubRankings; year: st
 
 export default function PantheonPage() {
   const enabled = usePageEnabled('pantheon');
+  const t = useTranslations('pantheon');
   const [data, setData]       = useState<PantheonData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
@@ -236,7 +246,7 @@ export default function PantheonPage() {
     fetch('/api/pantheon')
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
-      .catch(() => { setError('Σφάλμα φόρτωσης.'); setLoading(false); });
+      .catch(() => { setError(t('loadError')); setLoading(false); });
   }, []);
 
   useEffect(() => {
@@ -289,14 +299,14 @@ export default function PantheonPage() {
     return list.filter(m => !q || m.name.toLowerCase().includes(q));
   }, [data, search, milThreshold]);
 
-  if (enabled === false) return <ComingSoon label="Πάνθεον" />;
+  if (enabled === false) return <ComingSoon label={t('comingSoonLabel')} />;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
         <div className="text-center">
           <div className="w-10 h-10 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <div className="text-white/40 text-sm">Φόρτωση Πάνθεον...</div>
+          <div className="text-white/40 text-sm">{t('loadingPantheon')}</div>
         </div>
       </div>
     );
@@ -305,7 +315,7 @@ export default function PantheonPage() {
   if (error || !data) {
     return (
       <div className="min-h-screen bg-[#0A1628] flex items-center justify-center">
-        <div className="text-white/50 text-sm">{error || 'Δεν βρέθηκαν δεδομένα.'}</div>
+        <div className="text-white/50 text-sm">{error || t('noDataFound')}</div>
       </div>
     );
   }
@@ -314,15 +324,15 @@ export default function PantheonPage() {
     <main className="min-h-screen bg-[#0A1628] pb-16">
       {/* Header */}
       <div className="px-4 pt-8 pb-5 max-w-3xl mx-auto">
-        <h1 className="text-white font-bold text-2xl">Πάνθεον</h1>
-        <p className="text-white/40 text-sm mt-1">Ολοκληρώσεις, αρχεία &amp; κατατάξεις</p>
+        <h1 className="text-white font-bold text-2xl">{t('heading')}</h1>
+        <p className="text-white/40 text-sm mt-1">{t('subheading')}</p>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 space-y-4">
 
         {/* Summary chips */}
         <div className="flex gap-2">
-          <SummaryChip icon="🚴" value={fmt(data.totalRiders)} label="αναβάτες"  color="#06b6d4" />
+          <SummaryChip icon="🚴" value={fmt(data.totalRiders)} label={t('statRiders')}  color="#06b6d4" />
           <SummaryChip icon="🗺️" value={`${fmt(Math.round(data.totalKm / 1000))}k`} label="km" color="#f59e0b" />
           <SummaryChip icon="🏁" value={fmt(data.totalBrevets)} label="brevets"  color="#ce93d8" />
         </div>
@@ -330,22 +340,22 @@ export default function PantheonPage() {
         {/* Records / per-year summary */}
         {!year ? (
           <div className="space-y-2">
-            <RecordChip emoji="📅" title="Πιο Πολυάσχολη Χρονιά"
-              value={`${data.busiestYear}  —  ${fmt(data.busiestYearCount)} αναβάτες`} />
-            <RecordChip emoji="🔥" title="Ρεκόρ Streak"
+            <RecordChip emoji="📅" title={t('busiestYearTitle')}
+              value={t('busiestYearValue', { year: data.busiestYear, count: fmt(data.busiestYearCount) })} />
+            <RecordChip emoji="🔥" title={t('streakRecordTitle')}
               value={data.streakHolderName}
-              sub={`${data.streakRecordYears} διαδοχικά χρόνια`} />
-            <RecordChip emoji="⭐" title={`Περισσότερα SR${club !== 'ALL' ? ` (${club === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'})` : ''}`}
+              sub={t('streakRecordSub', { years: data.streakRecordYears })} />
+            <RecordChip emoji="⭐" title={`${t('mostSrTitle')}${club !== 'ALL' ? ` (${club === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'})` : ''}`}
               value={(club === 'ALL' ? data.mostSrName : data.byClub[club].mostSrName) || '—'}
               sub={`${club === 'ALL' ? data.mostSrCount : data.byClub[club].mostSrCount} Super Randonneur${(club === 'ALL' ? data.mostSrCount : data.byClub[club].mostSrCount) !== 1 ? 's' : ''}`} />
           </div>
         ) : yearLoading || !yearData ? (
           <div className="rounded-xl border border-white/10 bg-white/5 py-6 text-center text-white/30 text-sm">
-            Φόρτωση {year}...
+            {t('loadingYear', { year })}
           </div>
         ) : (
           <div className="flex gap-2">
-            <SummaryChip icon="🚴" value={fmt(yearData.totalRiders)} label={`αναβάτες ${year}`} color="#06b6d4" />
+            <SummaryChip icon="🚴" value={fmt(yearData.totalRiders)} label={t('statRidersYear', { year })} color="#06b6d4" />
             <SummaryChip icon="🗺️" value={`${fmt(Math.round(yearData.totalKm))}`} label="km" color="#f59e0b" />
             <SummaryChip icon="⭐" value={fmt((club === 'ALL' ? yearData.ALL : yearData[club]).srRanking.length)} label="SR" color="#FFD700" />
           </div>
@@ -358,24 +368,24 @@ export default function PantheonPage() {
               className={`flex-1 px-3 py-2 rounded-full text-xs font-bold transition-all ${
                 club === c ? 'bg-white text-[#0A1628]' : 'text-white/40 hover:text-white/60 border border-white/10'
               }`}>
-              {c === 'ALL' ? 'Όλοι' : c === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'}
+              {c === 'ALL' ? t('clubAll') : c === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'}
             </button>
           ))}
         </div>
 
         {/* Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-1">
-          <TabBtn label="Χιλιόμετρα"  active={tab === 'km'}         onClick={() => setTab('km')}         icon="🗺️" />
-          <TabBtn label="Ανάβαση"     active={tab === 'ascent'}     onClick={() => setTab('ascent')}     icon="⛰️" />
+          <TabBtn label={t('tabKm')}  active={tab === 'km'}         onClick={() => setTab('km')}         icon="🗺️" />
+          <TabBtn label={t('tabAscent')}     active={tab === 'ascent'}     onClick={() => setTab('ascent')}     icon="⛰️" />
           <TabBtn label="Brevets"      active={tab === 'brevets'}    onClick={() => setTab('brevets')}    icon="🏁" />
           <TabBtn label="SR"           active={tab === 'sr'}         onClick={() => setTab('sr')}         icon="⭐" />
-          <TabBtn label="Ορόσημα"     active={tab === 'milestones'} onClick={() => setTab('milestones')} icon="🏆" />
+          <TabBtn label={t('tabMilestones')}     active={tab === 'milestones'} onClick={() => setTab('milestones')} icon="🏆" />
         </div>
 
         {/* Year selector (hidden for milestones — all-time only) */}
         {tab !== 'milestones' && (
           <div className="flex gap-2 overflow-x-auto pb-1">
-            <YearChip label="ΟΛΑ" active={year === null} onClick={() => setYear(null)} />
+            <YearChip label={t('yearAll')} active={year === null} onClick={() => setYear(null)} />
             {data.availableYears.map(y => (
               <YearChip key={y} label={y} active={year === y} onClick={() => setYear(y)} />
             ))}
@@ -394,7 +404,7 @@ export default function PantheonPage() {
             <input
               type="text" value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Όνομα ή ΑΜ..."
+              placeholder={t('searchPlaceholder')}
               className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-2.5 text-white text-sm placeholder-white/30 outline-none focus:border-white/30"
             />
             {search && (
@@ -410,7 +420,7 @@ export default function PantheonPage() {
         <div className="bg-blue-950/40 border border-white/10 rounded-2xl divide-y divide-white/0">
 
           {year && yearLoading && tab !== 'milestones' && (
-            <div className="py-8 text-center text-white/30 text-sm">Φόρτωση...</div>
+            <div className="py-8 text-center text-white/30 text-sm">{t('loadingEllipsis')}</div>
           )}
 
           {(!year || !yearLoading) && (
@@ -419,12 +429,12 @@ export default function PantheonPage() {
           {tab === 'km' && (
             <div className="px-4">
               {filteredKm.length === 0
-                ? <div className="py-8 text-center text-white/30 text-sm">Δεν βρέθηκαν αποτελέσματα</div>
+                ? <div className="py-8 text-center text-white/30 text-sm">{t('noResults')}</div>
                 : filteredKm.map((m, i) => {
                     const realRank = search ? activeData!.kmRanking.indexOf(m) + 1 : i + 1;
                     return (
                       <RankRow key={i} rank={realRank} name={m.name}
-                        value={`${fmt(Math.round(m.totalKm))} km`} unit="χλμ."
+                        value={`${fmt(Math.round(m.totalKm))} km`} unit={t('rankUnitKm')}
                         lepoteId={m.lepoteId} harId={m.harId} />
                     );
                   })}
@@ -435,12 +445,12 @@ export default function PantheonPage() {
           {tab === 'ascent' && (
             <div className="px-4">
               {filteredAscent.length === 0
-                ? <div className="py-8 text-center text-white/30 text-sm">Δεν βρέθηκαν αποτελέσματα</div>
+                ? <div className="py-8 text-center text-white/30 text-sm">{t('noResults')}</div>
                 : filteredAscent.map((m, i) => {
                     const realRank = search ? activeData!.ascentRanking.indexOf(m) + 1 : i + 1;
                     return (
                       <RankRow key={i} rank={realRank} name={m.name}
-                        value={`${fmt(Math.round(m.totalAscent))} m`} unit="ανάβαση"
+                        value={`${fmt(Math.round(m.totalAscent))} m`} unit={t('rankUnitAscent')}
                         lepoteId={m.lepoteId} harId={m.harId} />
                     );
                   })}
@@ -451,12 +461,12 @@ export default function PantheonPage() {
           {tab === 'brevets' && (
             <div className="px-4">
               {filteredBrevets.length === 0
-                ? <div className="py-8 text-center text-white/30 text-sm">Δεν βρέθηκαν αποτελέσματα</div>
+                ? <div className="py-8 text-center text-white/30 text-sm">{t('noResults')}</div>
                 : filteredBrevets.map((m, i) => {
                     const realRank = search ? activeData!.brevetsRanking.indexOf(m) + 1 : i + 1;
                     return (
                       <RankRow key={i} rank={realRank} name={m.name}
-                        value={String(m.totalBrevets)} unit="brevets"
+                        value={String(m.totalBrevets)} unit={t('rankUnitBrevets')}
                         lepoteId={m.lepoteId} harId={m.harId} />
                     );
                   })}
@@ -467,7 +477,7 @@ export default function PantheonPage() {
           {tab === 'sr' && (
             <div className="px-4">
               {filteredSr.length === 0
-                ? <div className="py-8 text-center text-white/30 text-sm">Κανένας SR</div>
+                ? <div className="py-8 text-center text-white/30 text-sm">{t('noSr')}</div>
                 : filteredSr.map((m, i) => {
                     const realRank = search ? activeData!.srRanking.indexOf(m) + 1 : i + 1;
                     return <SrRow key={i} rank={realRank} entry={m} />;
@@ -482,18 +492,18 @@ export default function PantheonPage() {
             <div>
               {/* Threshold picker */}
               <div className="flex gap-2 px-4 pt-4 pb-2 overflow-x-auto">
-                {[10, 25, 50, 100, 200].map(t => (
-                  <button key={t} onClick={() => setMilThreshold(t)}
+                {[10, 25, 50, 100, 200].map(th => (
+                  <button key={th} onClick={() => setMilThreshold(th)}
                     className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 transition-all border ${
-                      milThreshold === t ? 'bg-amber-500/30 text-amber-300 border-amber-500/50' : 'text-white/40 border-white/10'
+                      milThreshold === th ? 'bg-amber-500/30 text-amber-300 border-amber-500/50' : 'text-white/40 border-white/10'
                     }`}>
-                    {t}+ brevets
+                    {t('milestoneThreshold', { threshold: th })}
                   </button>
                 ))}
               </div>
               <div className="px-4">
                 <div className="text-white/30 text-xs mb-3 pb-2 border-b border-white/5">
-                  {filteredMilestones.length} αναβάτες με {milThreshold}+ brevets
+                  {t('milestoneCountLine', { count: filteredMilestones.length, threshold: milThreshold })}
                 </div>
                 {filteredMilestones.map((m, i) => (
                   <div key={i} className="flex items-center gap-3 py-2.5 border-b border-white/5 last:border-0">

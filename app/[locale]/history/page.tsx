@@ -6,6 +6,10 @@ import { db } from '@/app/lib/firebase';
 import { getPublicMembers } from '@/app/lib/publicMembersCache';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 import PageViews from '@/app/components/PageViews';
+import { useTranslations } from 'next-intl';
+
+const ALL_YEARS = '__all__';
+const ALL_ORGS = '__all__';
 
 interface BrevetEvent {
   key: string;
@@ -114,14 +118,15 @@ function CertBadge({ har, acp }: { har: string; acp: string }) {
 
 export default function HistoryPage() {
   const enabled = usePageEnabled('history');
+  const t = useTranslations('history');
 
   const [events, setEvents]         = useState<BrevetEvent[]>([]);
   const [loading, setLoading]       = useState(true);
   const [selected, setSelected]     = useState<BrevetEvent | null>(null);
   const [detailVis, setDetailVis]   = useState(false);
   const [search, setSearch]         = useState('');
-  const [yearFilter, setYearFilter] = useState('Όλα');
-  const [orgFilter, setOrgFilter]   = useState('Όλοι');
+  const [yearFilter, setYearFilter] = useState(ALL_YEARS);
+  const [orgFilter, setOrgFilter]   = useState(ALL_ORGS);
   const [distFilter, setDistFilter] = useState<number | null>(null);
   const [sortAsc, setSortAsc]       = useState(false);
   const [partSort, setPartSort]     = useState<'name' | 'time'>('name');
@@ -150,12 +155,12 @@ export default function HistoryPage() {
 
   const years = useMemo(() => {
     const s = new Set(events.map(e => e.year));
-    return ['Όλα', ...Array.from(s).sort((a, b) => b.localeCompare(a))];
+    return [ALL_YEARS, ...Array.from(s).sort((a, b) => b.localeCompare(a))];
   }, [events]);
 
   const orgs = useMemo(() => {
     const s = new Set(events.map(e => e.organizer).filter(Boolean));
-    return ['Όλοι', ...Array.from(s).sort((a, b) => a.localeCompare(b, 'el'))];
+    return [ALL_ORGS, ...Array.from(s).sort((a, b) => a.localeCompare(b, 'el'))];
   }, [events]);
 
   const distances = useMemo(() => {
@@ -169,8 +174,8 @@ export default function HistoryPage() {
       const q = search.trim().toLowerCase();
       list = list.filter(e => e.name.toLowerCase().includes(q) || e.organizer.toLowerCase().includes(q));
     }
-    if (yearFilter !== 'Όλα') list = list.filter(e => e.year === yearFilter);
-    if (orgFilter !== 'Όλοι') list = list.filter(e => e.organizer === orgFilter);
+    if (yearFilter !== ALL_YEARS) list = list.filter(e => e.year === yearFilter);
+    if (orgFilter !== ALL_ORGS) list = list.filter(e => e.organizer === orgFilter);
     if (distFilter !== null)  list = list.filter(e => e.distance === distFilter);
     return sortAsc ? [...list].reverse() : list;
   }, [events, search, yearFilter, orgFilter, distFilter, sortAsc]);
@@ -212,7 +217,7 @@ export default function HistoryPage() {
       <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
-  if (enabled === false) return <ComingSoon label="Ιστορικό Brevets" />;
+  if (enabled === false) return <ComingSoon label={t('comingSoonLabel')} />;
 
   return (
     <div className="min-h-screen bg-[#0A1628] px-5 py-12">
@@ -223,8 +228,8 @@ export default function HistoryPage() {
       <div className="max-w-4xl mx-auto relative z-10">
 
         <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Ιστορικό Brevets</h1>
-          <p className="text-white/40 text-sm">Όλα τα brevet από δημόσια προφίλ αναβατών</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">{t('pageHeading')}</h1>
+          <p className="text-white/40 text-sm">{t('pageSubhead')}</p>
         </div>
 
         {/* Search */}
@@ -234,7 +239,7 @@ export default function HistoryPage() {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Αναζήτηση brevet ή διοργανωτή..."
+            placeholder={t('searchPlaceholder')}
             className="w-full bg-white/[0.04] border border-white/10 text-white placeholder-white/25
               rounded-2xl pl-10 pr-10 py-3.5 text-sm focus:outline-none focus:border-cyan-500/40 transition-colors"
           />
@@ -257,7 +262,7 @@ export default function HistoryPage() {
                       ${yearFilter === y
                         ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20'
                         : 'bg-white/[0.06] text-white/45 hover:bg-white/10 hover:text-white border border-white/10'}`}>
-                    {y}
+                    {y === ALL_YEARS ? t('allYears') : y}
                   </button>
                 ))}
               </div>
@@ -272,7 +277,7 @@ export default function HistoryPage() {
                       ${orgFilter === o
                         ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/20'
                         : 'bg-white/[0.06] text-white/45 hover:bg-white/10 hover:text-white border border-white/10'}`}>
-                    {o}
+                    {o === ALL_ORGS ? t('allOrganizers') : o}
                   </button>
                 ))}
               </div>
@@ -298,11 +303,11 @@ export default function HistoryPage() {
                 ))}
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-white/35 text-xs tabular-nums">{filtered.length} brevet</span>
+                <span className="text-white/35 text-xs tabular-nums">{t('brevetCount', { count: filtered.length })}</span>
                 <button onClick={() => setSortAsc(s => !s)}
                   className="text-xs font-semibold text-white/45 hover:text-white
                     bg-white/[0.05] border border-white/10 px-3 py-1.5 rounded-full transition-colors">
-                  {sortAsc ? '↑ Παλαιότερα' : '↓ Νεότερα'}
+                  {sortAsc ? t('sortOldest') : t('sortNewest')}
                 </button>
               </div>
             </div>
@@ -313,10 +318,10 @@ export default function HistoryPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-white/30 text-sm">Φόρτωση ιστορικού...</p>
+            <p className="text-white/30 text-sm">{t('loadingHistory')}</p>
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-white/25 text-center py-16 text-sm">Δεν βρέθηκαν αποτελέσματα</p>
+          <p className="text-white/25 text-center py-16 text-sm">{t('noResults')}</p>
         ) : (
           <div className="flex flex-col gap-2">
             {filtered.map(ev => {
@@ -352,7 +357,7 @@ export default function HistoryPage() {
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="hidden sm:flex flex-col items-end gap-1">
                         <CertBadge har={ev.har} acp={ev.acp} />
-                        <span className="text-white/25 text-[10px]">{ev.participants.length} αναβάτες</span>
+                        <span className="text-white/25 text-[10px]">{t('ridersCount', { count: ev.participants.length })}</span>
                       </div>
                       {ev.organizerId
                         ? <img src={`/logos/${ev.organizerId}.png`} alt="" className="w-7 h-7 object-contain"
@@ -405,13 +410,13 @@ export default function HistoryPage() {
                           onClick={() => { if (partSort === 'name') setPartAsc(a => !a); else { setPartSort('name'); setPartAsc(true); } }}
                           className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all
                             ${partSort === 'name' ? 'bg-white/10 text-white' : 'text-white/35 hover:text-white'}`}>
-                          {partSort === 'name' ? (partAsc ? '↑' : '↓') : '⇅'} {sortedParticipants.length} Συμμετέχοντες
+                          {partSort === 'name' ? (partAsc ? '↑' : '↓') : '⇅'} {t('participantsCount', { count: sortedParticipants.length })}
                         </button>
                         <button
                           onClick={() => { if (partSort === 'time') setPartAsc(a => !a); else { setPartSort('time'); setPartAsc(true); } }}
                           className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all
                             ${partSort === 'time' ? 'bg-white/10 text-white' : 'text-white/35 hover:text-white'}`}>
-                          {partSort === 'time' ? (partAsc ? '↑' : '↓') : '⇅'} Χρόνος
+                          {partSort === 'time' ? (partAsc ? '↑' : '↓') : '⇅'} {t('timeLabel')}
                         </button>
                       </div>
 

@@ -28,6 +28,7 @@
 // LOGOS: /public/logos/{lepoteId}.png and /public/logos/{harId}.png
 
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { YearCard, ClubsProvider } from './BrevetCards';
 import { OrosimaDiadomon, TaksidiXrono, Epiteugmata, FondDeCulotteCard } from './ProfileSections';
 
@@ -81,12 +82,12 @@ function findRank<T extends RankEntry>(arr: T[], lepoteId: string, harId: string
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function fmtNum(n: number) {
-  return n.toLocaleString('el-GR');
+function fmtNum(n: number, dateLocale: string = 'el-GR') {
+  return n.toLocaleString(dateLocale);
 }
-function fmtDate(dt: string): string {
+function fmtDate(dt: string, dateLocale: string = 'el-GR'): string {
   if (!dt || dt === 'null') return '';
-  try { const d = new Date(dt); if (!isNaN(d.getTime())) return d.toLocaleDateString('el-GR',{day:'2-digit',month:'2-digit',year:'numeric'}); } catch {}
+  try { const d = new Date(dt); if (!isNaN(d.getTime())) return d.toLocaleDateString(dateLocale,{day:'2-digit',month:'2-digit',year:'numeric'}); } catch {}
   const mmap: Record<string,string> = {'Ιαν':'01','Φεβ':'02','Μαρ':'03','Απρ':'04','Μαΐ':'05','Μαϊ':'05','Μάϊ':'05','Μάι':'05','Μαι':'05','Ιουν':'06','Ιουλ':'07','Αυγ':'08','Σεπ':'09','Οκτ':'10','Νοε':'11','Δεκ':'12'};
   let m = '??';
   for (const [k, v] of Object.entries(mmap)) { if (dt.includes(k)) { m = v; break; } }
@@ -138,6 +139,7 @@ function ClubFilterBar({ member, active, onToggle }: {
   active: Club;
   onToggle: (c: Club) => void;
 }) {
+  const t = useTranslations('profileDashboard');
   const hasLepote = member.lepoteId && member.lepoteId !== '0' && member.lepoteId !== '';
   const hasHar    = member.harId    && member.harId    !== '0' && member.harId    !== '';
 
@@ -228,11 +230,11 @@ function ClubFilterBar({ member, active, onToggle }: {
       <div style={{ textAlign: 'center', marginTop: 12, fontSize: 13 }}>
         {active === 'ALL' ? (
           <span style={{ color: 'rgba(255,255,255,0.7)', fontStyle: 'italic', fontWeight: 500 }}>
-            {(hasLepote || hasHar) ? '👆 Πάτα στο λογότυπο για εμφάνιση στοιχείων ανά φορέα' : ''}
+            {(hasLepote || hasHar) ? t('filterHint') : ''}
           </span>
         ) : (
           <span style={{ color: active === 'ACP' ? '#60a5fa' : '#a78bfa', fontWeight: 700, fontSize: 13 }}>
-            ● Εμφάνιση: {active === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε. / ACP brevets μόνο' : 'H.A.R. brevets μόνο'}
+            {t('filterShowingPrefix')}{active === 'ACP' ? t('filterAcpOnly') : t('filterHarOnly')}
             {' '}
             <button onClick={() => onToggle(active)}
               style={{
@@ -241,7 +243,7 @@ function ClubFilterBar({ member, active, onToggle }: {
                 borderRadius: 6, padding: '2px 10px', color: 'rgba(255,255,255,0.85)',
                 marginLeft: 6,
               }}>
-              Όλα
+              {t('filterResetAll')}
             </button>
           </span>
         )}
@@ -305,6 +307,7 @@ function KpiRow({ emoji, title, badge, color, value, sub, progress }: {
 function DistanceProfileCard({ b200, b300, b400, b6, b10, total }: {
   b200: number; b300: number; b400: number; b6: number; b10: number; total: number;
 }) {
+  const t = useTranslations('profileDashboard');
   if (total === 0) return null;
   const buckets = [
     { n: b200, color: '#90CAF9', label: '200',   type: 'Voyager' },
@@ -323,7 +326,7 @@ function DistanceProfileCard({ b200, b300, b400, b6, b10, total }: {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 11 }}>
         <span style={{ fontSize: 17 }}>🛣️</span>
-        <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: top.color }}>Προφίλ απόστασης</span>
+        <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: top.color }}>{t('distanceProfileTitle')}</span>
         <span style={{ padding: '3px 12px', borderRadius: 20, border: `1px solid ${top.color}99`, background: `${top.color}18`, fontSize: 12, fontWeight: 700, color: top.color }}>{top.type}</span>
       </div>
       {/* Proportional band bar */}
@@ -351,6 +354,9 @@ function DistanceProfileCard({ b200, b300, b400, b6, b10, total }: {
 // Shown only for riders certified by BOTH clubs — mirrors Flutter's dualClub
 // balance scene (ACP km share vs HAR km share, real club logos).
 function DualClubBalanceCard({ acpKm, harKm }: { acpKm: number; harKm: number }) {
+  const t = useTranslations('profileDashboard');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   if (acpKm <= 0 || harKm <= 0) return null;
   const total   = acpKm + harKm;
   const acpPct  = Math.round(acpKm / total * 100);
@@ -363,7 +369,7 @@ function DualClubBalanceCard({ acpKm, harKm }: { acpKm: number; harKm: number })
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 11 }}>
         <span style={{ fontSize: 17 }}>⚖️</span>
-        <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: '#a78bfa' }}>Ισορροπία φορέων</span>
+        <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: '#a78bfa' }}>{t('clubBalanceTitle')}</span>
         <span style={{ padding: '3px 12px', borderRadius: 20, border: '1px solid rgba(167,139,250,0.6)', background: 'rgba(167,139,250,0.15)', fontSize: 12, fontWeight: 700, color: '#a78bfa' }}>
           {acpPct}% / {harPct}%
         </span>
@@ -377,12 +383,12 @@ function DualClubBalanceCard({ acpKm, harKm }: { acpKm: number; harKm: number })
           <img src="/logos/650000.png" alt="ΛΕ.ΠΟ.Τ.Ε." style={{ width: 22, height: 22, objectFit: 'contain' }}
             onError={ev => { (ev.target as HTMLImageElement).style.display = 'none'; }} />
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>
-            ΛΕ.ΠΟ.Τ.Ε. · {fmtNum(Math.round(acpKm))} km
+            ΛΕ.ΠΟ.Τ.Ε. · {fmtNum(Math.round(acpKm), dateLocale)} km
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>
-            H.A.R. · {fmtNum(Math.round(harKm))} km
+            H.A.R. · {fmtNum(Math.round(harKm), dateLocale)} km
           </span>
           <img src="/logos/659999.png" alt="H.A.R." style={{ width: 22, height: 22, objectFit: 'contain' }}
             onError={ev => { (ev.target as HTMLImageElement).style.display = 'none'; }} />
@@ -397,11 +403,20 @@ function DualClubBalanceCard({ acpKm, harKm }: { acpKm: number; harKm: number })
 // Matches Flutter _buildActivityCardiograph with new KPI layout
 // ══════════════════════════════════════════════════════════════════════════════
 const KPI_INFO = [
-  { emoji: '⚡', color: '#9C27B0', title: 'Ρυθμός σεζόν',       text: 'Πόσο γεμάτη είναι μια τυπική σου σεζόν: σύνολο brevets ÷ ενεργές χρονιές. Μετράει τον όγκο, όχι κάθε πότε εμφανίζεσαι.' },
-  { emoji: '📅', color: '#4CAF50', title: 'Συνέπεια',            text: 'Πόσο συνεχής είσαι στον χρόνο: ενεργές χρονιές ÷ συνολικές χρονιές (ενεργή = ≥1 brevet). Το σερί δείχνει τις τρέχουσες συνεχόμενες. Μετράει την παρουσία, όχι τον όγκο.' },
-  { emoji: '🏆', color: '#f59e0b', title: 'Super Randonneur',    text: 'Σε πόσες χρονιές έκλεισες την κανονική σειρά 200+300+400+600. Επίτευγμα, ανεξάρτητο από όγκο και συνέχεια.' },
-  { emoji: '🛣️', color: '#1976D2', title: 'Προφίλ απόστασης',   text: 'Η κατανομή των brevets σου ανά απόσταση: Sprinter (200), Cruiser (300–400), Hardcore (600), Legendary (1000+ — μαζί 1000/1200/1400, PBP, LRM).' },
+  { emoji: '⚡', color: '#9C27B0' },
+  { emoji: '📅', color: '#4CAF50' },
+  { emoji: '🏆', color: '#f59e0b' },
+  { emoji: '🛣️', color: '#1976D2' },
 ];
+
+function kpiInfo(index: number, t: ReturnType<typeof useTranslations>) {
+  switch (index) {
+    case 0: return { title: t('kpiRhythmTitle'), text: t('kpiRhythmText') };
+    case 1: return { title: t('kpiConsistencyTitle'), text: t('kpiConsistencyText') };
+    case 2: return { title: t('kpiSrTitle'), text: t('kpiSrText') };
+    default: return { title: t('distanceProfileTitle'), text: t('kpiDistanceProfileText') };
+  }
+}
 
 function ActivityCardiograph({ history, member, activeClub, pantheon }: {
   history: Record<string, YearData>;
@@ -409,6 +424,9 @@ function ActivityCardiograph({ history, member, activeClub, pantheon }: {
   activeClub: Club;
   pantheon: PantheonBrief | null;
 }) {
+  const t = useTranslations('profileDashboard');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [tooltip, setTooltip] = useState<{x:number;y:number;year:number;count:number}|null>(null);
   const [showInfo, setShowInfo] = useState(false);
@@ -444,13 +462,13 @@ function ActivityCardiograph({ history, member, activeClub, pantheon }: {
 
   // Rhythm (brevets / active year)
   const rhythm = activeYrs > 0 ? totalBrevs / activeYrs : 0;
-  const rhythmLabel = rhythm>=10?'Κορυφαίος':rhythm>=5?'Αφοσιωμένος':rhythm>=2?'Τακτικός':'Περιστασιακός';
+  const rhythmLabel = rhythm>=10?t('rhythmTop'):rhythm>=5?t('rhythmDedicated'):rhythm>=2?t('rhythmRegular'):t('rhythmCasual');
   const rhythmEmoji = rhythm>=10?'🔥':rhythm>=5?'💪':rhythm>=2?'🚴':'🌱';
   const rhythmColor = rhythm>=10?'#FF6B35':rhythm>=5?'#9C27B0':rhythm>=2?'#1976D2':'#4CAF50';
 
   // Consistency
   const consistency = yearsInSport > 0 ? (activeYrs / yearsInSport) * 100 : 0;
-  const conLabel = consistency>=80?'Σταθερός':consistency>=50?'Τακτικός':consistency>=25?'Χαλαρός':'Σποραδικός';
+  const conLabel = consistency>=80?t('consistencySteady'):consistency>=50?t('consistencyRegular'):consistency>=25?t('consistencyRelaxed'):t('consistencySporadic');
   const conColor = consistency>=80?'#4CAF50':consistency>=50?'#1976D2':consistency>=25?'#FF9800':'#9E9E9E';
 
   // Streak — consecutive recent active years
@@ -661,13 +679,13 @@ function ActivityCardiograph({ history, member, activeClub, pantheon }: {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 20 }}>📈</span>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>Ταυτότητα αναβάτη</span>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>{t('riderIdentityTitle')}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>Brevets ανά έτος</span>
+          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>{t('brevetsPerYear')}</span>
           <button
             onClick={() => setShowInfo(v => !v)}
-            title="Τι σημαίνουν οι δείκτες"
+            title={t('infoTooltipTitle')}
             style={{
               background: showInfo ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)',
               border: '1px solid rgba(255,255,255,0.3)',
@@ -687,21 +705,24 @@ function ActivityCardiograph({ history, member, activeClub, pantheon }: {
           padding: '16px 16px 8px',
         }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.9)', margin: '0 0 12px' }}>
-            Τι σημαίνουν οι δείκτες
+            {t('infoTooltipTitle')}
           </p>
-          {KPI_INFO.map((item, i) => (
-            <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-              <span style={{
-                fontSize: 18, flexShrink: 0, width: 28, height: 28,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '50%', background: `${item.color}25`,
-              }}>{item.emoji}</span>
-              <div>
-                <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 700, color: item.color }}>{item.title}</p>
-                <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{item.text}</p>
+          {KPI_INFO.map((item, i) => {
+            const info = kpiInfo(i, t);
+            return (
+              <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+                <span style={{
+                  fontSize: 18, flexShrink: 0, width: 28, height: 28,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: '50%', background: `${item.color}25`,
+                }}>{item.emoji}</span>
+                <div>
+                  <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 700, color: item.color }}>{info.title}</p>
+                  <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{info.text}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -711,9 +732,9 @@ function ActivityCardiograph({ history, member, activeClub, pantheon }: {
         borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}>
         {[
-          { v: String(totalBrevs), l: 'Σύνολο brevets',          c: '#06b6d4' },
-          { v: `${peakYear}`,      l: `Ρεκόρ · ${counts[peakIdx]} brevets`, c: '#f87171' },
-          { v: String(activeYrs),  l: 'Ενεργά έτη',              c: '#4ade80' },
+          { v: String(totalBrevs), l: t('totalBrevetsLabel'),          c: '#06b6d4' },
+          { v: `${peakYear}`,      l: t('recordLabel', { count: counts[peakIdx] }), c: '#f87171' },
+          { v: String(activeYrs),  l: t('activeYearsLabel'),              c: '#4ade80' },
         ].map((s, i) => (
           <div key={i} style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: s.c }}>{s.v}</div>
@@ -726,56 +747,56 @@ function ActivityCardiograph({ history, member, activeClub, pantheon }: {
       <div style={{ padding: '12px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <KpiRow
           emoji={rhythmEmoji}
-          title="Ρυθμός σεζόν"
+          title={t('kpiRhythmTitle')}
           badge={rhythmLabel}
           color={rhythmColor}
           value={rhythm.toFixed(1)}
-          sub="brevets / ενεργό έτος"
+          sub={t('brevetsPerActiveYear')}
           progress={Math.min(1, rhythm / 10)}
         />
         <KpiRow
           emoji="📊"
-          title="Συνέπεια"
+          title={t('kpiConsistencyTitle')}
           badge={conLabel}
           color={conColor}
           value={`${consistency.toFixed(0)}%`}
-          sub={`${activeYrs} / ${yearsInSport} έτη · σερί ${streak} 🔥`}
+          sub={t('yearsStreak', { active: activeYrs, total: yearsInSport, streak })}
           progress={consistency / 100}
         />
         <DistanceProfileCard b200={b200} b300={b300} b400={b400} b6={b6} b10={b10} total={distTotal} />
         <KpiRow
           emoji="🏆"
-          title="Super Randonneur"
+          title={t('kpiSrTitle')}
           badge={srYears > 0 ? `×${srYears}` : '—'}
           color="#f59e0b"
           value={`${srYears} / ${activeYrs}`}
           sub={acpSrYears > 0 && harSrYears > 0
-            ? `ACP: ${acpSrYears} · HAR: ${harSrYears} · έτη πλήρους σειράς`
-            : 'έτη με πλήρη σειρά SR'}
+            ? t('srPerClub', { acp: acpSrYears, har: harSrYears })
+            : t('srFullSeriesYears')}
           progress={activeYrs > 0 ? srYears / activeYrs : 0}
         />
         {kmRank && (
-          <KpiRow emoji="🗺️" title="Εθνική κατάταξη · Χιλιόμετρα" badge={`#${kmRank.rank}`} color="#06b6d4"
-            value={`${kmRank.rank}η θέση`}
-            sub={`από ${kmRank.total} αναβάτες${activeClub !== 'ALL' ? ` (${activeClub === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'})` : ''}`}
+          <KpiRow emoji="🗺️" title={t('rankKmTitle')} badge={`#${kmRank.rank}`} color="#06b6d4"
+            value={t('rankPosition', { rank: kmRank.rank })}
+            sub={t('rankSubFromTotal', { total: kmRank.total, clubSuffix: activeClub !== 'ALL' ? ` (${activeClub === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'})` : '' })}
             progress={kmRank.total > 1 ? 1 - (kmRank.rank - 1) / (kmRank.total - 1) : 1} />
         )}
         {ascentRank && (
-          <KpiRow emoji="⛰️" title="Εθνική κατάταξη · Ανάβαση" badge={`#${ascentRank.rank}`} color="#a78bfa"
-            value={`${ascentRank.rank}η θέση`}
-            sub={`από ${ascentRank.total} αναβάτες${activeClub !== 'ALL' ? ` (${activeClub === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'})` : ''}`}
+          <KpiRow emoji="⛰️" title={t('rankAscentTitle')} badge={`#${ascentRank.rank}`} color="#a78bfa"
+            value={t('rankPosition', { rank: ascentRank.rank })}
+            sub={t('rankSubFromTotal', { total: ascentRank.total, clubSuffix: activeClub !== 'ALL' ? ` (${activeClub === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'})` : '' })}
             progress={ascentRank.total > 1 ? 1 - (ascentRank.rank - 1) / (ascentRank.total - 1) : 1} />
         )}
         {brevetsRank && (
-          <KpiRow emoji="🏁" title="Εθνική κατάταξη · Brevets" badge={`#${brevetsRank.rank}`} color="#f59e0b"
-            value={`${brevetsRank.rank}η θέση`}
-            sub={`από ${brevetsRank.total} αναβάτες${activeClub !== 'ALL' ? ` (${activeClub === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'})` : ''}`}
+          <KpiRow emoji="🏁" title={t('rankBrevetsTitle')} badge={`#${brevetsRank.rank}`} color="#f59e0b"
+            value={t('rankPosition', { rank: brevetsRank.rank })}
+            sub={t('rankSubFromTotal', { total: brevetsRank.total, clubSuffix: activeClub !== 'ALL' ? ` (${activeClub === 'ACP' ? 'ΛΕ.ΠΟ.Τ.Ε.' : 'H.A.R.'})` : '' })}
             progress={brevetsRank.total > 1 ? 1 - (brevetsRank.rank - 1) / (brevetsRank.total - 1) : 1} />
         )}
         {fdcRank && (
-          <KpiRow emoji="🍑" title="Fond de Culotte · Κατάταξη" badge={`#${fdcRank.rank}`} color="#ec4899"
-            value={`${fdcRank.rank}η θέση`}
-            sub={`από ${fdcRank.total} αναβάτες · ώρες σέλας`}
+          <KpiRow emoji="🍑" title={t('fdcRankTitle')} badge={`#${fdcRank.rank}`} color="#ec4899"
+            value={t('rankPosition', { rank: fdcRank.rank })}
+            sub={t('fdcRankSub', { total: fdcRank.total })}
             progress={fdcRank.total > 1 ? 1 - (fdcRank.rank - 1) / (fdcRank.total - 1) : 1} />
         )}
         <DualClubBalanceCard acpKm={acpKmForBalance} harKm={harKmForBalance} />
@@ -783,7 +804,7 @@ function ActivityCardiograph({ history, member, activeClub, pantheon }: {
 
       {/* Chart label */}
       <div style={{ padding: '2px 40px 6px', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>
-        Ιστορικό Δραστηριότητας · {firstYear} – {lastYear}
+        {t('activityHistoryLabel', { first: firstYear, last: lastYear })}
       </div>
 
       {/* Chart canvas */}
@@ -805,7 +826,7 @@ function ActivityCardiograph({ history, member, activeClub, pantheon }: {
           }}>
             <div style={{ color: '#FFDD00', fontSize: 11, fontWeight: 700 }}>{tooltip.year}</div>
             <div style={{ color: '#fff', fontSize: 11 }}>
-              {tooltip.count === 0 ? 'Καμία δραστηριότητα' : `${tooltip.count} brevets`}
+              {tooltip.count === 0 ? t('noActivity') : t('brevetsSuffix', { count: tooltip.count })}
             </div>
           </div>
         )}
@@ -824,14 +845,14 @@ function ActivityCardiograph({ history, member, activeClub, pantheon }: {
           }} />
           <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.65)' }}>
             {lastActiveYear >= nowYear - 1
-              ? `Ενεργός — τελευταία δραστηριότητα ${lastActiveYear} (${lastActiveCount} brevets)`
-              : `Τελευταία δραστηριότητα: ${lastActiveYear} — ${nowYear - lastActiveYear} χρόνια αδράνειας`}
+              ? t('activeStatus', { year: lastActiveYear, count: lastActiveCount })
+              : t('inactiveStatus', { year: lastActiveYear, years: nowYear - lastActiveYear })}
           </span>
         </div>
         {lastBrevetInfo && (
           <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
             🚴 <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>{lastBrevetInfo.n}</span>
-            {' · '}{fmtDate(lastBrevetInfo.dt)}{' · '}{lastBrevetInfo.d}km
+            {' · '}{fmtDate(lastBrevetInfo.dt, dateLocale)}{' · '}{lastBrevetInfo.d}km
           </div>
         )}
       </div>
@@ -845,6 +866,9 @@ function ActivityCardiograph({ history, member, activeClub, pantheon }: {
 // Always visible on web — no button required
 // ══════════════════════════════════════════════════════════════════════════════
 function HistoryAnalysis({ history }: { history: Record<string, YearData> }) {
+  const t = useTranslations('profileDashboard');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const [showKm,   setShowKm]   = useState(true);
   const [showEl,   setShowEl]   = useState(true);
@@ -1044,14 +1068,14 @@ function HistoryAnalysis({ history }: { history: Record<string, YearData> }) {
       {/* Header */}
       <div style={{ background: 'rgba(13,59,94,0.9)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ fontSize: 20 }}>📊</span>
-        <span style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>Συνολική Ανάλυση Ιστορικού</span>
+        <span style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>{t('historyAnalysisTitle')}</span>
       </div>
 
       {/* Toggle buttons */}
       <div style={{ display: 'flex', gap: 8, padding: '12px 16px', flexWrap: 'wrap' }}>
-        <ToggleBtn label="Χιλιόμετρα"   active={showKm}  color="#06b6d4" onClick={()=>setShowKm(v=>!v)} />
-        <ToggleBtn label="Υψομετρικά"   active={showEl}  color="#f59e0b" onClick={()=>setShowEl(v=>!v)} />
-        <ToggleBtn label="Αρ. Brevets"  active={showBrv} color="#3b82f6" onClick={()=>setShowBrv(v=>!v)} />
+        <ToggleBtn label={t('toggleKm')}   active={showKm}  color="#06b6d4" onClick={()=>setShowKm(v=>!v)} />
+        <ToggleBtn label={t('toggleElevation')}   active={showEl}  color="#f59e0b" onClick={()=>setShowEl(v=>!v)} />
+        <ToggleBtn label={t('toggleBrevets')}  active={showBrv} color="#3b82f6" onClick={()=>setShowBrv(v=>!v)} />
       </div>
 
       {/* Chart */}
@@ -1076,9 +1100,9 @@ function HistoryAnalysis({ history }: { history: Record<string, YearData> }) {
             <div style={{ color: '#06b6d4', fontSize: 12, fontWeight: 700, marginBottom: 3 }}>
               {tooltip.year}
             </div>
-            {showKm  && <div style={{ color:'#06b6d4', fontSize:11 }}>🚲 {fmtNum(Math.round(tooltip.km))} km</div>}
-            {showEl  && <div style={{ color:'#f59e0b', fontSize:11 }}>⛰️ {fmtNum(Math.round(tooltip.el))} m+</div>}
-            {showBrv && <div style={{ color:'#3b82f6', fontSize:11 }}>🏅 {tooltip.brv} brevets</div>}
+            {showKm  && <div style={{ color:'#06b6d4', fontSize:11 }}>🚲 {fmtNum(Math.round(tooltip.km), dateLocale)} km</div>}
+            {showEl  && <div style={{ color:'#f59e0b', fontSize:11 }}>⛰️ {fmtNum(Math.round(tooltip.el), dateLocale)} m+</div>}
+            {showBrv && <div style={{ color:'#3b82f6', fontSize:11 }}>🏅 {t('brevetsSuffix', { count: tooltip.brv })}</div>}
           </div>
         )}
       </div>
@@ -1091,6 +1115,9 @@ function HistoryAnalysis({ history }: { history: Record<string, YearData> }) {
 // Renders everything below the header with club filtering applied
 // ══════════════════════════════════════════════════════════════════════════════
 export function FilteredProfile({ member }: { member: MemberProfile }) {
+  const t = useTranslations('profileDashboard');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const [activeClub, setActiveClub] = useState<Club>('ALL');
   const [pantheon, setPantheon] = useState<PantheonBrief | null>(null);
 
@@ -1132,10 +1159,10 @@ export function FilteredProfile({ member }: { member: MemberProfile }) {
 
       {/* Stats row — recalculates on filter */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-        <StatCard emoji="🚲" value={fmtNum(Math.round(km))}      label="Χιλιόμετρα"      unit="km"  color="#06b6d4" />
-        <StatCard emoji="🏅" value={String(brevets)}              label="Brevets"          unit="BRM" color="#f59e0b" />
-        <StatCard emoji="⛰️" value={fmtNum(Math.round(elev))}    label="Υψομετρικά"      unit="m+"  color="#a78bfa" />
-        <StatCard emoji="🏆" value={String(sr)}                   label="Super Randonneur" unit="SR"  color="#f87171" />
+        <StatCard emoji="🚲" value={fmtNum(Math.round(km), dateLocale)}      label={t('toggleKm')}      unit="km"  color="#06b6d4" />
+        <StatCard emoji="🏅" value={String(brevets)}              label={t('statBrevets')}          unit="BRM" color="#f59e0b" />
+        <StatCard emoji="⛰️" value={fmtNum(Math.round(elev), dateLocale)}    label={t('toggleElevation')}      unit="m+"  color="#a78bfa" />
+        <StatCard emoji="🏆" value={String(sr)}                   label={t('statSr')} unit="SR"  color="#f87171" />
       </div>
 
       {/* Επιτεύγματα — medal images, always from full member stats */}
@@ -1162,11 +1189,11 @@ export function FilteredProfile({ member }: { member: MemberProfile }) {
         borderRadius: 16, padding: '20px', marginBottom: 20,
       }}>
         <h2 style={{ color: '#fff', fontWeight: 700, fontSize: 20, margin: '0 0 16px' }}>
-          📜 Ιστορικό ({sortedYears.length} χρόνια)
+          {t('historyHeading', { count: sortedYears.length })}
         </h2>
         <ClubsProvider>
           {sortedYears.length === 0 ? (
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Δεν βρέθηκε ιστορικό.</p>
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>{t('noHistoryFound')}</p>
           ) : (
             sortedYears.map(year => (
               <YearCard key={year} year={year} data={filtered[year]} />

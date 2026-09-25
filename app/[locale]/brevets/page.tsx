@@ -7,6 +7,8 @@ import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 import BrevetCard from '@/app/components/BrevetCard';
 import PageViews from '@/app/components/PageViews';
 import { useInterestedBrevets } from '@/app/lib/useInterestedBrevets';
+import { Link } from '@/i18n/navigation';
+import { useTranslations, useLocale } from 'next-intl';
 
 const globeButtonStyle = `
   @keyframes globeSpin {
@@ -130,6 +132,9 @@ function deriveOrganizers(data: Brevet[]): OrganizerOption[] {
 }
 
 export default function BrevetsPage() {
+  const t = useTranslations('brevets');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const [brevets, setBrevets] = useState<Brevet[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<number | null>(null);
@@ -293,7 +298,7 @@ export default function BrevetsPage() {
 
           if (monthBrevets.length === 0 || loading) return null;
 
-          const monthName = now.toLocaleDateString('el-GR', { month: 'long' });
+          const monthName = now.toLocaleDateString(dateLocale, { month: 'long' });
           const doubled   = [...monthBrevets, ...monthBrevets];
 
           return (
@@ -304,7 +309,7 @@ export default function BrevetsPage() {
               <div className="px-6 mb-4 flex items-center gap-3">
                 <div className="h-px flex-1 bg-white/10" />
                 <span className="text-white/70 text-sm font-bold tracking-widest uppercase">
-                  🚴 Τα Brevets του {monthName}
+                  {t('monthlyTitle', { month: monthName })}
                 </span>
                 <div className="h-px flex-1 bg-white/10" />
               </div>
@@ -316,16 +321,16 @@ export default function BrevetsPage() {
                     const hasImage = b.imageUrl && b.imageUrl.length > 0;
                     const dateObj  = b.date ? new Date(b.date) : null;
                     const dateStr  = dateObj
-                      ? dateObj.toLocaleDateString('el-GR', {
+                      ? dateObj.toLocaleDateString(dateLocale, {
                           day: 'numeric', month: 'short',
                         })
                       : '';
                     const timeStr  = dateObj && !isNaN(dateObj.getTime())
-                      ? dateObj.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })
+                      ? dateObj.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })
                       : '';
 
                     return (
-                      <a
+                      <Link
                         key={i}
                         href={`/brevets/${b.id}`}
                         className="brevet-halo flex-shrink-0 w-52 h-32 rounded-2xl
@@ -388,7 +393,7 @@ export default function BrevetsPage() {
                             <span className="text-white/40 text-xs">📍 {b.start}</span>
                           </div>
                         </div>
-                      </a>
+                      </Link>
                     );
                   })}
                 </div>
@@ -401,13 +406,13 @@ export default function BrevetsPage() {
         <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">
-              📅 Ημερολόγιο Brevet
+              {t('heading')}
             </h1>
             <p className="text-white/50">
-              Όλα τα προγραμματισμένα brevets της σεζόν
+              {t('subheading')}
             </p>
           </div>
-          <a
+          <Link
             href="/brevets/overview"
             className="flex flex-col items-center gap-1.5 text-xs font-bold px-4 py-3 rounded-xl
               transition-all hover:bg-cyan-500/20 no-underline"
@@ -422,8 +427,8 @@ export default function BrevetsPage() {
               <img src="/hellas.png" alt="" className="globe-spin-img w-full h-full object-contain" />
               <span className="globe-shine" />
             </span>
-            Χάρτης όλων των διαδρομών
-          </a>
+            {t('mapButton')}
+          </Link>
         </div>
 
         {/* ── FILTERS ── */}
@@ -432,7 +437,7 @@ export default function BrevetsPage() {
           <div className="flex flex-col sm:flex-row gap-4">
             <input
               type="text"
-              placeholder="Αναζήτηση brevet, πόλη, διοργανωτή..."
+              placeholder={t('searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 bg-white/5 border border-white/10 text-white
@@ -445,7 +450,7 @@ export default function BrevetsPage() {
               className="bg-white/5 border border-white/10 text-white rounded-xl
                 px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
             >
-              <option value="">Όλα τα χρόνια</option>
+              <option value="">{t('yearAll')}</option>
               <option value="2026">2026</option>
               <option value="2025">2025</option>
               <option value="2024">2024</option>
@@ -454,7 +459,7 @@ export default function BrevetsPage() {
           </div>
 
           <div className="flex gap-2 flex-wrap items-center">
-            <span className="text-white/30 text-xs w-16">Απόσταση:</span>
+            <span className="text-white/30 text-xs w-16">{t('distanceLabel')}</span>
             {[null, 200, 300, 400, 600, 1000].map((d) => (
               <button
                 key={d ?? 'all'}
@@ -465,20 +470,20 @@ export default function BrevetsPage() {
                     : 'bg-white/5 text-white/60 hover:text-white border border-white/10'
                 }`}
               >
-                {d === null ? 'Όλα' : `${d}km`}
+                {d === null ? t('all') : `${d}km`}
               </button>
             ))}
           </div>
 
           <div className="flex gap-2 flex-wrap items-center">
-            <span className="text-white/30 text-xs w-16">Δυσκολία:</span>
+            <span className="text-white/30 text-xs w-16">{t('difficultyLabel')}</span>
             {[
-              { label: null,             display: 'Όλες',            color: null },
-              { label: 'ΕΥΚΟΛΟ',        display: '🟢 Εύκολο',       color: '#2E7D32' },
-              { label: 'ΜΕΤΡΙΟ',        display: '🟡 Μέτριο',       color: '#F9A825' },
-              { label: 'ΔΥΣΚΟΛΟ',       display: '🟠 Δύσκολο',      color: '#E65100' },
-              { label: 'ΠΟΛΥ ΔΥΣΚΟΛΟ', display: '🔴 Πολύ Δύσκολο', color: '#D32F2F' },
-              { label: 'ΑΚΡΑΙΟ',        display: '💀 Ακραίο',       color: '#6A1B9A' },
+              { label: null,             display: t('difficultyAll'), color: null },
+              { label: 'ΕΥΚΟΛΟ',        display: t('diffEasy'),      color: '#2E7D32' },
+              { label: 'ΜΕΤΡΙΟ',        display: t('diffMedium'),    color: '#F9A825' },
+              { label: 'ΔΥΣΚΟΛΟ',       display: t('diffHard'),      color: '#E65100' },
+              { label: 'ΠΟΛΥ ΔΥΣΚΟΛΟ', display: t('diffVeryHard'),  color: '#D32F2F' },
+              { label: 'ΑΚΡΑΙΟ',        display: t('diffExtreme'),   color: '#6A1B9A' },
             ].map((d) => (
               <button
                 key={d.display}
@@ -496,15 +501,10 @@ export default function BrevetsPage() {
           </div>
 
           <div className="flex gap-2 flex-wrap items-center">
-            <span className="text-white/30 text-xs w-16">Μήνας:</span>
+            <span className="text-white/30 text-xs w-16">{t('monthLabel')}</span>
             {[
-              { value: null, label: 'Όλοι' },
-              { value: 1,  label: 'Ιαν' }, { value: 2,  label: 'Φεβ' },
-              { value: 3,  label: 'Μαρ' }, { value: 4,  label: 'Απρ' },
-              { value: 5,  label: 'Μαϊ' }, { value: 6,  label: 'Ιουν' },
-              { value: 7,  label: 'Ιουλ' }, { value: 8,  label: 'Αυγ' },
-              { value: 9,  label: 'Σεπ' }, { value: 10, label: 'Οκτ' },
-              { value: 11, label: 'Νοε' }, { value: 12, label: 'Δεκ' },
+              { value: null, label: t('monthAll') },
+              ...t.raw('months').map((label: string, i: number) => ({ value: i + 1, label })),
             ].map((m) => (
               <button
                 key={m.label}
@@ -526,7 +526,7 @@ export default function BrevetsPage() {
               <div className="flex items-center gap-2">
                 <span className="text-purple-300 text-sm">🏁</span>
                 <span className="text-purple-300 text-sm font-medium">
-                  Εμφάνιση brevets του συλλόγου σου
+                  {t('organizerViewBanner')}
                 </span>
               </div>
               <button
@@ -539,12 +539,12 @@ export default function BrevetsPage() {
                   border border-purple-400/30 hover:border-purple-400
                   px-3 py-1.5 rounded-lg transition-all"
               >
-                Δες όλα →
+                {t('seeAll')}
               </button>
             </div>
           ) : organizers.length > 1 ? (
             <div className="flex items-center gap-3">
-              <span className="text-white/30 text-xs w-16 flex-shrink-0">Διοργ.:</span>
+              <span className="text-white/30 text-xs w-16 flex-shrink-0">{t('organizerLabel')}</span>
               <div className="flex gap-2 overflow-x-auto pb-1"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', cursor: 'grab' }}
                 ref={(el) => {
@@ -566,7 +566,7 @@ export default function BrevetsPage() {
                       : 'bg-white/5 text-white/60 hover:text-white border-white/10'
                   }`}
                 >
-                  Όλοι
+                  {t('monthAll')}
                 </button>
                 {organizers.map((org) => {
                   const isSelected = organizerFilter === org.id;
@@ -602,12 +602,12 @@ export default function BrevetsPage() {
             <div className="text-center">
               <div className="w-8 h-8 border-2 border-cyan-500
                 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-white/50 text-sm">Φόρτωση brevets...</p>
+              <p className="text-white/50 text-sm">{t('loadingText')}</p>
             </div>
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-24">
-            <p className="text-white/30 text-lg">Δεν βρέθηκαν brevets</p>
+            <p className="text-white/30 text-lg">{t('noneFound')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -625,7 +625,7 @@ export default function BrevetsPage() {
 
         {!loading && (
           <p className="text-white/30 text-xs text-center mt-8">
-            {filtered.length} brevets
+            {t('brevetsCount', { count: filtered.length })}
           </p>
         )}
 
