@@ -144,6 +144,16 @@ export default async function Cop31Page({
           </h2>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
             <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLSfeyu-KCacJRVdTmsrVC9yXgfJiXP41-Yte7XwbtmF3g9JLOg/viewform"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between gap-3 bg-emerald-500/15 border border-emerald-400/30
+                hover:border-emerald-400/60 hover:bg-emerald-500/20 rounded-xl px-4 py-3 transition-colors group"
+            >
+              <span className="text-emerald-200 text-sm font-bold group-hover:text-white">{t('linkRegister')}</span>
+              <span className="text-emerald-300 text-xs">→</span>
+            </a>
+            <a
               href="https://www.hellenic-autonomous-randonneur.com/#cop31-bike-ride"
               target="_blank"
               rel="noopener noreferrer"
@@ -161,6 +171,16 @@ export default async function Cop31Page({
                 hover:border-cyan-500/40 rounded-xl px-4 py-3 transition-colors group"
             >
               <span className="text-white/80 text-sm group-hover:text-white">{t('linkGlobal')}</span>
+              <span className="text-cyan-400 text-xs">→</span>
+            </a>
+            <a
+              href="https://www.komoot.com/collection/4610779/-cop31-bike-ride-gr-branch"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between gap-3 bg-[#0A1628]/40 border border-white/10
+                hover:border-cyan-500/40 rounded-xl px-4 py-3 transition-colors group"
+            >
+              <span className="text-white/80 text-sm group-hover:text-white">{t('linkKomoot')}</span>
               <span className="text-cyan-400 text-xs">→</span>
             </a>
             <div>
