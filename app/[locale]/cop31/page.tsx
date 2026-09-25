@@ -97,14 +97,28 @@ export default async function Cop31Page({
               {route.map((line, i) => (
                 <li
                   key={i}
-                  className={`flex items-center gap-3 text-sm rounded-xl px-4 py-3 ${
+                  className={`flex items-center justify-between gap-3 text-sm rounded-xl px-4 py-3 ${
                     i === route.length - 1
                       ? 'bg-emerald-500/10 border border-emerald-400/25 text-emerald-200 font-medium'
                       : 'bg-[#0A1628]/40 border border-white/10 text-white/75'
                   }`}
                 >
-                  <span className="text-white/30 font-mono text-xs w-5 shrink-0">{i + 1}</span>
-                  {line}
+                  <span className="flex items-center gap-3 min-w-0">
+                    <span className="text-white/30 font-mono text-xs w-5 shrink-0">{i + 1}</span>
+                    {line}
+                  </span>
+                  <a
+                    href={`/cop31-gpx/day-${i + 1}.gpx`}
+                    download
+                    aria-label={t('gpxDownloadAria', { day: i + 1 })}
+                    className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                      i === route.length - 1
+                        ? 'border-emerald-400/40 text-emerald-200 hover:bg-emerald-400/10'
+                        : 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10'
+                    }`}
+                  >
+                    GPX ↓
+                  </a>
                 </li>
               ))}
             </ol>

@@ -577,6 +577,7 @@
     "routeHeading": "The 8-day route",
     "routeIntro": "These are the main daily stops — the real route runs through everything in between them too. Detailed GPX tracks for each day will be published progressively. Total distance: approximately 1,300 km.",
     "routeMapAlt": "Route map: Athens → Pınarhisar, Turkey",
+    "gpxDownloadAria": "Download GPX file for day {day}",
     "route1": "Wed 30/9 — Athens → Atalanti",
     "route2": "Thu 1/10 — Atalanti → Karditsa",
     "route3": "Fri 2/10 — Karditsa → Katerini",
