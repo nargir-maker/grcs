@@ -143,7 +143,12 @@ export default async function Cop31Page({
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
             <p className="text-white/70 leading-relaxed">{t('supportP1')}</p>
 
-            <div className="flex items-center gap-3">
+            <a
+              href="https://www.seanergymaritime.com/en"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 group w-fit"
+            >
               <div className="bg-white rounded-xl px-3 py-2 shrink-0">
                 <img
                   src="/seanergy-logo.png"
@@ -151,8 +156,8 @@ export default async function Cop31Page({
                   className="h-6 w-auto object-contain"
                 />
               </div>
-              <p className="text-white/50 text-sm">{t('supportSponsor')}</p>
-            </div>
+              <p className="text-white/50 text-sm group-hover:text-white/80 transition-colors">{t('supportSponsor')}</p>
+            </a>
 
             <details className="group mt-2 rounded-xl border border-white/10 bg-[#0A1628]/40 open:bg-[#0A1628]/60 transition-colors">
               <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-white/80 hover:text-white">
@@ -241,6 +246,16 @@ export default async function Cop31Page({
                 hover:border-cyan-500/40 rounded-xl px-4 py-3 transition-colors group"
             >
               <span className="text-white/80 text-sm group-hover:text-white">{t('linkPdf')}</span>
+              <span className="text-cyan-400 text-xs">→</span>
+            </a>
+            <a
+              href="https://www.seanergymaritime.com/en"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between gap-3 bg-[#0A1628]/40 border border-white/10
+                hover:border-cyan-500/40 rounded-xl px-4 py-3 transition-colors group"
+            >
+              <span className="text-white/80 text-sm group-hover:text-white">{t('linkSeanergy')}</span>
               <span className="text-cyan-400 text-xs">→</span>
             </a>
             <a
