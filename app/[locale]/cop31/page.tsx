@@ -144,6 +144,14 @@ export default async function Cop31Page({
             <p className="text-white/70 leading-relaxed">{t('supportP1')}</p>
             <p className="text-white/50 text-sm">{t('supportSponsor')}</p>
 
+            <div className="bg-white rounded-xl px-5 py-4 inline-block">
+              <img
+                src="/seanergy-logo.png"
+                alt={t('seanergyLogoAlt')}
+                className="h-8 w-auto object-contain"
+              />
+            </div>
+
             <details className="group mt-2 rounded-xl border border-white/10 bg-[#0A1628]/40 open:bg-[#0A1628]/60 transition-colors">
               <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-white/80 hover:text-white">
                 {t('seanergyChipTitle')}
