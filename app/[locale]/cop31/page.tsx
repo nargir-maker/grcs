@@ -142,14 +142,16 @@ export default async function Cop31Page({
           </h2>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
             <p className="text-white/70 leading-relaxed">{t('supportP1')}</p>
-            <p className="text-white/50 text-sm">{t('supportSponsor')}</p>
 
-            <div className="bg-white rounded-xl px-5 py-4 inline-block">
-              <img
-                src="/seanergy-logo.png"
-                alt={t('seanergyLogoAlt')}
-                className="h-8 w-auto object-contain"
-              />
+            <div className="flex items-center gap-3">
+              <div className="bg-white rounded-xl px-3 py-2 shrink-0">
+                <img
+                  src="/seanergy-logo.png"
+                  alt={t('seanergyLogoAlt')}
+                  className="h-6 w-auto object-contain"
+                />
+              </div>
+              <p className="text-white/50 text-sm">{t('supportSponsor')}</p>
             </div>
 
             <details className="group mt-2 rounded-xl border border-white/10 bg-[#0A1628]/40 open:bg-[#0A1628]/60 transition-colors">
