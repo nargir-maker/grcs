@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { db } from '@/app/lib/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 import BrevetCard from '@/app/components/BrevetCard';
 import PageViews from '@/app/components/PageViews';
@@ -139,7 +139,8 @@ export default function BrevetsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<number | null>(null);
   const [search, setSearch] = useState('');
-  const [yearFilter, setYearFilter] = useState<number | null>(2026);
+  const [yearFilter, setYearFilter] = useState<number | null>(new Date().getFullYear());
+  const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + 1 - i);
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
   const [monthFilter, setMonthFilter] = useState<number | null>(null);
   const [organizerFilter, setOrganizerFilter] = useState<string | null>(() => {
@@ -180,14 +181,7 @@ export default function BrevetsPage() {
           });
         }
 
-        const currentYear = new Date().getFullYear();
-        const q = query(
-          collection(db, 'all_brevets'),
-          where('info.date', '>=', `${currentYear}-01-01`),
-          where('info.date', '<=', `${currentYear}-12-31`)
-        );
-
-        const snapshot = await getDocs(q);
+        const snapshot = await getDocs(collection(db, 'all_brevets'));
         const data: Brevet[] = [];
 
         snapshot.forEach((doc) => {
@@ -445,16 +439,16 @@ export default function BrevetsPage() {
                 focus:outline-none focus:border-cyan-500/50"
             />
             <select
+              value={yearFilter ?? ''}
               onChange={(e) => setYearFilter(parseInt(e.target.value) || null)}
-              defaultValue="2026"
               className="bg-white/5 border border-white/10 text-white rounded-xl
                 px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
+              style={{ colorScheme: 'dark' }}
             >
-              <option value="">{t('yearAll')}</option>
-              <option value="2026">2026</option>
-              <option value="2025">2025</option>
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
+              <option value="" style={{ background: '#0A1628', color: '#fff' }}>{t('yearAll')}</option>
+              {yearOptions.map((y) => (
+                <option key={y} value={y} style={{ background: '#0A1628', color: '#fff' }}>{y}</option>
+              ))}
             </select>
           </div>
 
