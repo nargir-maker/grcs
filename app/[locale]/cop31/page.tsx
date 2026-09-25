@@ -108,6 +108,16 @@ export default async function Cop31Page({
                 </li>
               ))}
             </ol>
+            <figure className="mt-5">
+              <img
+                src="/cop31-route-map.webp"
+                alt={t('routeMapAlt')}
+                className="w-full rounded-xl border border-white/10 object-cover"
+              />
+              <figcaption className="text-white/25 text-[11px] mt-1.5 text-center">
+                Maplibre | © komoot | © Mapbox | Map data © OpenStreetMap contributors
+              </figcaption>
+            </figure>
           </div>
         </section>
 
@@ -133,6 +143,23 @@ export default async function Cop31Page({
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
             <p className="text-white/70 leading-relaxed">{t('supportP1')}</p>
             <p className="text-white/50 text-sm">{t('supportSponsor')}</p>
+
+            <details className="group mt-2 rounded-xl border border-white/10 bg-[#0A1628]/40 open:bg-[#0A1628]/60 transition-colors">
+              <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-white/80 hover:text-white">
+                {t('seanergyChipTitle')}
+                <span className="text-cyan-400 text-xs shrink-0 transition-transform group-open:rotate-180">▾</span>
+              </summary>
+              <div className="px-4 pb-5 pt-1 space-y-3 border-t border-white/10">
+                <p className="text-white/60 text-sm leading-relaxed pt-3">{t('seanergyP1')}</p>
+                <p className="text-white/60 text-sm leading-relaxed">{t('seanergyP2')}</p>
+                <p className="text-white/60 text-sm leading-relaxed">{t('seanergyP3')}</p>
+                <p className="text-white/60 text-sm leading-relaxed">{t('seanergyP4')}</p>
+                <p className="text-white/60 text-sm leading-relaxed">{t('seanergyP5')}</p>
+                <p className="text-emerald-300 text-sm font-medium italic pt-1">{t('seanergyQuote')}</p>
+                <p className="text-white/60 text-sm leading-relaxed">{t('seanergyP6')}</p>
+                <p className="text-white/50 text-sm">{t('seanergyThanks')}</p>
+              </div>
+            </details>
           </div>
         </section>
 
