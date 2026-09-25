@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
+import { useLocale } from 'next-intl';
+import { routing } from '@/i18n/routing';
 
 export interface OrganizerSession {
   role: 'organizer';
@@ -38,13 +40,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const [organizer, setOrganizer]           = useState<OrganizerSession | null>(null);
   const [organizerLoaded, setOrganizerLoaded] = useState(false);
+  const locale = useLocale();
+  const withLocale = (path: string) =>
+    locale === routing.defaultLocale ? path : `/${locale}${path}`;
 
   const signInWithGoogle = async () => {
-     await signIn('google', { callbackUrl: '/profile' }, { prompt: 'select_account' });
+     await signIn('google', { callbackUrl: withLocale('/profile') }, { prompt: 'select_account' });
   };
 
   const logout = async () => {
-     await signOut({ callbackUrl: '/' });
+     await signOut({ callbackUrl: withLocale('/') });
   };
 
   useEffect(() => {

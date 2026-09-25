@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
 import { useAuth } from '../lib/AuthContext';
+import LanguageSwitcher from './LanguageSwitcher';
 
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const t = useTranslations('nav');
   const {
     user,
     signInWithGoogle,
@@ -32,7 +35,7 @@ if (isOrganizer && organizer) {
           {/* Brevets dropdown */}
           <div className="relative group">
             <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
-              Brevets
+              {t('brevets')}
               <svg className="w-3 h-3 opacity-40 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
               </svg>
@@ -41,19 +44,19 @@ if (isOrganizer && organizer) {
               <div className="bg-[#0d1f3c] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
                 <Link href="/brevets"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Πρόγραμμα Brevets
+                  {t('brevetsSchedule')}
                 </Link>
                 <Link href="/brevets/overview"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Χάρτης Διαδρομών
+                  {t('brevetsMap')}
                 </Link>
                 <Link href="/history"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Ιστορικό
+                  {t('history')}
                 </Link>
                 <Link href="/live"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                  Live Tracking
+                  {t('liveTracking')}
                 </Link>
               </div>
             </div>
@@ -61,7 +64,7 @@ if (isOrganizer && organizer) {
           {/* Στατιστικά dropdown */}
           <div className="relative group">
             <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
-              Στατιστικά
+              {t('stats')}
               <svg className="w-3 h-3 opacity-40 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
               </svg>
@@ -70,27 +73,27 @@ if (isOrganizer && organizer) {
               <div className="bg-[#0d1f3c] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
                 <Link href="/results"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Αποτελέσματα
+                  {t('results')}
                 </Link>
                 <Link href="/members"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Αναβάτες
+                  {t('riders')}
                 </Link>
                 <Link href="/pantheon"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Πάνθεον
+                  {t('pantheon')}
                 </Link>
                 <Link href="/community"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Κοινότητα
+                  {t('community')}
                 </Link>
                 <Link href="/organizer-universe"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Organizer Universe
+                  {t('organizerUniverse')}
                 </Link>
                 <Link href="/brevet-universe"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                  Brevet Universe
+                  {t('brevetUniverse')}
                 </Link>
               </div>
             </div>
@@ -98,7 +101,7 @@ if (isOrganizer && organizer) {
           {/* Randonneuring dropdown */}
           <div className="relative group">
             <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
-              Randonneuring
+              {t('randonneuring')}
               <svg className="w-3 h-3 opacity-40 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
               </svg>
@@ -107,30 +110,32 @@ if (isOrganizer && organizer) {
               <div className="bg-[#0d1f3c] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
                 <Link href="/randonneuring"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Ιστορία του Randonneuring
+                  {t('randonneuringHistory')}
                 </Link>
                 <Link href="/randonneuring/guide"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Πρακτικός Οδηγός
+                  {t('practicalGuide')}
                 </Link>
                 <Link href="/randonneuring/acp-guide"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Οδηγός ACP
+                  {t('acpGuide')}
                 </Link>
                 <Link href="/randonneuring/har-guide"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                  Οδηγός HAR
+                  {t('harGuide')}
                 </Link>
               </div>
             </div>
           </div>
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
-            Σχετικά
+            {t('about')}
           </Link>
         </div>
 
-        {/* Desktop right: organizer pill + dashboard + logout */}
+        {/* Desktop right: language + organizer pill + dashboard + logout */}
         <div className="hidden sm:flex items-center gap-3">
+          <LanguageSwitcher />
+
           {/* Dashboard cog */}
           <Link href="/organizer/dashboard"
             className="text-white/30 hover:text-white text-xs transition-colors"
@@ -147,7 +152,7 @@ if (isOrganizer && organizer) {
           >
             <span className="text-purple-300 text-xs font-semibold">🏁</span>
             <div className="flex flex-col leading-tight">
-              <span className="text-white/50 text-xs">Διοργανωτής</span>
+              <span className="text-white/50 text-xs">{t('organizer')}</span>
               <span className="text-white text-sm font-semibold">{organizer.clubNameGr}</span>
             </div>
             <span className="text-purple-300 text-xs ml-1">→</span>
@@ -156,7 +161,7 @@ if (isOrganizer && organizer) {
           {/* Logout */}
           <button onClick={logoutOrganizer}
             className="text-white/40 hover:text-white text-sm transition-colors">
-            Έξοδος
+            {t('signOut')}
           </button>
         </div>
 
@@ -178,62 +183,65 @@ if (isOrganizer && organizer) {
       {/* Mobile organizer menu */}
       {menuOpen && (
         <div className="sm:hidden mt-4 pb-4 border-t border-white/10 pt-4 flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Brevets</span>
+          <div className="flex items-center justify-between">
+            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">{t('brevets')}</span>
+            <LanguageSwitcher compact />
+          </div>
+          <div className="flex flex-col gap-2 -mt-2">
             <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
               <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Πρόγραμμα Brevets</Link>
+                onClick={() => setMenuOpen(false)}>{t('brevetsSchedule')}</Link>
               <Link href="/brevets/overview" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Χάρτης Διαδρομών</Link>
+                onClick={() => setMenuOpen(false)}>{t('brevetsMap')}</Link>
               <Link href="/history" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Ιστορικό</Link>
+                onClick={() => setMenuOpen(false)}>{t('history')}</Link>
               <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Live Tracking</Link>
+                onClick={() => setMenuOpen(false)}>{t('liveTracking')}</Link>
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Στατιστικά</span>
+            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">{t('stats')}</span>
             <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
               <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Αποτελέσματα</Link>
+                onClick={() => setMenuOpen(false)}>{t('results')}</Link>
               <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Αναβάτες</Link>
+                onClick={() => setMenuOpen(false)}>{t('riders')}</Link>
               <Link href="/pantheon" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Πάνθεον</Link>
+                onClick={() => setMenuOpen(false)}>{t('pantheon')}</Link>
               <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Κοινότητα</Link>
+                onClick={() => setMenuOpen(false)}>{t('community')}</Link>
               <Link href="/organizer-universe" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Organizer Universe</Link>
+                onClick={() => setMenuOpen(false)}>{t('organizerUniverse')}</Link>
               <Link href="/brevet-universe" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Brevet Universe</Link>
+                onClick={() => setMenuOpen(false)}>{t('brevetUniverse')}</Link>
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Randonneuring</span>
+            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">{t('randonneuring')}</span>
             <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
               <Link href="/randonneuring" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Ιστορία</Link>
+                onClick={() => setMenuOpen(false)}>{t('randonneuringHistory')}</Link>
               <Link href="/randonneuring/guide" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Πρακτικός Οδηγός</Link>
+                onClick={() => setMenuOpen(false)}>{t('practicalGuide')}</Link>
               <Link href="/randonneuring/acp-guide" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Οδηγός ACP</Link>
+                onClick={() => setMenuOpen(false)}>{t('acpGuide')}</Link>
               <Link href="/randonneuring/har-guide" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Οδηγός HAR</Link>
+                onClick={() => setMenuOpen(false)}>{t('harGuide')}</Link>
             </div>
           </div>
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors"
-            onClick={() => setMenuOpen(false)}>Σχετικά</Link>
+            onClick={() => setMenuOpen(false)}>{t('about')}</Link>
 
           <div className="flex flex-col gap-3 pt-2 border-t border-white/10">
             <Link href="/organizer/dashboard"
               className="flex items-center gap-2 text-purple-300 text-sm font-semibold"
               onClick={() => setMenuOpen(false)}>
-              ⚙️ Dashboard Διοργανωτή
+              ⚙️ {t('organizerDashboard')}
             </Link>
             <span className="text-white/40 text-xs">{organizer.clubNameGr}</span>
             <button onClick={logoutOrganizer}
               className="text-white/40 hover:text-white text-sm transition-colors text-left">
-              ↩ Έξοδος
+              ↩ {t('signOut')}
             </button>
           </div>
         </div>
@@ -257,7 +265,7 @@ if (isOrganizer && organizer) {
           {/* Brevets dropdown */}
           <div className="relative group">
             <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
-              Brevets
+              {t('brevets')}
               <svg className="w-3 h-3 opacity-40 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
               </svg>
@@ -266,19 +274,19 @@ if (isOrganizer && organizer) {
               <div className="bg-[#0d1f3c] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
                 <Link href="/brevets"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Πρόγραμμα Brevets
+                  {t('brevetsSchedule')}
                 </Link>
                 <Link href="/brevets/overview"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Χάρτης Διαδρομών
+                  {t('brevetsMap')}
                 </Link>
                 <Link href="/history"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Ιστορικό
+                  {t('history')}
                 </Link>
                 <Link href="/live"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                  Live Tracking
+                  {t('liveTracking')}
                 </Link>
               </div>
             </div>
@@ -286,7 +294,7 @@ if (isOrganizer && organizer) {
           {/* Στατιστικά dropdown */}
           <div className="relative group">
             <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
-              Στατιστικά
+              {t('stats')}
               <svg className="w-3 h-3 opacity-40 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
               </svg>
@@ -295,27 +303,27 @@ if (isOrganizer && organizer) {
               <div className="bg-[#0d1f3c] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
                 <Link href="/results"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Αποτελέσματα
+                  {t('results')}
                 </Link>
                 <Link href="/members"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Αναβάτες
+                  {t('riders')}
                 </Link>
                 <Link href="/pantheon"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Πάνθεον
+                  {t('pantheon')}
                 </Link>
                 <Link href="/community"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Κοινότητα
+                  {t('community')}
                 </Link>
                 <Link href="/organizer-universe"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Organizer Universe
+                  {t('organizerUniverse')}
                 </Link>
                 <Link href="/brevet-universe"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                  Brevet Universe
+                  {t('brevetUniverse')}
                 </Link>
               </div>
             </div>
@@ -323,7 +331,7 @@ if (isOrganizer && organizer) {
           {/* Randonneuring dropdown */}
           <div className="relative group">
             <button className="text-white/60 hover:text-white text-sm transition-colors flex items-center gap-1">
-              Randonneuring
+              {t('randonneuring')}
               <svg className="w-3 h-3 opacity-40 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
               </svg>
@@ -332,36 +340,38 @@ if (isOrganizer && organizer) {
               <div className="bg-[#0d1f3c] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
                 <Link href="/randonneuring"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Ιστορία του Randonneuring
+                  {t('randonneuringHistory')}
                 </Link>
                 <Link href="/randonneuring/guide"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Πρακτικός Οδηγός
+                  {t('practicalGuide')}
                 </Link>
                 <Link href="/randonneuring/acp-guide"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
-                  Οδηγός ACP
+                  {t('acpGuide')}
                 </Link>
                 <Link href="/randonneuring/har-guide"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                  Οδηγός HAR
+                  {t('harGuide')}
                 </Link>
               </div>
             </div>
           </div>
           <Link href="/about" className="text-white/60 hover:text-white text-sm transition-colors">
-            Σχετικά
+            {t('about')}
           </Link>
         </div>
 
         {/* Desktop auth */}
         <div className="hidden sm:flex items-center gap-3">
+          <LanguageSwitcher />
+
           {loading ? (
             <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
           ) : user ? (
             <div className="flex items-center gap-3">
 
-              {/*── Admin Cog ───────────────────────────────── */}    
+              {/*── Admin Cog ───────────────────────────────── */}
                 {user?.email === 'nikos.argiropoulos@gmail.com' && (
                 <Link href="/admin"
                   className="text-white/30 hover:text-white text-xs transition-colors">
@@ -390,7 +400,7 @@ if (isOrganizer && organizer) {
                   </span>
                 )}
                 <div className="flex flex-col leading-tight">
-                  <span className="text-white/50 text-xs">Το προφίλ μου</span>
+                  <span className="text-white/50 text-xs">{t('myProfile')}</span>
                   <span className="text-white text-sm font-semibold">
                     {user.name?.split(' ')[0]}
                   </span>
@@ -403,19 +413,19 @@ if (isOrganizer && organizer) {
                 onClick={logout}
                 className="text-white/40 hover:text-white text-sm transition-colors"
               >
-                Έξοδος
+                {t('signOut')}
               </button>
             </div>
           ) : (
             <>
               <Link href="/login"
                 className="text-white/60 hover:text-white text-sm px-4 py-2 transition-colors">
-                Σύνδεση
+                {t('signIn')}
               </Link>
               <Link href="/login"
                 className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold
                   text-sm px-4 py-2 rounded-full transition-colors">
-                Εγγραφή
+                {t('signUp')}
               </Link>
             </>
           )}
@@ -439,59 +449,66 @@ if (isOrganizer && organizer) {
       {/* Mobile cyclist menu */}
       {menuOpen && (
         <div className="sm:hidden mt-4 pb-4 border-t border-white/10 pt-4 flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Brevets</span>
+          <div className="flex items-center justify-between">
+            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">{t('brevets')}</span>
+            <LanguageSwitcher compact />
+          </div>
+          <div className="flex flex-col gap-2 -mt-2">
             <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
               <Link href="/brevets" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Πρόγραμμα Brevets</Link>
+                onClick={() => setMenuOpen(false)}>{t('brevetsSchedule')}</Link>
               <Link href="/brevets/overview" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Χάρτης Διαδρομών</Link>
+                onClick={() => setMenuOpen(false)}>{t('brevetsMap')}</Link>
               <Link href="/history" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Ιστορικό</Link>
+                onClick={() => setMenuOpen(false)}>{t('history')}</Link>
               <Link href="/live" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Live Tracking</Link>
+                onClick={() => setMenuOpen(false)}>{t('liveTracking')}</Link>
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Στατιστικά</span>
+            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">{t('stats')}</span>
             <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
               <Link href="/results" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Αποτελέσματα</Link>
+                onClick={() => setMenuOpen(false)}>{t('results')}</Link>
               <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Αναβάτες</Link>
+                onClick={() => setMenuOpen(false)}>{t('riders')}</Link>
               <Link href="/pantheon" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Πάνθεον</Link>
+                onClick={() => setMenuOpen(false)}>{t('pantheon')}</Link>
               <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors"
-                onClick={() => setMenuOpen(false)}>Κοινότητα</Link>
+                onClick={() => setMenuOpen(false)}>{t('community')}</Link>
+              <Link href="/organizer-universe" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>{t('organizerUniverse')}</Link>
+              <Link href="/brevet-universe" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>{t('brevetUniverse')}</Link>
             </div>
           </div>
           <Link href="/about"
             className="text-white/60 hover:text-white text-sm transition-colors"
             onClick={() => setMenuOpen(false)}>
-            Σχετικά
+            {t('about')}
           </Link>
           <div className="flex flex-col gap-2">
-            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Randonneuring</span>
+            <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">{t('randonneuring')}</span>
             <div className="pl-3 border-l border-white/10 flex flex-col gap-2">
               <Link href="/randonneuring"
                 className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>
-                Ιστορία
+                {t('randonneuringHistory')}
               </Link>
               <Link href="/randonneuring/guide"
                 className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>
-                Πρακτικός Οδηγός
+                {t('practicalGuide')}
               </Link>
               <Link href="/randonneuring/acp-guide"
                 className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>
-                Οδηγός ACP
+                {t('acpGuide')}
               </Link>
               <Link href="/randonneuring/har-guide"
                 className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>
-                Οδηγός HAR
+                {t('harGuide')}
               </Link>
             </div>
           </div>
@@ -519,7 +536,7 @@ if (isOrganizer && organizer) {
                       {user.name?.[0]}
                     </span>
                   )}
-                  <span>👤 Το Προφίλ μου</span>
+                  <span>👤 {t('myProfileMobile')}</span>
                   <span className="text-cyan-400 text-xs ml-auto">→</span>
                 </Link>
 
@@ -528,7 +545,7 @@ if (isOrganizer && organizer) {
                   onClick={logout}
                   className="text-white/40 hover:text-white text-sm transition-colors text-left"
                 >
-                  ↩ Έξοδος
+                  ↩ {t('signOut')}
                 </button>
               </>
             ) : (
@@ -538,7 +555,7 @@ if (isOrganizer && organizer) {
                   text-sm px-4 py-2 rounded-full transition-colors text-center"
                 onClick={() => setMenuOpen(false)}
               >
-                Σύνδεση με Google
+                {t('signInWithGoogle')}
               </Link>
             )}
           </div>
