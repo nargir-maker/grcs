@@ -6,6 +6,7 @@ import './globals.css';
 import { routing } from '@/i18n/routing';
 import Nav from '@/app/components/Nav';
 import WhatsNew from '@/app/components/WhatsNew';
+import Cop31Banner from '@/app/components/Cop31Banner';
 import { AuthProvider } from '@/app/lib/AuthContext';
 import { SessionProviderWrapper } from '@/app/lib/SessionProviderWrapper';
 import { Analytics } from "@vercel/analytics/next"
@@ -73,6 +74,7 @@ export default async function RootLayout({
           <SessionProviderWrapper>
             <AuthProvider>
               <Nav />
+              <Cop31Banner />
               <WhatsNew />
               <main className="flex-1">
                 {children}
