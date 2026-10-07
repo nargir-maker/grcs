@@ -24,6 +24,9 @@ interface LiveMapProps {
   onRiderSelect: (id: string | null) => void;
   mapHeight?: string;
   riderLabelMode?: 'brevet' | 'friendly';
+  // Pre-parsed route coordinates (e.g. a friendly ride's uploaded GPX, already
+  // decoded in RTDB) — used instead of gpxUrl when there's no GPX file to fetch.
+  routeCoords?: { lat: number; lng: number }[];
 }
 
 // ── Tile styles ───────────────────────────────────────────────────────────────
@@ -200,16 +203,90 @@ function buildKmMarkers(
   }
 }
 
+function clearRouteLayers(map: any, layerRef: { current: any[] }) {
+  layerRef.current.forEach(l => map.removeLayer(l));
+  layerRef.current = [];
+}
+
+// Draws the route polyline + start/finish/CP markers from an already-resolved
+// list of [lat, lng] pairs, and fills parsedCoordsRef (used by buildKmMarkers).
+// Shared by the GPX-fetch path (brevets) and the pre-parsed-coords path (friendly rides).
+function drawRoute(
+  leaflet: any, map: any, coords: [number, number][],
+  controls: { km: number; name: string; lat: number; lng: number }[],
+  routeLayerRef: { current: any[] },
+  parsedCoordsRef: { current: ParsedCoord[] },
+  fitBounds: boolean,
+) {
+  clearRouteLayers(map, routeLayerRef);
+  if (coords.length === 0) { parsedCoordsRef.current = []; return; }
+
+  const parsed: ParsedCoord[] = [];
+  let distKm = 0, prevLat = 0, prevLng = 0;
+  coords.forEach(([lat, lng], i) => {
+    if (i > 0 && prevLat !== 0) distKm += haversineM(prevLat, prevLng, lat, lng) / 1000;
+    prevLat = lat; prevLng = lng;
+    parsed.push({ lat, lng, distKm });
+  });
+  parsedCoordsRef.current = parsed;
+
+  const poly = leaflet.polyline(coords, { color: '#ff3d02', weight: 3, opacity: 0.7 }).addTo(map);
+  routeLayerRef.current.push(poly);
+  if (fitBounds) map.fitBounds(poly.getBounds(), { padding: [30, 30] });
+
+  const startMarker = leaflet.marker(coords[0], {
+    icon: leaflet.divIcon({
+      html: `<div style="width:28px;height:28px;border-radius:50%;
+        background:#22c55e;border:2.5px solid #fff;color:#fff;font-size:13px;
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:0 1px 4px rgba(0,0,0,.5)">🚴</div>`,
+      className: '', iconSize: [28, 28], iconAnchor: [14, 14],
+    }),
+  }).addTo(map).bindPopup('Αφετηρία');
+  routeLayerRef.current.push(startMarker);
+
+  const finishMarker = leaflet.marker(coords[coords.length - 1], {
+    icon: leaflet.divIcon({
+      html: `<div style="width:28px;height:28px;border-radius:50%;
+        background:#ef4444;border:2.5px solid #fff;color:#fff;font-size:13px;
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:0 1px 4px rgba(0,0,0,.5)">🏆</div>`,
+      className: '', iconSize: [28, 28], iconAnchor: [14, 14],
+    }),
+  }).addTo(map).bindPopup('Τερματισμός');
+  routeLayerRef.current.push(finishMarker);
+
+  controls.forEach((cp, i) => {
+    if (!cp.lat || !cp.lng) return;
+    const cpMarker = leaflet.marker([cp.lat, cp.lng], {
+      icon: leaflet.divIcon({
+        html: svgCpMarker(i + 1),
+        className: '', iconSize: [32, 32], iconAnchor: [16, 16],
+      }),
+      zIndexOffset: 300,
+    }).addTo(map).bindTooltip(
+      cp.name
+        ? `<b>CP${i+1}: ${cp.name}</b><br/>${cp.km} km`
+        : `<b>CP${i+1}</b><br/>${cp.km} km`,
+      { permanent: false }
+    );
+    routeLayerRef.current.push(cpMarker);
+  });
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function LiveMap({
   gpxUrl, controls, riders, selectedRiderId, onRiderSelect,
   mapHeight = '500px',
   riderLabelMode = 'brevet',
+  routeCoords,
 }: LiveMapProps) {
   const mapRef       = useRef<HTMLDivElement>(null);
   const mapInstance  = useRef<any>(null);
   const riderMarkers = useRef<Map<string, any>>(new Map());
-  const kmLayerRef   = useRef<any[]>([]);
+  const kmLayerRef    = useRef<any[]>([]);
+  const routeLayerRef = useRef<any[]>([]);
+  const routeFittedRef = useRef(false);
   const parsedCoords = useRef<ParsedCoord[]>([]);
   const tileLayerRef = useRef<any>(null);
   const zoomedRiderId = useRef<string | null>(null);
@@ -244,6 +321,10 @@ export default function LiveMap({
       tileLayerRef.current = tile;
       mapInstance.current  = map;
 
+      map.on('zoomend', () => {
+        buildKmMarkers(leaflet, map, parsedCoords.current, map.getZoom(), kmLayerRef);
+      });
+
       if (gpxUrl) {
         try {
           const res  = await fetch(gpxUrl);
@@ -251,79 +332,24 @@ export default function LiveMap({
           const xml  = new DOMParser().parseFromString(text, 'text/xml');
           const pts  = xml.querySelectorAll('trkpt');
           const coords: [number, number][] = [];
-          const parsed: ParsedCoord[]      = [];
-          let distKm = 0, prevLat = 0, prevLng = 0;
-
-          pts.forEach((pt, i) => {
+          pts.forEach(pt => {
             const lat = parseFloat(pt.getAttribute('lat') ?? '0');
             const lng = parseFloat(pt.getAttribute('lon') ?? '0');
-            if (lat && lng) {
-              if (i > 0 && prevLat !== 0)
-                distKm += haversineM(prevLat, prevLng, lat, lng) / 1000;
-              prevLat = lat; prevLng = lng;
-              coords.push([lat, lng]);
-              parsed.push({ lat, lng, distKm });
-            }
+            if (lat && lng) coords.push([lat, lng]);
           });
 
-          parsedCoords.current = parsed;
-
           if (coords.length > 0) {
-            const poly = leaflet.polyline(coords, {
-              color: '#ff3d02', weight: 3, opacity: 0.7,
-            }).addTo(map);
-            map.fitBounds(poly.getBounds(), { padding: [30, 30] });
-
-            // START 🚴
-            leaflet.marker(coords[0], {
-              icon: leaflet.divIcon({
-                html: `<div style="width:28px;height:28px;border-radius:50%;
-                  background:#22c55e;border:2.5px solid #fff;color:#fff;font-size:13px;
-                  display:flex;align-items:center;justify-content:center;
-                  box-shadow:0 1px 4px rgba(0,0,0,.5)">🚴</div>`,
-                className: '', iconSize: [28, 28], iconAnchor: [14, 14],
-              }),
-            }).addTo(map).bindPopup('Αφετηρία');
-
-            // FINISH 🏆
-            leaflet.marker(coords[coords.length - 1], {
-              icon: leaflet.divIcon({
-                html: `<div style="width:28px;height:28px;border-radius:50%;
-                  background:#ef4444;border:2.5px solid #fff;color:#fff;font-size:13px;
-                  display:flex;align-items:center;justify-content:center;
-                  box-shadow:0 1px 4px rgba(0,0,0,.5)">🏆</div>`,
-                className: '', iconSize: [28, 28], iconAnchor: [14, 14],
-              }),
-            }).addTo(map).bindPopup('Τερματισμός');
-
-            // CP MARKERS — κίτρινοι κύκλοι CPx
-            controls.forEach((cp, i) => {
-              if (!cp.lat || !cp.lng) return;
-              leaflet.marker([cp.lat, cp.lng], {
-                icon: leaflet.divIcon({
-                  html: svgCpMarker(i + 1),
-                  className: '', iconSize: [32, 32], iconAnchor: [16, 16],
-                }),
-                zIndexOffset: 300,
-              }).addTo(map).bindTooltip(
-                cp.name
-                  ? `<b>CP${i+1}: ${cp.name}</b><br/>${cp.km} km`
-                  : `<b>CP${i+1}</b><br/>${cp.km} km`,
-                { permanent: false }
-              );
-            });
-
-            // KM MARKERS
-            buildKmMarkers(leaflet, map, parsed, map.getZoom(), kmLayerRef);
-            map.on('zoomend', () => {
-              buildKmMarkers(leaflet, map, parsed, map.getZoom(), kmLayerRef);
-            });
+            drawRoute(leaflet, map, coords, controls, routeLayerRef, parsedCoords, true);
+            routeFittedRef.current = true;
+            buildKmMarkers(leaflet, map, parsedCoords.current, map.getZoom(), kmLayerRef);
+          } else {
+            map.setView([38.0, 23.7], 7);
           }
         } catch (e) {
           console.error('GPX load error:', e);
           map.setView([38.0, 23.7], 7);
         }
-      } else {
+      } else if (!routeCoords || routeCoords.length === 0) {
         map.setView([38.0, 23.7], 7);
       }
     }
@@ -338,6 +364,28 @@ export default function LiveMap({
       }
     };
   }, [gpxUrl]);
+
+  // ── Route from pre-parsed coordinates (e.g. a friendly ride's GPX) ─────────
+  // Separate from the gpxUrl effect above since this data can arrive/change
+  // live via an RTDB listener, after the map has already mounted.
+  useEffect(() => {
+    if (!mapInstance.current || !L || gpxUrl) return;
+    const map = mapInstance.current;
+
+    if (!routeCoords || routeCoords.length === 0) {
+      clearRouteLayers(map, routeLayerRef);
+      kmLayerRef.current.forEach(m => map.removeLayer(m));
+      kmLayerRef.current = [];
+      parsedCoords.current = [];
+      routeFittedRef.current = false;
+      return;
+    }
+
+    const coords: [number, number][] = routeCoords.map(c => [c.lat, c.lng]);
+    drawRoute(L, map, coords, controls, routeLayerRef, parsedCoords, !routeFittedRef.current);
+    routeFittedRef.current = true;
+    buildKmMarkers(L, map, parsedCoords.current, map.getZoom(), kmLayerRef);
+  }, [routeCoords, L, gpxUrl, controls]);
 
   // ── Update rider markers ──────────────────────────────────────────────────
   useEffect(() => {

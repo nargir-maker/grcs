@@ -30,6 +30,10 @@ const LiveMap = dynamic(() => import('@/app/components/LiveMap'), {
   loading: () => <MapLoading />,
 });
 
+// Stable reference — friendly rides have no CP/control points, and passing a
+// fresh [] literal as a prop every render would retrigger LiveMap's route effect.
+const NO_CONTROLS: { km: number; name: string; lat: number; lng: number }[] = [];
+
 interface Rider {
   id: string;
   fullName: string;
@@ -289,6 +293,7 @@ export default function FriendlyRidePage() {
   const [lastSeenTs, setLastSeenTs]       = useState(Date.now());
   const [viewerName, setViewerName]       = useState<string | null>(null);
   const [showRiderList, setShowRiderList] = useState(false);
+  const [routeCoords, setRouteCoords]     = useState<{ lat: number; lng: number }[]>([]);
 
   // Φόρτωσε αποθηκευμένο όνομα από localStorage
   useEffect(() => {
@@ -341,6 +346,26 @@ export default function FriendlyRidePage() {
       setLastUpdate(new Date());
     });
     return () => off(participantsRef);
+  }, [code]);
+
+  // Route listener — GPX route uploaded from the mobile app, encoded as
+  // "lat,lng|lat,lng|..." (see FriendlyRideService.uploadRoute in the Flutter app)
+  useEffect(() => {
+    if (!code) return;
+    const routeRef = ref(rtdb, `friendly_rides/${code}/route`);
+    onValue(routeRef, (snapshot) => {
+      const data = snapshot.val();
+      const pts = data?.pts as string | undefined;
+      if (!pts) { setRouteCoords([]); return; }
+      const coords = pts.split('|')
+        .map(pair => {
+          const [lat, lng] = pair.split(',').map(Number);
+          return { lat, lng };
+        })
+        .filter(c => Number.isFinite(c.lat) && Number.isFinite(c.lng));
+      setRouteCoords(coords);
+    });
+    return () => off(routeRef);
   }, [code]);
 
   // Messages listener
@@ -416,7 +441,8 @@ export default function FriendlyRidePage() {
             <div className="absolute inset-0">
               <LiveMap
                 gpxUrl=""
-                controls={[]}
+                controls={NO_CONTROLS}
+                routeCoords={routeCoords}
                 riders={riders.map(r => ({ ...r, registryId: r.id }))}
                 selectedRiderId={selectedRider}
                 onRiderSelect={setSelectedRider}
