@@ -1034,5 +1034,34 @@
     "signalLabel": "signal",
     "waitingForRiders": "Waiting for riders to join the ride...",
     "footerLabel": "Friendly Ride"
+  },
+  "brevetUniverse": {
+    "overline": "Statistics",
+    "heroSubtitle": "All the routes that have been ridden in official brevets in Greece.",
+    "errorLoading": "Unable to load data.",
+    "statUniqueRoutes": "Unique Routes",
+    "statParticipations": "Participations",
+    "statTimePeriod": "Time Period",
+    "distAll": "All",
+    "kmUnit": "km",
+    "bubbleTopCount": "Top {count} routes",
+    "bubbleSizeHint": "size = participations · tap for details",
+    "bubbleSublabel": "{count} participants · {distance} km",
+    "rankingFullTitle": "Full Ranking",
+    "rankingCount": "{count} routes",
+    "editionsCount": "{count} editions"
+  },
+  "brevetSpotlight": {
+    "categoryOverallTitle": "🏆 Most popular\nBrevet",
+    "category200Title": "🔵 Most popular\n200",
+    "category300Title": "🟢 Most popular\n300",
+    "category400Title": "🟣 Most popular\n400",
+    "category600Title": "🟠 Most popular\n600",
+    "category1000Title": "🔴 Most popular\n1000+",
+    "statRiders": "Riders",
+    "statEditions": "Editions"
+  },
+  "pageViews": {
+    "pageViewsCount": "👁️ {count} page views"
   }
 }

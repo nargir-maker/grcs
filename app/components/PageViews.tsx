@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 
 interface Props { page: string }
 
 export default function PageViews({ page }: Props) {
+  const t = useTranslations('pageViews');
+  const locale = useLocale();
+  const numberLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const [views, setViews] = useState<number | null>(null);
 
   useEffect(() => {
@@ -22,7 +26,7 @@ export default function PageViews({ page }: Props) {
 
   return (
     <p className="text-white/20 text-xs text-center pb-2">
-      👁️ {views.toLocaleString('el')} προβολές σελίδας
+      {t('pageViewsCount', { count: views.toLocaleString(numberLocale) })}
     </p>
   );
 }

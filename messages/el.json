@@ -1034,5 +1034,34 @@
     "signalLabel": "σήμα",
     "waitingForRiders": "Αναμονή για αναβάτες να ενωθούν στη βόλτα...",
     "footerLabel": "Φιλική Βόλτα"
+  },
+  "brevetUniverse": {
+    "overline": "Στατιστικά",
+    "heroSubtitle": "Όλες οι διαδρομές που έχουν τρεχτεί σε επίσημα brevets στην Ελλάδα.",
+    "errorLoading": "Αδυναμία φόρτωσης δεδομένων.",
+    "statUniqueRoutes": "Μοναδικές Διαδρομές",
+    "statParticipations": "Συμμετοχές",
+    "statTimePeriod": "Χρονική Περίοδος",
+    "distAll": "Όλες",
+    "kmUnit": "χλμ",
+    "bubbleTopCount": "Top {count} διαδρομές",
+    "bubbleSizeHint": "μέγεθος = συμμετοχές · αγγίξτε για λεπτομέρειες",
+    "bubbleSublabel": "{count} συμμ. · {distance} χλμ",
+    "rankingFullTitle": "Πλήρης Κατάταξη",
+    "rankingCount": "{count} διαδρομές",
+    "editionsCount": "{count} εκδόσεις"
+  },
+  "brevetSpotlight": {
+    "categoryOverallTitle": "🏆 Πιο δημοφιλές\nΜπρεβέ",
+    "category200Title": "🔵 Πιο δημοφιλές\n200άρι",
+    "category300Title": "🟢 Πιο δημοφιλές\n300άρι",
+    "category400Title": "🟣 Πιο δημοφιλές\n400άρι",
+    "category600Title": "🟠 Πιο δημοφιλές\n600άρι",
+    "category1000Title": "🔴 Πιο δημοφιλές\n1000άρι+",
+    "statRiders": "Αναβάτες",
+    "statEditions": "Εκδόσεις"
+  },
+  "pageViews": {
+    "pageViewsCount": "👁️ {count} προβολές σελίδας"
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { resolveOrganizerLogoId } from '../lib/organizerLogo';
 
 export interface SpotlightRoute {
@@ -18,14 +19,14 @@ interface Category { bucket: number; title: string; color: string }
 
 // Mirrors _BrevetSpotlightCarouselState._cats in the Flutter app's
 // brevet_universe_screen.dart — same copy, same colors, same order.
-const CATEGORIES: Category[] = [
-  { bucket: -1,   title: '🏆 Πιο δημοφιλές\nΜπρεβέ',  color: '#00D4FF' },
-  { bucket: 200,  title: '🔵 Πιο δημοφιλές\n200άρι',  color: '#42A5F5' },
-  { bucket: 300,  title: '🟢 Πιο δημοφιλές\n300άρι',  color: '#66BB6A' },
-  { bucket: 400,  title: '🟣 Πιο δημοφιλές\n400άρι',  color: '#7986CB' },
-  { bucket: 600,  title: '🟠 Πιο δημοφιλές\n600άρι',  color: '#FF8A65' },
-  { bucket: 1000, title: '🔴 Πιο δημοφιλές\n1000άρι+', color: '#EF5350' },
-];
+const CATEGORY_DEFS = [
+  { bucket: -1,   titleKey: 'categoryOverallTitle', color: '#00D4FF' },
+  { bucket: 200,  titleKey: 'category200Title',     color: '#42A5F5' },
+  { bucket: 300,  titleKey: 'category300Title',     color: '#66BB6A' },
+  { bucket: 400,  titleKey: 'category400Title',     color: '#7986CB' },
+  { bucket: 600,  titleKey: 'category600Title',     color: '#FF8A65' },
+  { bucket: 1000, titleKey: 'category1000Title',    color: '#EF5350' },
+] as const;
 
 function bucketOf(dist: number) {
   if (dist <= 200) return 200;
@@ -51,12 +52,16 @@ interface Slide { route: SpotlightRoute; title: string; color: string }
 interface Props { routes: SpotlightRoute[] }
 
 export default function BrevetSpotlightCarousel({ routes }: Props) {
+  const t = useTranslations('brevetSpotlight');
+  const locale = useLocale();
+  const numberLocale = locale === 'el' ? 'el-GR' : 'en-US';
+
   // routes is already sorted by participants desc (same as Flutter's `ranked`),
   // so the first match per bucket is the most popular route in that bucket.
   const slides: Slide[] = [];
-  for (const cat of CATEGORIES) {
+  for (const cat of CATEGORY_DEFS) {
     const top = cat.bucket === -1 ? routes[0] : routes.find(r => bucketOf(r.distance) === cat.bucket);
-    if (top) slides.push({ route: top, title: cat.title, color: cat.color });
+    if (top) slides.push({ route: top, title: t(cat.titleKey), color: cat.color });
   }
 
   const count = slides.length;
@@ -149,12 +154,12 @@ export default function BrevetSpotlightCarousel({ routes }: Props) {
           {/* Stats row */}
           <div className="flex items-center gap-2">
             <div className="flex-1 text-center">
-              <div className="font-bold text-xl" style={{ color }}>{route.participants.toLocaleString('el')}</div>
-              <div className="text-white/35 text-[10px]">Αναβάτες</div>
+              <div className="font-bold text-xl" style={{ color }}>{route.participants.toLocaleString(numberLocale)}</div>
+              <div className="text-white/35 text-[10px]">{t('statRiders')}</div>
             </div>
             <div className="flex-1 text-center">
               <div className="font-bold text-xl" style={{ color: `${color}CC` }}>{route.editions}</div>
-              <div className="text-white/35 text-[10px]">Εκδόσεις</div>
+              <div className="text-white/35 text-[10px]">{t('statEditions')}</div>
             </div>
             {route.organizer && (
               <div className="flex-1 flex flex-col items-center min-w-0">

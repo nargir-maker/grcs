@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { useLocale, useTranslations } from 'next-intl';
 import type { BubbleItem } from '@/app/components/BubbleChart';
 import BrevetSpotlightCarousel from '@/app/components/BrevetSpotlightCarousel';
 import PageViews from '@/app/components/PageViews';
@@ -28,10 +29,10 @@ interface UniverseData {
 const DIST_OPTIONS = [0, 200, 300, 400, 600, 1000] as const;
 type DistFilter = typeof DIST_OPTIONS[number];
 
-function distLabel(d: DistFilter) {
-  if (d === 0)    return 'Όλες';
+function distLabel(d: DistFilter, t: ReturnType<typeof useTranslations>) {
+  if (d === 0)    return t('distAll');
   if (d === 1000) return '1000+';
-  return `${d} χλμ`;
+  return `${d} ${t('kmUnit')}`;
 }
 
 function distBadgeColor(d: number) {
@@ -57,6 +58,9 @@ function matchesDist(d: number, filter: DistFilter) {
 }
 
 export default function BrevetUniversePage() {
+  const t = useTranslations('brevetUniverse');
+  const locale = useLocale();
+  const numberLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const [data, setData]         = useState<UniverseData | null>(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(false);
@@ -77,7 +81,7 @@ export default function BrevetUniversePage() {
     .map((r, i) => ({
       id:       r.key,
       label:    r.name,
-      sublabel: `${r.participants.toLocaleString('el')} συμμ. · ${r.distance} χλμ`,
+      sublabel: t('bubbleSublabel', { count: r.participants.toLocaleString(numberLocale), distance: r.distance }),
       value:    r.participants,
       rank:     i + 1,
     }));
@@ -92,12 +96,12 @@ export default function BrevetUniversePage() {
 
         {/* Hero */}
         <div className="mb-10">
-          <p className="text-cyan-400 text-xs font-bold uppercase tracking-widest mb-3">Στατιστικά</p>
+          <p className="text-cyan-400 text-xs font-bold uppercase tracking-widest mb-3">{t('overline')}</p>
           <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-3">
             🚴 Brevet Universe
           </h1>
           <p className="text-white/40 text-sm">
-            Όλες οι διαδρομές που έχουν τρεχτεί σε επίσημα brevets στην Ελλάδα.
+            {t('heroSubtitle')}
           </p>
         </div>
 
@@ -110,14 +114,14 @@ export default function BrevetUniversePage() {
           </div>
         ) : error ? (
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-red-400 text-sm mb-10">
-            Αδυναμία φόρτωσης δεδομένων.
+            {t('errorLoading')}
           </div>
         ) : data && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
             {[
-              { label: 'Μοναδικές Διαδρομές', value: data.totalRoutes.toLocaleString('el') },
-              { label: 'Συμμετοχές',          value: data.totalParticipations.toLocaleString('el') },
-              { label: 'Χρονική Περίοδος',    value: yearRange },
+              { label: t('statUniqueRoutes'),    value: data.totalRoutes.toLocaleString(numberLocale) },
+              { label: t('statParticipations'),  value: data.totalParticipations.toLocaleString(numberLocale) },
+              { label: t('statTimePeriod'),      value: yearRange },
             ].map(s => (
               <div key={s.label} className="bg-white/5 border border-white/10 rounded-2xl p-5">
                 <div className="text-cyan-400 font-bold text-2xl mb-1">{s.value}</div>
@@ -142,7 +146,7 @@ export default function BrevetUniversePage() {
                   ${distFilter === d
                     ? 'bg-cyan-500 border-cyan-500 text-black'
                     : 'bg-white/5 border-white/10 text-white/50 hover:text-white hover:border-white/20'}`}>
-                {distLabel(d)}
+                {distLabel(d, t)}
                 {d > 0 && (
                   <span className="ml-1.5 text-xs opacity-70">
                     ({(data.ranking.filter(r => matchesDist(r.distance, d))).length})
@@ -159,7 +163,7 @@ export default function BrevetUniversePage() {
             <div className="px-6 pt-5 pb-2 border-b border-white/8">
               <div className="text-white font-bold text-base">Bubble Universe</div>
               <div className="text-white/35 text-xs mt-0.5">
-                Top {bubbleItems.length} διαδρομές{distFilter ? ` · ${distLabel(distFilter)}` : ''} · μέγεθος = συμμετοχές · αγγίξτε για λεπτομέρειες
+                {t('bubbleTopCount', { count: bubbleItems.length })}{distFilter ? ` · ${distLabel(distFilter, t)}` : ''} · {t('bubbleSizeHint')}
               </div>
             </div>
             <div className="p-4">
@@ -172,8 +176,8 @@ export default function BrevetUniversePage() {
         {data && filtered.length > 0 && (
           <div className="bg-white/3 border border-white/8 rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-white/8 flex items-center justify-between">
-              <div className="text-white font-bold text-base">Πλήρης Κατάταξη</div>
-              <div className="text-white/30 text-sm">{filtered.length} διαδρομές</div>
+              <div className="text-white font-bold text-base">{t('rankingFullTitle')}</div>
+              <div className="text-white/30 text-sm">{t('rankingCount', { count: filtered.length })}</div>
             </div>
             <div className="divide-y divide-white/5">
               {filtered.map((route, i) => (
@@ -186,14 +190,14 @@ export default function BrevetUniversePage() {
 
                   {/* Distance badge */}
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${distBadgeColor(route.distance)}`}>
-                    {route.distance} χλμ
+                    {route.distance} {t('kmUnit')}
                   </span>
 
                   {/* Name & meta */}
                   <div className="flex-1 min-w-0">
                     <div className="text-white text-sm font-semibold truncate">{route.name}</div>
                     <div className="text-white/35 text-xs mt-0.5">
-                      {route.editions} εκδόσεις
+                      {t('editionsCount', { count: route.editions })}
                       {route.organizer ? ` · ${route.organizer}` : ''}
                       {route.firstYear ? ` · ${route.firstYear}${route.lastYear && route.lastYear !== route.firstYear ? `–${route.lastYear}` : ''}` : ''}
                     </div>
@@ -208,13 +212,13 @@ export default function BrevetUniversePage() {
                       />
                     </div>
                     <div className="text-white/60 text-xs tabular-nums w-16 text-right">
-                      {route.participants.toLocaleString('el')}
+                      {route.participants.toLocaleString(numberLocale)}
                     </div>
                   </div>
 
                   {/* Mobile */}
                   <div className="sm:hidden text-white/50 text-sm tabular-nums flex-shrink-0">
-                    {route.participants.toLocaleString('el')}
+                    {route.participants.toLocaleString(numberLocale)}
                   </div>
                 </div>
               ))}
