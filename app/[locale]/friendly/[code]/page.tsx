@@ -5,23 +5,29 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { ref, onValue, off, get, push, set, serverTimestamp } from 'firebase/database';
 import { rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
 import { decodeParam } from '@/app/lib/routeParams';
 
-const LiveMap = dynamic(() => import('@/app/components/LiveMap'), {
-  ssr: false,
-  loading: () => (
+function MapLoading() {
+  const t = useTranslations('friendly');
+  return (
     <div style={{ height: '82vh' }} className="bg-white/5 rounded-2xl
       border border-white/10 flex items-center justify-center">
       <div className="text-center">
         <div className="w-6 h-6 border-2 border-green-500 border-t-transparent
           rounded-full animate-spin mx-auto mb-2" />
-        <p className="text-white/30 text-sm">Φόρτωση χάρτη...</p>
+        <p className="text-white/30 text-sm">{t('loadingMap')}</p>
       </div>
     </div>
-  ),
+  );
+}
+
+const LiveMap = dynamic(() => import('@/app/components/LiveMap'), {
+  ssr: false,
+  loading: () => <MapLoading />,
 });
 
 interface Rider {
@@ -74,22 +80,23 @@ function Chip({ value, label, color }: {
 
 // ── Name modal ────────────────────────────────────────────────────────────────
 function NameModal({ onSave }: { onSave: (name: string) => void }) {
+  const t = useTranslations('friendly');
   const [name, setName] = useState('');
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center
       bg-[#0A1628]/90 backdrop-blur-sm rounded-2xl">
       <div className="bg-white/5 border border-white/15 rounded-2xl p-6 w-full max-w-xs mx-4">
         <p className="text-2xl text-center mb-2">💬</p>
-        <h3 className="text-white font-bold text-center mb-1">Πώς να σε λένε;</h3>
+        <h3 className="text-white font-bold text-center mb-1">{t('nameModalTitle')}</h3>
         <p className="text-white/40 text-xs text-center mb-4">
-          Το όνομά σου θα φαίνεται στα μηνύματά σου
+          {t('nameModalSubtitle')}
         </p>
         <input
           autoFocus
           value={name}
           onChange={e => setName(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onSave(name.trim()); }}
-          placeholder="π.χ. Νίκος"
+          placeholder={t('namePlaceholder')}
           maxLength={30}
           className="w-full bg-white/5 border border-white/15 text-white rounded-xl
             px-4 py-2.5 text-sm focus:outline-none focus:border-green-500/60
@@ -100,7 +107,7 @@ function NameModal({ onSave }: { onSave: (name: string) => void }) {
           disabled={!name.trim()}
           className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40
             text-black font-bold py-2.5 rounded-xl text-sm transition-all">
-          Συνέχεια →
+          {t('continueButton')}
         </button>
       </div>
     </div>
@@ -121,6 +128,9 @@ function ChatPanel({
   viewerName: string | null;
   onSetViewerName: (name: string) => void;
 }) {
+  const t = useTranslations('friendly');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const [text, setText]       = useState('');
   const [sending, setSending] = useState(false);
   const scrollRef             = useRef<HTMLDivElement>(null);
@@ -161,7 +171,7 @@ function ChatPanel({
         border-b border-white/10 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-lg">💬</span>
-          <span className="text-white font-bold text-sm">Ομαδικό Chat</span>
+          <span className="text-white font-bold text-sm">{t('groupChat')}</span>
           <span className="text-white/30 text-xs font-mono">{code}</span>
         </div>
         <button onClick={onClose}
@@ -176,13 +186,13 @@ function ChatPanel({
         {messages.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <p className="text-white/20 text-sm text-center">
-              Δεν υπάρχουν μηνύματα ακόμα.
+              {t('noMessagesYet')}
             </p>
           </div>
         ) : messages.map(msg => {
           const isViewer = msg.uid === 'web-viewer' && msg.name === viewerName;
           const dt       = new Date(msg.ts);
-          const time     = dt.toLocaleTimeString('el-GR', {
+          const time     = dt.toLocaleTimeString(dateLocale, {
             hour: '2-digit', minute: '2-digit'
           });
 
@@ -238,7 +248,7 @@ function ChatPanel({
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-          placeholder="Γράψε μήνυμα..."
+          placeholder={t('messagePlaceholder')}
           className="flex-1 bg-white/5 border border-white/15 text-white rounded-full
             px-4 py-2 text-sm focus:outline-none focus:border-green-500/60
             placeholder-white/25"
@@ -263,6 +273,9 @@ function ChatPanel({
 export default function FriendlyRidePage() {
   const params  = useParams();
   const code    = decodeParam(params.code as string)?.toUpperCase();
+  const t = useTranslations('friendly');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
 
   const [riders, setRiders]               = useState<Rider[]>([]);
   const [messages, setMessages]           = useState<ChatMessage[]>([]);
@@ -341,7 +354,7 @@ export default function FriendlyRidePage() {
         .map(([key, val]: [string, any]) => ({
           id:     key,
           uid:    val.uid ?? '',
-          name:   val.name ?? 'Αναβάτης',
+          name:   val.name ?? t('defaultRiderName'),
           gender: val.gender ?? 'M',
           text:   val.text ?? '',
           ts:     val.ts ?? 0,
@@ -371,13 +384,13 @@ export default function FriendlyRidePage() {
     <div className="min-h-screen bg-[#0A1628] flex items-center justify-center px-6">
       <div className="text-center max-w-sm">
         <div className="text-5xl mb-4">🚴</div>
-        <h1 className="text-white font-bold text-xl mb-2">Βόλτα δεν βρέθηκε</h1>
+        <h1 className="text-white font-bold text-xl mb-2">{t('rideNotFoundTitle')}</h1>
         <p className="text-white/40 text-sm mb-6">
-          Δεν υπάρχει ενεργή φιλική βόλτα με κωδικό{' '}
+          {t('rideNotFoundBody')}{' '}
           <span className="text-green-400 font-bold">{code}</span>.
         </p>
         <a href="/" className="text-cyan-400 text-sm hover:text-cyan-300 transition-colors">
-          ← Επιστροφή στην αρχική
+          {t('backToHome')}
         </a>
       </div>
     </div>
@@ -391,7 +404,7 @@ export default function FriendlyRidePage() {
         <div className="flex items-center gap-3 mb-4">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
           <span className="text-green-400 text-xs font-bold tracking-wider">LIVE</span>
-          <h1 className="text-xl font-bold text-white">Φιλική Βόλτα 🚴‍♂️</h1>
+          <h1 className="text-xl font-bold text-white">{t('pageTitle')}</h1>
           <span className="text-white/30 text-sm font-mono tracking-widest">{code}</span>
         </div>
 
@@ -417,10 +430,10 @@ export default function FriendlyRidePage() {
               <div
                 onClick={() => setShowRiderList(v => !v)}
                 className="flex flex-wrap items-center gap-2 cursor-pointer select-none"
-                title="Λίστα αναβατών"
+                title={t('riderListTooltip')}
               >
-                <Chip value={activeRiders.length} label="🚴 Σε βόλτα" color="#22c55e" />
-                <Chip value={riders.length}       label="👥 Σύνολο"   color="white"   />
+                <Chip value={activeRiders.length} label={`🚴 ${t('statOnRide')}`} color="#22c55e" />
+                <Chip value={riders.length}       label={`👥 ${t('statTotal')}`}   color="white"   />
                 <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
                   {showRiderList ? '▲' : '▼'}
                 </span>
@@ -434,7 +447,7 @@ export default function FriendlyRidePage() {
                     minWidth: 200, maxHeight: 256, overflowY: 'auto',
                   }}>
                   {riders.length === 0 ? (
-                    <p className="text-white/40 text-xs px-4 py-3">Κανένας αναβάτης</p>
+                    <p className="text-white/40 text-xs px-4 py-3">{t('noRiders')}</p>
                   ) : (
                     riders.map(rider => (
                       <button
@@ -464,7 +477,7 @@ export default function FriendlyRidePage() {
                 padding: '5px 12px',
               }}>
                 <span style={{ color: 'white', fontSize: 15, fontWeight: 'bold', fontFamily: 'monospace' }}>
-                  🕐 {currentTime.toLocaleTimeString('el-GR', {
+                  🕐 {currentTime.toLocaleTimeString(dateLocale, {
                     hour: '2-digit', minute: '2-digit', second: '2-digit'
                   })}
                 </span>
@@ -475,10 +488,10 @@ export default function FriendlyRidePage() {
                   border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
                   padding: '5px 12px',
                 }}>
-                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>Έναρξη: </span>
+                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{t('startLabel')}</span>
                   <span style={{ color: '#4ade80', fontSize: 13, fontWeight: 'bold', fontFamily: 'monospace' }}>
-                    {rideStartTime.toLocaleDateString('el-GR', { day: 'numeric', month: 'short' })}{' '}
-                    {rideStartTime.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}
+                    {rideStartTime.toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })}{' '}
+                    {rideStartTime.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               )}
@@ -489,9 +502,9 @@ export default function FriendlyRidePage() {
                   padding: '5px 12px',
                 }}>
                   <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>
-                    Ενημέρωση: {lastUpdate.toLocaleTimeString('el-GR', {
+                    {t('lastUpdate', { time: lastUpdate.toLocaleTimeString(dateLocale, {
                       hour: '2-digit', minute: '2-digit', second: '2-digit'
-                    })}
+                    }) })}
                   </span>
                 </div>
               )}
@@ -542,7 +555,7 @@ export default function FriendlyRidePage() {
         {riders.length > 0 && (
           <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-white/10">
-              <h2 className="text-white font-bold">Αναβάτες</h2>
+              <h2 className="text-white font-bold">{t('ridersHeading')}</h2>
             </div>
             <div className="divide-y divide-white/5">
               {riders
@@ -567,7 +580,7 @@ export default function FriendlyRidePage() {
                         <p className="text-white text-sm font-medium truncate">
                           {rider.fullName}
                         </p>
-                        <p className="text-xs text-green-400">🚴 Σε βόλτα</p>
+                        <p className="text-xs text-green-400">{`🚴 ${t('statOnRide')}`}</p>
                       </div>
                       <div className="flex gap-4 text-right shrink-0">
                         {rider.currentKm !== '0' && (
@@ -575,7 +588,7 @@ export default function FriendlyRidePage() {
                             <div className="text-white text-sm font-bold">
                               {parseFloat(rider.currentKm).toFixed(1)}km
                             </div>
-                            <div className="text-white/30 text-xs">διανυθείσα</div>
+                            <div className="text-white/30 text-xs">{t('distanceCovered')}</div>
                           </div>
                         )}
                         {rider.avgSpeed !== '0' && (
@@ -583,16 +596,16 @@ export default function FriendlyRidePage() {
                             <div className="text-cyan-400 text-sm font-bold">
                               {parseFloat(rider.avgSpeed).toFixed(1)}
                             </div>
-                            <div className="text-white/30 text-xs">km/h μ.ο.</div>
+                            <div className="text-white/30 text-xs">{t('avgSpeedUnit')}</div>
                           </div>
                         )}
                         {mins !== null && (
                           <div>
                             <div className={`text-sm font-bold ${
                               mins > 5 ? 'text-red-400' : 'text-green-400'}`}>
-                              {mins < 1 ? 'Τώρα' : `${mins}λ`}
+                              {mins < 1 ? t('signalNow') : t('signalMinutesAgo', { mins })}
                             </div>
-                            <div className="text-white/30 text-xs">σήμα</div>
+                            <div className="text-white/30 text-xs">{t('signalLabel')}</div>
                           </div>
                         )}
                       </div>
@@ -615,13 +628,13 @@ export default function FriendlyRidePage() {
           <div className="text-center py-12">
             <div className="text-4xl mb-3">🚴</div>
             <p className="text-white/30">
-              Αναμονή για αναβάτες να ενωθούν στη βόλτα...
+              {t('waitingForRiders')}
             </p>
           </div>
         )}
 
         <p className="text-white/20 text-xs text-center mt-6">
-          Φιλική Βόλτα · {code} · Greek Brevets Tracker
+          {t('footerLabel')} · {code} · Greek Brevets Tracker
         </p>
       </div>
     </div>
