@@ -897,5 +897,33 @@
     "footerCtaBody": "The feeling when you finish your first 200 and get that stamp is impossible to put into words.",
     "footerCtaButton": "See upcoming Brevets",
     "footerCtaBack": "History & Structure"
+  },
+  "acpGuide": {
+    "metaTitle": "Randonneuring Guide — GRC",
+    "metaDescription": "From your first 200km Brevet to Randonneur 10000. The progression path and rules.",
+    "breadcrumbHome": "Home",
+    "breadcrumbTitle": "Randonneuring Guide",
+    "heroTitle": "Randonneuring Guide",
+    "heroSubtitle": "From your first Brevet to R-10000",
+    "ladderHeading": "🏅 Progression Path",
+    "ladderCaption": "Tap each category to learn more",
+    "officialSourceLink": "Official source",
+    "backToGuide": "Practical Guide",
+    "ladder1Label": "First Brevet 200km",
+    "ladder1Sub": "The beginning",
+    "ladder2Label": "Super Randonneur",
+    "ladder2Sub": "200+300+400+600 / year",
+    "ladder3Label": "Super Randonnée",
+    "ladder3Sub": "600km + 10,000m+",
+    "ladder4Label": "ISR / ISR (2C) / ISR (3C) / ISR (4C)",
+    "ladder4Sub": "SR in 4 countries — up to 4 continents",
+    "ladder5Label": "Paris-Brest-Paris",
+    "ladder5Sub": "1200km / 90h",
+    "ladder6Label": "Challenge Lepertel",
+    "ladder6Sub": "4× LRM 1200km+ / 4 consecutive years",
+    "ladder7Label": "Randonneur 5000",
+    "ladder7Sub": "5,000km / 4 years",
+    "ladder8Label": "Randonneur 10000",
+    "ladder8Sub": "10,000km / 6 years"
   }
 }

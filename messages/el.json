@@ -897,5 +897,33 @@
     "footerCtaBody": "Η αίσθηση όταν θα τερματίσεις το πρώτο σου 200άρι και θα πάρεις τη σφραγίδα δεν περιγράφεται με λόγια.",
     "footerCtaButton": "Δες τα επερχόμενα Brevets",
     "footerCtaBack": "Ιστορία & Δομή"
+  },
+  "acpGuide": {
+    "metaTitle": "Οδηγός Randonneuring — GRC",
+    "metaDescription": "Από το πρώτο Brevet 200km ως το Randonneur 10000. Πορεία διακρίσεων και κανονισμοί.",
+    "breadcrumbHome": "Αρχική",
+    "breadcrumbTitle": "Οδηγός Randonneuring",
+    "heroTitle": "Οδηγός Randonneuring",
+    "heroSubtitle": "Από το πρώτο Brevet ως το R-10000",
+    "ladderHeading": "🏅 Πορεία Διακρίσεων",
+    "ladderCaption": "Πάτησε σε κάθε κατηγορία για να μάθεις περισσότερα",
+    "officialSourceLink": "Επίσημη πηγή",
+    "backToGuide": "Πρακτικός Οδηγός",
+    "ladder1Label": "Πρώτο Brevet 200km",
+    "ladder1Sub": "Η αρχή",
+    "ladder2Label": "Super Randonneur",
+    "ladder2Sub": "200+300+400+600 / έτος",
+    "ladder3Label": "Super Randonnée",
+    "ladder3Sub": "600km + 10,000m+",
+    "ladder4Label": "ISR / ISR (2C) / ISR (3C) / ISR (4C)",
+    "ladder4Sub": "SR σε 4 χώρες — έως 4 ηπείρους",
+    "ladder5Label": "Paris-Brest-Paris",
+    "ladder5Sub": "1200km / 90h",
+    "ladder6Label": "Challenge Lepertel",
+    "ladder6Sub": "4× LRM 1200km+ / 4 διαδοχικά έτη",
+    "ladder7Label": "Randonneur 5000",
+    "ladder7Sub": "5,000km / 4 χρόνια",
+    "ladder8Label": "Randonneur 10000",
+    "ladder8Sub": "10,000km / 6 χρόνια"
   }
 }

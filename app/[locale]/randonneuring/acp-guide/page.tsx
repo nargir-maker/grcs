@@ -1,13 +1,18 @@
 import type { Metadata } from 'next';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { adminDb } from '@/app/lib/firebaseAdmin';
 import UsefulButton from '@/app/components/UsefulButton';
 import PageViews from '@/app/components/PageViews';
 
-export const metadata: Metadata = {
-  title: 'Οδηγός Randonneuring — GRC',
-  description: 'Από το πρώτο Brevet 200km ως το Randonneur 10000. Πορεία διακρίσεων και κανονισμοί.',
-};
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'acpGuide' });
+  return {
+    title: t('metaTitle'),
+    description: t('metaDescription'),
+  };
+}
 
 interface Topic {
   id: string;
@@ -19,18 +24,22 @@ interface Topic {
   color?: string;
 }
 
-const LADDER = [
-  { icon: '🚴', label: 'Πρώτο Brevet 200km',              sublabel: 'Η αρχή',                                    color: '#2196F3' },
-  { icon: '🏆', label: 'Super Randonneur',                 sublabel: '200+300+400+600 / έτος',                    color: '#FFD600' },
-  { icon: '🏔️', label: 'Super Randonnée',                  sublabel: '600km + 10,000m+',                          color: '#FF6D00' },
-  { icon: '🌍', label: 'ISR / ISR (2C) / ISR (3C) / ISR (4C)', sublabel: 'SR σε 4 χώρες — έως 4 ηπείρους',     color: '#00E676' },
-  { icon: '🗼', label: 'Paris-Brest-Paris',                sublabel: '1200km / 90h',                              color: '#FF1744' },
-  { icon: '🌟', label: 'Challenge Lepertel',               sublabel: '4× LRM 1200km+ / 4 διαδοχικά έτη',         color: '#00E5FF' },
-  { icon: '🥇', label: 'Randonneur 5000',                  sublabel: '5,000km / 4 χρόνια',                        color: '#FFD600' },
-  { icon: '🏅', label: 'Randonneur 10000',                 sublabel: '10,000km / 6 χρόνια',                       color: '#ffffff' },
-];
+export default async function AcpGuidePage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations('acpGuide');
 
-export default async function AcpGuidePage() {
+  const LADDER = [
+    { icon: '🚴', label: t('ladder1Label'), sublabel: t('ladder1Sub'), color: '#2196F3' },
+    { icon: '🏆', label: t('ladder2Label'), sublabel: t('ladder2Sub'), color: '#FFD600' },
+    { icon: '🏔️', label: t('ladder3Label'), sublabel: t('ladder3Sub'), color: '#FF6D00' },
+    { icon: '🌍', label: t('ladder4Label'), sublabel: t('ladder4Sub'), color: '#00E676' },
+    { icon: '🗼', label: t('ladder5Label'), sublabel: t('ladder5Sub'), color: '#FF1744' },
+    { icon: '🌟', label: t('ladder6Label'), sublabel: t('ladder6Sub'), color: '#00E5FF' },
+    { icon: '🥇', label: t('ladder7Label'), sublabel: t('ladder7Sub'), color: '#FFD600' },
+    { icon: '🏅', label: t('ladder8Label'), sublabel: t('ladder8Sub'), color: '#ffffff' },
+  ];
+
   let topics: Topic[] = [];
 
   if (adminDb) {
@@ -60,26 +69,26 @@ export default async function AcpGuidePage() {
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-white/30 mb-8">
-          <Link href="/" className="hover:text-white transition-colors">Αρχική</Link>
+          <Link href="/" className="hover:text-white transition-colors">{t('breadcrumbHome')}</Link>
           <span>/</span>
           <Link href="/randonneuring" className="hover:text-white transition-colors">Randonneuring</Link>
           <span>/</span>
-          <span className="text-white/60">Οδηγός Randonneuring</span>
+          <span className="text-white/60">{t('breadcrumbTitle')}</span>
         </div>
 
         {/* Hero */}
         <div className="mb-10 text-center">
           <div className="text-5xl mb-4">🚴</div>
           <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-3">
-            Οδηγός Randonneuring
+            {t('heroTitle')}
           </h1>
-          <p className="text-white/40 text-sm">Από το πρώτο Brevet ως το R-10000</p>
+          <p className="text-white/40 text-sm">{t('heroSubtitle')}</p>
         </div>
 
         {/* Progression Ladder */}
         <section className="mb-10">
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-            <h2 className="text-white font-bold text-base text-center mb-6">🏅 Πορεία Διακρίσεων</h2>
+            <h2 className="text-white font-bold text-base text-center mb-6">{t('ladderHeading')}</h2>
             <div className="flex flex-col gap-0">
               {LADDER.map((step, i) => {
                 const isLast = i === LADDER.length - 1;
@@ -107,7 +116,7 @@ export default async function AcpGuidePage() {
             </div>
           </div>
           <p className="text-white/25 text-xs text-center mt-3">
-            Πάτησε σε κάθε κατηγορία για να μάθεις περισσότερα
+            {t('ladderCaption')}
           </p>
         </section>
 
@@ -133,7 +142,7 @@ export default async function AcpGuidePage() {
                   {topic.url && (
                     <a href={topic.url} target="_blank" rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 mt-3 text-cyan-400 hover:text-cyan-300 text-xs font-medium transition-colors">
-                      Επίσημη πηγή ↗
+                      {t('officialSourceLink')} ↗
                     </a>
                   )}
                 </div>
@@ -146,7 +155,7 @@ export default async function AcpGuidePage() {
         <div className="mt-10 text-center">
           <Link href="/randonneuring/guide"
             className="text-white/30 hover:text-white text-sm transition-colors">
-            ← Πρακτικός Οδηγός
+            ← {t('backToGuide')}
           </Link>
         </div>
 
