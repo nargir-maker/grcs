@@ -176,6 +176,9 @@ export default async function AboutPage({
                   <img src="/logos/659999.png" alt="H.A.R." className="w-56 h-56 object-contain rounded-full" />
                 </a>
               </div>
+              <p className="text-white/30 text-xs text-center pt-2">
+                {t('externalLinksDisclaimer')}
+              </p>
             </div>
 
           </div>
