@@ -6,7 +6,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/app/lib/firebase';
 import { useRouter } from '@/i18n/navigation';
 import { useAuth } from '@/app/lib/AuthContext';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { routing } from '@/i18n/routing';
 
 const scrollStyle = `
@@ -32,6 +32,7 @@ interface Club {
 type Mode = 'choose' | 'cyclist' | 'organizer';
 
 export default function LoginPage() {
+  const t = useTranslations('login');
   const [mode, setMode] = useState<Mode>('choose');
   const [clubs, setClubs] = useState<Club[]>([]);
   const [selectedClubId, setSelectedClubId] = useState('');
@@ -81,7 +82,7 @@ export default function LoginPage() {
       })
       .catch((err) => {
         console.error('clubs fetch error:', err);
-        setError('Αδυναμία φόρτωσης συλλόγων.');
+        setError(t('clubsFetchError'));
       })
       .finally(() => setClubsLoading(false));
   }, [mode]);
@@ -107,9 +108,9 @@ export default function LoginPage() {
   const handleOrganizerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!selectedClubId) { setError('Επέλεξε σύλλογο.'); return; }
-    if (!password.trim()) { setError('Εισήγαγε κωδικό.'); return; }
-    if (password.trim() !== selectedClubId) { setError('Λάθος κωδικός. Δοκίμασε ξανά.'); return; }
+    if (!selectedClubId) { setError(t('selectClubError')); return; }
+    if (!password.trim()) { setError(t('enterPasswordError')); return; }
+    if (password.trim() !== selectedClubId) { setError(t('wrongPasswordError')); return; }
     setLoading(true);
     const selectedClub = clubs.find((c) => c.id === selectedClubId)!;
     localStorage.setItem('organizer_session', JSON.stringify({
@@ -186,10 +187,10 @@ export default function LoginPage() {
             {mode === 'choose' && (
               <div className="p-8">
                 <h2 className="text-white text-center text-lg font-semibold mb-2">
-                  Καλωσόρισες
+                  {t('welcomeTitle')}
                 </h2>
                 <p className="text-blue-200 text-center text-sm mb-8">
-                  Πώς θέλεις να συνδεθείς;
+                  {t('chooseModeSubtitle')}
                 </p>
                 <div className="flex flex-col gap-4">
                   <button
@@ -200,8 +201,8 @@ export default function LoginPage() {
                   >
                     <div className="text-3xl">🚴</div>
                     <div>
-                      <div className="text-white font-semibold text-base">Είμαι Αναβάτης</div>
-                      <div className="text-blue-300 text-xs mt-0.5">Δες brevets, εγγράψου, παρακολούθησε ιστορικό</div>
+                      <div className="text-white font-semibold text-base">{t('cyclistOption')}</div>
+                      <div className="text-blue-300 text-xs mt-0.5">{t('cyclistOptionDesc')}</div>
                     </div>
                     <div className="ml-auto text-blue-300 group-hover:translate-x-1 transition-transform">→</div>
                   </button>
@@ -213,8 +214,8 @@ export default function LoginPage() {
                   >
                     <div className="text-3xl">🏁</div>
                     <div>
-                      <div className="text-white font-semibold text-base">Είμαι Διοργανωτής</div>
-                      <div className="text-purple-300 text-xs mt-0.5">Διαχείριση brevets, εγγραφών, αποτελεσμάτων</div>
+                      <div className="text-white font-semibold text-base">{t('organizerOption')}</div>
+                      <div className="text-purple-300 text-xs mt-0.5">{t('organizerOptionDesc')}</div>
                     </div>
                     <div className="ml-auto text-purple-300 group-hover:translate-x-1 transition-transform">→</div>
                   </button>
@@ -227,12 +228,12 @@ export default function LoginPage() {
               <div className="p-8">
                 <button onClick={handleBack}
                   className="flex items-center gap-1 text-blue-300 hover:text-white text-sm mb-6 transition-colors">
-                  ← Πίσω
+                  ← {t('back')}
                 </button>
                 <div className="text-center mb-6">
                   <div className="text-4xl mb-3">🚴</div>
-                  <h2 className="text-white font-semibold text-lg">Σύνδεση Αναβάτη</h2>
-                  <p className="text-blue-200 text-sm mt-1">Χρησιμοποίησε τον Google λογαριασμό σου</p>
+                  <h2 className="text-white font-semibold text-lg">{t('cyclistLoginTitle')}</h2>
+                  <p className="text-blue-200 text-sm mt-1">{t('cyclistLoginSubtitle')}</p>
                 </div>
                 <button
                   onClick={handleGoogleLogin}
@@ -251,7 +252,7 @@ export default function LoginPage() {
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                     </svg>
                   )}
-                  {loading ? 'Σύνδεση...' : 'Συνέχεια με Google'}
+                  {loading ? t('signingIn') : t('continueWithGoogle')}
                 </button>
               </div>
             )}
@@ -261,7 +262,7 @@ export default function LoginPage() {
               <div className="p-8">
                 <button onClick={handleBack}
                   className="flex items-center gap-1 text-purple-300 hover:text-white text-sm mb-6 transition-colors">
-                  ← Πίσω
+                  ← {t('back')}
                 </button>
 <div className="text-center mb-6">
                   <div className="flex justify-center mb-3">
@@ -278,18 +279,18 @@ export default function LoginPage() {
   <div className="text-4xl">🏁</div>
 )}
                   </div>
-                  <h2 className="text-white font-semibold text-lg">Σύνδεση Διοργανωτή</h2>
-                  <p className="text-purple-200 text-sm mt-1">Επέλεξε σύλλογο και εισήγαγε κωδικό</p>
+                  <h2 className="text-white font-semibold text-lg">{t('organizerLoginTitle')}</h2>
+                  <p className="text-purple-200 text-sm mt-1">{t('organizerLoginSubtitle')}</p>
                 </div>
                 <form onSubmit={handleOrganizerLogin} className="flex flex-col gap-4">
                   <div>
                     <label className="text-purple-200 text-xs font-semibold uppercase tracking-wider mb-1.5 block">
-                      Σύλλογος
+                      {t('clubLabel')}
                     </label>
                     {clubsLoading ? (
                       <div className="flex items-center gap-2 py-3 text-purple-300 text-sm">
                         <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-                        Φόρτωση συλλόγων...
+                        {t('loadingClubs')}
                       </div>
                     ) : (
                       <select
@@ -311,7 +312,7 @@ export default function LoginPage() {
                   </div>
                   <div>
                     <label className="text-purple-200 text-xs font-semibold uppercase tracking-wider mb-1.5 block">
-                      Κωδικός
+                      {t('passwordLabel')}
                     </label>
                     <input
                       type="password"
@@ -342,13 +343,13 @@ export default function LoginPage() {
                     {loading ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
-                        Σύνδεση...
+                        {t('signingIn')}
                       </>
-                    ) : 'Είσοδος ως Διοργανωτής'}
+                    ) : t('organizerSubmit')}
                   </button>
                 </form>
                 <p className="text-purple-300/50 text-xs text-center mt-4">
-                  Προσωρινός κωδικός: ID συλλόγου
+                  {t('tempPasswordHint')}
                 </p>
               </div>
             )}

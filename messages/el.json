@@ -614,5 +614,29 @@
     "linkSeanergy": "Seanergy Maritime Holdings Corp. — επίσημη ιστοσελίδα",
     "footerQuote": "Το COP31 Bike Ride δεν ανήκει σε έναν σύλλογο, μία ομάδα ή μία κατηγορία ποδηλατών. Ανήκει σε όλους.",
     "footerQuoteAttribution": "— Hellenic Autonomous Randonneurs"
+  },
+  "login": {
+    "clubsFetchError": "Αδυναμία φόρτωσης συλλόγων.",
+    "selectClubError": "Επέλεξε σύλλογο.",
+    "enterPasswordError": "Εισήγαγε κωδικό.",
+    "wrongPasswordError": "Λάθος κωδικός. Δοκίμασε ξανά.",
+    "welcomeTitle": "Καλωσόρισες",
+    "chooseModeSubtitle": "Πώς θέλεις να συνδεθείς;",
+    "cyclistOption": "Είμαι Αναβάτης",
+    "cyclistOptionDesc": "Δες brevets, εγγράψου, παρακολούθησε ιστορικό",
+    "organizerOption": "Είμαι Διοργανωτής",
+    "organizerOptionDesc": "Διαχείριση brevets, εγγραφών, αποτελεσμάτων",
+    "back": "Πίσω",
+    "cyclistLoginTitle": "Σύνδεση Αναβάτη",
+    "cyclistLoginSubtitle": "Χρησιμοποίησε τον Google λογαριασμό σου",
+    "signingIn": "Σύνδεση...",
+    "continueWithGoogle": "Συνέχεια με Google",
+    "organizerLoginTitle": "Σύνδεση Διοργανωτή",
+    "organizerLoginSubtitle": "Επέλεξε σύλλογο και εισήγαγε κωδικό",
+    "clubLabel": "Σύλλογος",
+    "loadingClubs": "Φόρτωση συλλόγων...",
+    "passwordLabel": "Κωδικός",
+    "organizerSubmit": "Είσοδος ως Διοργανωτής",
+    "tempPasswordHint": "Προσωρινός κωδικός: ID συλλόγου"
   }
 }

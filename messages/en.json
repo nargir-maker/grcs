@@ -614,5 +614,29 @@
     "linkSeanergy": "Seanergy Maritime Holdings Corp. — official website",
     "footerQuote": "The COP31 Bike Ride doesn't belong to one club, one team, or one category of cyclist. It belongs to everyone.",
     "footerQuoteAttribution": "— Hellenic Autonomous Randonneurs"
+  },
+  "login": {
+    "clubsFetchError": "Unable to load clubs.",
+    "selectClubError": "Select a club.",
+    "enterPasswordError": "Enter a password.",
+    "wrongPasswordError": "Wrong password. Try again.",
+    "welcomeTitle": "Welcome",
+    "chooseModeSubtitle": "How would you like to sign in?",
+    "cyclistOption": "I'm a Cyclist",
+    "cyclistOptionDesc": "View brevets, register, track your history",
+    "organizerOption": "I'm an Organizer",
+    "organizerOptionDesc": "Manage brevets, registrations, results",
+    "back": "Back",
+    "cyclistLoginTitle": "Cyclist Sign-in",
+    "cyclistLoginSubtitle": "Use your Google account",
+    "signingIn": "Signing in...",
+    "continueWithGoogle": "Continue with Google",
+    "organizerLoginTitle": "Organizer Sign-in",
+    "organizerLoginSubtitle": "Select your club and enter the password",
+    "clubLabel": "Club",
+    "loadingClubs": "Loading clubs...",
+    "passwordLabel": "Password",
+    "organizerSubmit": "Sign in as Organizer",
+    "tempPasswordHint": "Temporary password: club ID"
   }
 }
