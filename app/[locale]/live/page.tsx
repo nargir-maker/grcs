@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useSession } from 'next-auth/react';
+import { useLocale, useTranslations } from 'next-intl';
 import { ref, onValue, off, get } from 'firebase/database';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db, rtdb } from '@/app/lib/firebase';
@@ -31,6 +32,9 @@ interface FriendlyRide {
 
 export default function LivePage() {
   const router = useRouter();
+  const t = useTranslations('live');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const { data: session } = useSession();
   const [brevets, setBrevets] = useState<LiveBrevet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,16 +184,16 @@ export default function LivePage() {
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-            <h1 className="text-3xl font-bold text-white">Live Tracking</h1>
+            <h1 className="text-3xl font-bold text-white">{t('pageTitle')}</h1>
           </div>
-          <p className="text-white/50">Brevets σε εξέλιξη αυτή τη στιγμή</p>
+          <p className="text-white/50">{t('subtitle')}</p>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-24">
             <div className="text-center">
               <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-white/50 text-sm">Φόρτωση live brevets...</p>
+              <p className="text-white/50 text-sm">{t('loading')}</p>
             </div>
           </div>
         ) : (
@@ -209,7 +213,7 @@ export default function LivePage() {
                         </div>
                         <h2 className="text-white font-bold text-lg leading-tight mb-1">{b.title}</h2>
                         <p className="text-white/40 text-sm">
-                          📅 {b.date ? new Date(b.date).toLocaleDateString('el-GR', {
+                          📅 {b.date ? new Date(b.date).toLocaleDateString(dateLocale, {
                             day: 'numeric', month: 'long', year: 'numeric'
                           }) : '—'}
                         </p>
@@ -226,22 +230,22 @@ export default function LivePage() {
                     <div className="flex gap-4 mt-4 pt-4 border-t border-white/10">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-white">{b.activeRiders}</div>
-                        <div className="text-white/40 text-xs">🚴 Σε πορεία</div>
+                        <div className="text-white/40 text-xs">🚴 {t('statOnRoad')}</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-green-400">{b.finishedRiders}</div>
-                        <div className="text-white/40 text-xs">🏁 Τερμάτισαν</div>
+                        <div className="text-white/40 text-xs">🏁 {t('statFinished')}</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-red-400">{b.dnfRiders}</div>
-                        <div className="text-white/40 text-xs">❌ DNF</div>
+                        <div className="text-white/40 text-xs">❌ {t('statDnf')}</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-cyan-400">{b.riderCount}</div>
-                        <div className="text-white/40 text-xs">👥 Σύνολο</div>
+                        <div className="text-white/40 text-xs">👥 {t('statTotal')}</div>
                       </div>
                       <div className="ml-auto flex items-center">
-                        <span className="text-cyan-400 text-sm font-bold">Δες χάρτη →</span>
+                        <span className="text-cyan-400 text-sm font-bold">{t('viewMap')}</span>
                       </div>
                     </div>
                   </a>
@@ -250,17 +254,17 @@ export default function LivePage() {
             ) : (
               <div className="text-center py-16 mb-8">
                 <div className="text-5xl mb-4">🚴</div>
-                <p className="text-white/30 text-lg">Δεν υπάρχουν ενεργά brevets αυτή τη στιγμή</p>
-                <p className="text-white/20 text-sm mt-2">Έλεγξε ξανά την ημέρα ενός brevet</p>
+                <p className="text-white/30 text-lg">{t('noActiveBrevets')}</p>
+                <p className="text-white/20 text-sm mt-2">{t('checkBackLater')}</p>
               </div>
             )}
 
             {/* ── FRIENDLY RIDES ── */}
             <div className="mb-8">
               <h2 className="text-white/40 text-sm font-bold uppercase tracking-wider mb-3">
-                Φιλικές Βόλτες {friendlyRides.length > 0 && (
+                {t('friendlyRides')} {friendlyRides.length > 0 && (
                   <span className="text-purple-400 normal-case font-normal ml-1">
-                    · {friendlyRides.length} σε εξέλιξη
+                    · {t('inProgressCount', { count: friendlyRides.length })}
                   </span>
                 )}
               </h2>
@@ -279,12 +283,12 @@ export default function LivePage() {
                           <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
                           <span className="text-purple-400 text-xs font-bold tracking-wider">LIVE</span>
                         </div>
-                        <p className="text-white font-medium">Φιλική Βόλτα #{ride.code}</p>
+                        <p className="text-white font-medium">{t('friendlyRideHash', { code: ride.code })}</p>
                         <p className="text-white/40 text-xs mt-0.5">
-                          👥 {ride.participantCount} συμμετέχοντες
+                          👥 {t('participantsCount', { count: ride.participantCount })}
                         </p>
                       </div>
-                      <span className="text-purple-400 text-sm font-bold">Δες χάρτη →</span>
+                      <span className="text-purple-400 text-sm font-bold">{t('viewMap')}</span>
                     </button>
                   ))}
                 </div>
@@ -297,11 +301,11 @@ export default function LivePage() {
                   className="w-full border border-dashed border-white/20 rounded-xl px-5 py-4
                     text-white/40 hover:text-white/60 hover:border-white/30 transition-all text-sm"
                 >
-                  + Εισαγωγή κωδικού φιλικής βόλτας
+                  {t('enterCodeButton')}
                 </button>
               ) : (
                 <div className="bg-white/5 border border-white/10 rounded-xl px-5 py-4">
-                  <p className="text-white/60 text-sm mb-3">Εισήγαγε τον 5ψήφιο κωδικό:</p>
+                  <p className="text-white/60 text-sm mb-3">{t('enterCodePrompt')}</p>
                   <div className="flex gap-3">
                     <input
                       type="text"
@@ -309,11 +313,11 @@ export default function LivePage() {
                       onChange={e => { setCodeInput(e.target.value.toUpperCase()); setCodeError(''); }}
                       onKeyDown={e => {
                         if (e.key === 'Enter') {
-                          if (codeInput.trim().length < 4) { setCodeError('Ο κωδικός είναι πολύ μικρός.'); return; }
+                          if (codeInput.trim().length < 4) { setCodeError(t('codeTooShort')); return; }
                           router.push(`/friendly/${codeInput.trim()}`);
                         }
                       }}
-                      placeholder="π.χ. 8YSM36"
+                      placeholder={t('codePlaceholder')}
                       maxLength={8}
                       autoFocus
                       className="flex-1 bg-white/5 border border-white/20 rounded-lg px-4 py-2.5
@@ -322,13 +326,13 @@ export default function LivePage() {
                     />
                     <button
                       onClick={() => {
-                        if (codeInput.trim().length < 4) { setCodeError('Ο κωδικός είναι πολύ μικρός.'); return; }
+                        if (codeInput.trim().length < 4) { setCodeError(t('codeTooShort')); return; }
                         router.push(`/friendly/${codeInput.trim()}`);
                       }}
                       className="bg-purple-500/20 border border-purple-500/30 text-purple-400
                         px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-purple-500/30 transition-all"
                     >
-                      Πήγαινε →
+                      {t('goButton')}
                     </button>
                     <button
                       onClick={() => { setShowCodeInput(false); setCodeInput(''); setCodeError(''); }}
@@ -346,7 +350,7 @@ export default function LivePage() {
             {emptyBrevets.length > 0 && (
               <>
                 <h2 className="text-white/40 text-sm font-bold uppercase tracking-wider mb-3">
-                  Προσεχώς
+                  {t('upcoming')}
                 </h2>
                 <div className="flex flex-col gap-3">
                   {emptyBrevets.map(b => (
@@ -356,12 +360,12 @@ export default function LivePage() {
                       <div>
                         <p className="text-white/60 text-sm font-medium">{b.title}</p>
                         <p className="text-white/30 text-xs mt-0.5">
-                          {b.date ? new Date(b.date).toLocaleDateString('el-GR', {
+                          {b.date ? new Date(b.date).toLocaleDateString(dateLocale, {
                             day: 'numeric', month: 'long'
                           }) : '—'} · {b.distance}km
                         </p>
                       </div>
-                      <span className="text-white/20 text-xs">Δεν έχει ξεκινήσει</span>
+                      <span className="text-white/20 text-xs">{t('notStarted')}</span>
                     </div>
                   ))}
                 </div>

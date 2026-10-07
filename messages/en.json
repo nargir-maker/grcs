@@ -966,5 +966,28 @@
     "topic7Title": "COP Bike Ride — The Greek Leg",
     "topic7ShortDesc": "Annual global cycling relay; H.A.R. puts Greece on the world map",
     "topic7Content": "The \"COP Bike Ride\" is an ongoing, annually repeated international initiative, aiming to promote proposals for everyday cycling as a tool for reducing carbon emissions, traveling towards the UN Climate Change Conference (COP) each year: it already took place at COP29 (2024) and COP30 (2025, starting from Belém, Brazil), and continues this year towards COP31 in Antalya, Turkey (November 9–20, 2026).\n\nCoordination of the Greek leg for 2026 has been taken on by H.A.R. — effectively putting Greece on the world map of this initiative. The goal is for participation to be a matter for the whole Greek cycling community — clubs, groups and independent riders — without anyone needing to ride the entire route.\n\nThe Greek route starts on 9/30 from Athens and arrives on 10/7 at Pınarhisar, Turkey:\n9/30 Athens → Atalanti · 10/1 Atalanti → Karditsa · 10/2 Karditsa → Katerini · 10/3 Katerini → Thessaloniki · 10/4 Thessaloniki → Serres · 10/5 Serres → Komotini · 10/6 Komotini → Orestiada · 10/7 Orestiada → Pınarhisar."
+  },
+  "live": {
+    "pageTitle": "Live Tracking",
+    "subtitle": "Brevets currently in progress",
+    "loading": "Loading live brevets...",
+    "statOnRoad": "On the road",
+    "statFinished": "Finished",
+    "statDnf": "DNF",
+    "statTotal": "Total",
+    "viewMap": "View map →",
+    "noActiveBrevets": "There are no active brevets at the moment",
+    "checkBackLater": "Check back on the day of a brevet",
+    "friendlyRides": "Friendly Rides",
+    "inProgressCount": "{count} in progress",
+    "friendlyRideHash": "Friendly Ride #{code}",
+    "participantsCount": "{count} participants",
+    "enterCodeButton": "+ Enter friendly ride code",
+    "enterCodePrompt": "Enter the 5-digit code:",
+    "codePlaceholder": "e.g. 8YSM36",
+    "goButton": "Go →",
+    "codeTooShort": "The code is too short.",
+    "upcoming": "Upcoming",
+    "notStarted": "Not started yet"
   }
 }
