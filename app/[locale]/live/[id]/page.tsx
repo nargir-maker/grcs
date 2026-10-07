@@ -2,24 +2,30 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { ref, onValue, off } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
 import { decodeParam } from '@/app/lib/routeParams';
 
-const LiveMap = dynamic(() => import('@/app/components/LiveMap'), {
-  ssr: false,
-  loading: () => (
+function MapLoading() {
+  const t = useTranslations('liveBrevet');
+  return (
     <div style={{ height: '82vh' }} className="bg-white/5 rounded-2xl border border-white/10
       flex items-center justify-center">
       <div className="text-center">
         <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent
           rounded-full animate-spin mx-auto mb-2" />
-        <p className="text-white/30 text-sm">Φόρτωση χάρτη...</p>
+        <p className="text-white/30 text-sm">{t('loadingMap')}</p>
       </div>
     </div>
-  ),
+  );
+}
+
+const LiveMap = dynamic(() => import('@/app/components/LiveMap'), {
+  ssr: false,
+  loading: () => <MapLoading />,
 });
 
 // ── Elevation chart — lazy loaded ─────────────────────────────────────────────
@@ -83,6 +89,9 @@ function StatChip({ value, label, color }: {
 export default function LiveBrevetPage() {
   const params = useParams();
   const id = decodeParam(params.id as string);
+  const t = useTranslations('liveBrevet');
+  const locale = useLocale();
+  const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const [brevet, setBrevet]           = useState<BrevetInfo | null>(null);
   const [riders, setRiders]           = useState<Rider[]>([]);
   const [loading, setLoading]         = useState(true);
@@ -163,11 +172,11 @@ export default function LiveBrevetPage() {
   }
 
   function statusLabel(status: string) {
-    if (status === 'FINISHED') return '🏁 Τερμάτισε';
-    if (status === 'DNF')      return '❌ DNF';
-    if (status === 'ready')    return '⏳ Έτοιμος';
-    if (status === 'OVT')      return '⏱️ OVT';
-    return '🚴 Σε πορεία';
+    if (status === 'FINISHED') return `🏁 ${t('statusFinished')}`;
+    if (status === 'DNF')      return `❌ ${t('statusDnf')}`;
+    if (status === 'ready')    return `⏳ ${t('statusReady')}`;
+    if (status === 'OVT')      return `⏱️ ${t('statusOvt')}`;
+    return `🚴 ${t('statusOnRoad')}`;
   }
 
   if (loading) return (
@@ -184,7 +193,7 @@ export default function LiveBrevetPage() {
         {/* ── BACK ── */}
         <a href="/live" className="inline-flex items-center gap-2 text-white/40
           hover:text-white text-sm mb-4 transition-colors">
-          ← Πίσω στα Live Brevets
+          ← {t('backToLive')}
         </a>
 
         {/* ── HEADER ── */}
@@ -218,10 +227,10 @@ export default function LiveBrevetPage() {
 
             {/* ── STAT CHIPS — glassmorphism top-left ── */}
             <div className="absolute top-3 left-3 z-[1000] flex flex-wrap gap-2">
-              <StatChip value={activeRiders.length}   label="🚴 Σε πορεία"  color="#06b6d4" />
-              <StatChip value={finishedRiders.length} label="🏁 Τερμάτισαν" color="#22c55e" />
-              <StatChip value={dnfRiders.length}      label="❌ DNF"         color="#ef4444" />
-              <StatChip value={riders.length}         label="👥 Σύνολο"      color="white"   />
+              <StatChip value={activeRiders.length}   label={`🚴 ${t('statusOnRoad')}`} color="#06b6d4" />
+              <StatChip value={finishedRiders.length} label={`🏁 ${t('statusFinished')}`} color="#22c55e" />
+              <StatChip value={dnfRiders.length}      label={`❌ ${t('statusDnf')}`} color="#ef4444" />
+              <StatChip value={riders.length}         label={`👥 ${t('statTotal')}`} color="white"   />
             </div>
 
             {/* ── LAST UPDATE — glassmorphism top-right ── */}
@@ -235,9 +244,9 @@ export default function LiveBrevetPage() {
                 padding: '5px 10px',
               }}>
                 <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>
-                  Ενημέρωση: {lastUpdate.toLocaleTimeString('el-GR', {
+                  {t('lastUpdate', { time: lastUpdate.toLocaleTimeString(dateLocale, {
                     hour: '2-digit', minute: '2-digit', second: '2-digit'
-                  })}
+                  }) })}
                 </span>
               </div>
             )}
@@ -262,7 +271,7 @@ export default function LiveBrevetPage() {
                   color: showElevation ? '#000' : '#06b6d4',
                 }}
               >
-                ⛰️ Υψομετρικό
+                ⛰️ {t('elevationToggle')}
               </button>
             )}
 
@@ -302,7 +311,7 @@ export default function LiveBrevetPage() {
         {riders.length > 0 && (
           <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-white/10">
-              <h2 className="text-white font-bold">Αναβάτες</h2>
+              <h2 className="text-white font-bold">{t('ridersHeading')}</h2>
             </div>
             <div className="divide-y divide-white/5">
               {riders
@@ -350,7 +359,7 @@ export default function LiveBrevetPage() {
                         <div className="text-white text-sm font-bold">
                           {parseFloat(rider.currentKm).toFixed(0)}km
                         </div>
-                        <div className="text-white/30 text-xs">διανυθείσα</div>
+                        <div className="text-white/30 text-xs">{t('distanceCovered')}</div>
                       </div>
                     )}
                     {rider.avgSpeed !== '0' && (
@@ -358,7 +367,7 @@ export default function LiveBrevetPage() {
                         <div className="text-cyan-400 text-sm font-bold">
                           {rider.avgSpeed}
                         </div>
-                        <div className="text-white/30 text-xs">km/h μ.ο.</div>
+                        <div className="text-white/30 text-xs">{t('avgSpeedUnit')}</div>
                       </div>
                     )}
                   </div>
@@ -379,7 +388,7 @@ export default function LiveBrevetPage() {
 
         {riders.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-white/30">Δεν υπάρχουν αναβάτες ακόμα</p>
+            <p className="text-white/30">{t('noRidersYet')}</p>
           </div>
         )}
 

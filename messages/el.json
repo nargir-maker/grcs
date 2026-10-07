@@ -989,5 +989,21 @@
     "codeTooShort": "Ο κωδικός είναι πολύ μικρός.",
     "upcoming": "Προσεχώς",
     "notStarted": "Δεν έχει ξεκινήσει"
+  },
+  "liveBrevet": {
+    "loadingMap": "Φόρτωση χάρτη...",
+    "backToLive": "Πίσω στα Live Brevets",
+    "statusFinished": "Τερμάτισε",
+    "statusDnf": "DNF",
+    "statusReady": "Έτοιμος",
+    "statusOvt": "OVT",
+    "statusOnRoad": "Σε πορεία",
+    "statTotal": "Σύνολο",
+    "lastUpdate": "Ενημέρωση: {time}",
+    "elevationToggle": "Υψομετρικό",
+    "ridersHeading": "Αναβάτες",
+    "distanceCovered": "διανυθείσα",
+    "avgSpeedUnit": "km/h μ.ο.",
+    "noRidersYet": "Δεν υπάρχουν αναβάτες ακόμα"
   }
 }

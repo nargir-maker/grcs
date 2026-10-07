@@ -989,5 +989,21 @@
     "codeTooShort": "The code is too short.",
     "upcoming": "Upcoming",
     "notStarted": "Not started yet"
+  },
+  "liveBrevet": {
+    "loadingMap": "Loading map...",
+    "backToLive": "Back to Live Brevets",
+    "statusFinished": "Finished",
+    "statusDnf": "DNF",
+    "statusReady": "Ready",
+    "statusOvt": "OVT",
+    "statusOnRoad": "On the road",
+    "statTotal": "Total",
+    "lastUpdate": "Updated: {time}",
+    "elevationToggle": "Elevation",
+    "ridersHeading": "Riders",
+    "distanceCovered": "covered",
+    "avgSpeedUnit": "km/h avg",
+    "noRidersYet": "No riders yet"
   }
 }
