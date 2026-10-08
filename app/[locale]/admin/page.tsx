@@ -23,6 +23,7 @@ interface PageSetting {
 
 const PAGES: PageSetting[] = [
   { key: 'members',  label: 'Αναβάτες',      path: '/members',  icon: '👥', description: 'Hall of fame — λίστα δημόσιων μελών' },
+  { key: 'memberDirectory', label: 'Μητρώο Μελών', path: '/members/directory', icon: '📖', description: 'Πλήρες μητρώο μελών ΛΕ.ΠΟ.Τ.Ε. + H.A.R. — ορατό σε κάθε συνδεδεμένο χρήστη' },
   { key: 'results',  label: 'Αποτελέσματα',  path: '/results',  icon: '🏅', description: 'Αποτελέσματα brevets' },
   { key: 'history',  label: 'Ιστορικό',      path: '/history',  icon: '📜', description: 'Ιστορικό brevets — όλοι οι αγώνες' },
   { key: 'live',     label: 'Live',           path: '/live',     icon: '📡', description: 'Live παρακολούθηση αναβατών' },

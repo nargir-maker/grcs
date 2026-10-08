@@ -79,6 +79,10 @@ if (isOrganizer && organizer) {
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
                   {t('riders')}
                 </Link>
+                <Link href="/members/directory"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  {t('memberDirectory')}
+                </Link>
                 <Link href="/pantheon"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
                   {t('pantheon')}
@@ -206,6 +210,8 @@ if (isOrganizer && organizer) {
                 onClick={() => setMenuOpen(false)}>{t('results')}</Link>
               <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>{t('riders')}</Link>
+              <Link href="/members/directory" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>{t('memberDirectory')}</Link>
               <Link href="/pantheon" className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>{t('pantheon')}</Link>
               <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors"
@@ -308,6 +314,10 @@ if (isOrganizer && organizer) {
                 <Link href="/members"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
                   {t('riders')}
+                </Link>
+                <Link href="/members/directory"
+                  className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
+                  {t('memberDirectory')}
                 </Link>
                 <Link href="/pantheon"
                   className="block px-4 py-3 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors border-b border-white/5">
@@ -472,6 +482,8 @@ if (isOrganizer && organizer) {
                 onClick={() => setMenuOpen(false)}>{t('results')}</Link>
               <Link href="/members" className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>{t('riders')}</Link>
+              <Link href="/members/directory" className="text-white/60 hover:text-white text-sm transition-colors"
+                onClick={() => setMenuOpen(false)}>{t('memberDirectory')}</Link>
               <Link href="/pantheon" className="text-white/60 hover:text-white text-sm transition-colors"
                 onClick={() => setMenuOpen(false)}>{t('pantheon')}</Link>
               <Link href="/community" className="text-white/60 hover:text-white text-sm transition-colors"
