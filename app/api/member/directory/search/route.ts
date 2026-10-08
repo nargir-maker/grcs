@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { adminDb } from '@/app/lib/firebaseAdmin';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZES = [20, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 20;
 
 // Full member registry search — any signed-in user (not admin-only).
 // Unlike /members (opt-in "Hall of Fame"), this mirrors the mobile app's
@@ -16,9 +17,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 503 });
   }
 
-  const { q, mode, cursor } = await req.json();
+  const { q, mode, cursor, pageSize } = await req.json();
   const term = (q ?? '').toString().trim();
   const searchMode = ['name', 'lepote', 'har'].includes(mode) ? mode : 'name';
+  const PAGE_SIZE = PAGE_SIZES.includes(pageSize) ? pageSize : DEFAULT_PAGE_SIZE;
 
   const base = adminDb.collection('members');
   let snap: FirebaseFirestore.QuerySnapshot;

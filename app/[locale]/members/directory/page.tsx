@@ -13,7 +13,7 @@ import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 import PageViews from '@/app/components/PageViews';
 import { useTranslations } from 'next-intl';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZES = [20, 50, 100] as const;
 
 type SearchMode = 'name' | 'lepote' | 'har';
 
@@ -29,6 +29,26 @@ interface DirectoryMember {
 }
 
 interface Cursor { surname: string; id: string; }
+
+// ── Shield icons (insurance status) ─────────────────────────────────
+function ShieldIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z"
+        stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ShieldXIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z"
+        stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M9.5 9.5l5 5M14.5 9.5l-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 // ── Member row ──────────────────────────────────────────────────────
 function MemberRow({ m }: { m: DirectoryMember }) {
@@ -56,12 +76,17 @@ function MemberRow({ m }: { m: DirectoryMember }) {
       </div>
 
       <div className="flex items-center gap-1.5 shrink-0">
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-          m.isInsured
-            ? 'text-green-400 bg-green-500/10 border-green-500/25'
-            : 'text-red-400 bg-red-500/10 border-red-500/25'
-        }`}>
-          {m.isInsured ? t('insured') : t('notInsured')}
+        <span
+          title={m.isInsured ? t('insured') : t('notInsured')}
+          className={`flex items-center justify-center w-7 h-7 rounded-full border ${
+            m.isInsured
+              ? 'text-green-400 bg-green-500/10 border-green-500/25'
+              : 'text-red-400 bg-red-500/10 border-red-500/25'
+          }`}
+        >
+          {m.isInsured
+            ? <ShieldIcon className="w-4 h-4" />
+            : <ShieldXIcon className="w-4 h-4" />}
         </span>
         <span className="hidden sm:inline text-[10px] text-white/40 bg-white/5 border border-white/10
           px-2 py-0.5 rounded-full">
@@ -79,15 +104,19 @@ export default function MemberDirectoryPage() {
   const enabled = usePageEnabled('memberDirectory');
   const t = useTranslations('memberDirectory');
 
-  const [members,     setMembers]     = useState<DirectoryMember[]>([]);
-  const [loading,     setLoading]     = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore,     setHasMore]     = useState(false);
-  const [cursor,      setCursor]      = useState<Cursor | null>(null);
-  const [error,       setError]       = useState<string | null>(null);
+  const [members,       setMembers]       = useState<DirectoryMember[]>([]);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState<string | null>(null);
 
   const [search,     setSearch]     = useState('');
   const [searchMode, setSearchMode] = useState<SearchMode>('name');
+
+  const [pageSize,       setPageSize]       = useState<number>(PAGE_SIZES[0]);
+  const [pageIndex,      setPageIndex]      = useState(0);
+  const [maxKnownPage,   setMaxKnownPage]   = useState(0);
+  const [hasNextPage,    setHasNextPage]    = useState(false);
+  const [cursorsByPage,  setCursorsByPage]  = useState<Record<number, Cursor | null>>({ 0: null });
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Auth guard ───────────────────────────────────────────────────
@@ -96,17 +125,21 @@ export default function MemberDirectoryPage() {
     if (!session) { router.replace('/login'); return; }
   }, [session, status]);
 
-  // ── Debounced fetch on search / mode change ──────────────────────
+  // ── Debounced reset + fetch on search / mode / page size change ──
   useEffect(() => {
     if (!session) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchPage(false), 350);
+    debounceRef.current = setTimeout(() => {
+      setCursorsByPage({ 0: null });
+      setMaxKnownPage(0);
+      setHasNextPage(false);
+      loadPage(0, { 0: null }, pageSize);
+    }, 350);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [search, searchMode, session]);
+  }, [search, searchMode, pageSize, session]);
 
-  async function fetchPage(append: boolean) {
-    if (append) setLoadingMore(true);
-    else        setLoading(true);
+  async function loadPage(pageIdx: number, cursorMap: Record<number, Cursor | null>, size: number) {
+    setLoading(true);
     setError(null);
 
     try {
@@ -116,22 +149,37 @@ export default function MemberDirectoryPage() {
         body: JSON.stringify({
           q: search.trim(),
           mode: searchMode,
-          cursor: append ? cursor : null,
+          cursor: cursorMap[pageIdx] ?? null,
+          pageSize: size,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Search failed');
 
-      setMembers(prev => append ? [...prev, ...json.results] : json.results);
-      setCursor(json.nextCursor ?? null);
-      setHasMore(!!json.nextCursor);
+      const nextCursor: Cursor | null = json.nextCursor ?? null;
+      setMembers(json.results);
+      setPageIndex(pageIdx);
+      if (nextCursor) {
+        setCursorsByPage(prev => ({ ...prev, [pageIdx + 1]: nextCursor }));
+        setMaxKnownPage(prev => Math.max(prev, pageIdx + 1));
+      }
+      setHasNextPage(!!nextCursor);
     } catch (e) {
       console.error('Member directory fetch error:', e);
       setError(e instanceof Error ? e.message : 'Error');
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
+  }
+
+  function goToPage(idx: number) {
+    if (idx < 0 || idx > maxKnownPage || idx === pageIndex) return;
+    loadPage(idx, cursorsByPage, pageSize);
+  }
+
+  function changePageSize(size: number) {
+    if (size === pageSize) return;
+    setPageSize(size);
   }
 
   // ── Guards ───────────────────────────────────────────────────────
@@ -204,6 +252,24 @@ export default function MemberDirectoryPage() {
           />
         </div>
 
+        {/* Per-page selector */}
+        <div className="flex items-center justify-end gap-2 mb-3">
+          <span className="text-white/40 text-xs">{t('perPage')}</span>
+          <div className="flex gap-1 bg-white/5 border border-white/10 rounded-lg p-1">
+            {PAGE_SIZES.map(size => (
+              <button
+                key={size}
+                onClick={() => changePageSize(size)}
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                  pageSize === size ? 'bg-cyan-500 text-black' : 'text-white/50 hover:text-white'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
 
         {loading ? (
@@ -221,19 +287,41 @@ export default function MemberDirectoryPage() {
               {members.map(m => <MemberRow key={m.id} m={m} />)}
             </div>
 
-            {hasMore && (
-              <div className="flex justify-center mt-8">
+            {(pageIndex > 0 || hasNextPage) && (
+              <div className="flex items-center justify-center gap-1.5 mt-8">
                 <button
-                  onClick={() => fetchPage(true)}
-                  disabled={loadingMore}
-                  className="bg-white/5 border border-white/10 text-white/70 hover:text-white
-                    hover:bg-white/10 px-8 py-3 rounded-xl text-sm font-bold
-                    transition-all disabled:opacity-50 flex items-center gap-2"
+                  onClick={() => goToPage(pageIndex - 1)}
+                  disabled={pageIndex === 0}
+                  aria-label={t('prevPage')}
+                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/5 border border-white/10
+                    text-white/70 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  {loadingMore
-                    ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    : null}
-                  {loadingMore ? t('loadingMore') : t('nextPage', { count: PAGE_SIZE })}
+                  ‹
+                </button>
+
+                {Array.from({ length: maxKnownPage + 1 }, (_, i) => i).map(i => (
+                  <button
+                    key={i}
+                    onClick={() => goToPage(i)}
+                    aria-label={t('page', { page: i + 1 })}
+                    className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-bold transition-all ${
+                      i === pageIndex
+                        ? 'bg-cyan-500 text-black'
+                        : 'bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => goToPage(pageIndex + 1)}
+                  disabled={!hasNextPage}
+                  aria-label={t('nextPage')}
+                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/5 border border-white/10
+                    text-white/70 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ›
                 </button>
               </div>
             )}
