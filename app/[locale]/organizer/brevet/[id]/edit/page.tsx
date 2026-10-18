@@ -825,7 +825,7 @@ export default function EditBrevetPage() {
         {/* ── SECTION 6: Λεπτομέρειες ── */}
         <Section title="💬 Λεπτομέρειες">
           <Field label="Περιγραφή" hint="(μέχρι 1000 χαρακτήρες)">
-            <textarea className={`${inp} resize-none`} rows={3}
+            <textarea className={`${inp} resize-y`} rows={8}
               maxLength={1000} value={form.description}
               onChange={e => set('description', e.target.value)}
               placeholder="Σύντομη περιγραφή..." />
