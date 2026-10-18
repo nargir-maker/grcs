@@ -176,6 +176,8 @@
     "nightStartAlt": "Night start",
     "coOrganized": "🤝 Co-organized",
     "coOrganizedAlt": "Co-organized",
+    "entryCostLabel": "entry",
+    "medalLabel": "Medal",
     "statKm": "kilometers",
     "statAscent": "meters of ascent",
     "statTimeLimit": "time limit",

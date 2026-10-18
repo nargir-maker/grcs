@@ -114,6 +114,7 @@ interface BrevetDetail {
   organizerLogo: string; climbProfile: ClimbSegment[];
   externalRegistration: string;
   allowPreRide: boolean; allowPostRide: boolean;
+  entryCost: number; hasMedal: boolean; medalCost: number;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -649,6 +650,9 @@ export default function BrevetDetailPage() {
           duration: getTimeLimit(km, t('hoursUnit')), organizerLogo,
           allowPreRide:  extra.allowPreRide  !== undefined ? !!extra.allowPreRide  : harFallback,
           allowPostRide: extra.allowPostRide !== undefined ? !!extra.allowPostRide : harFallback,
+          entryCost: parseFloat(extra.entryCost?.toString() ?? '0') || 0,
+          hasMedal: extra.hasMedal === true,
+          medalCost: parseFloat(extra.medalCost?.toString() ?? '0') || 0,
           climbProfile: (() => {
             const raw = route.climbProfile;
             if (!raw) return [];
@@ -767,6 +771,18 @@ export default function BrevetDetailPage() {
               <span>🕐 {startDate.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })}</span>
             )}
             <span>🏷️ {brevet.certification} {brevet.type}</span>
+            {brevet.entryCost > 0 && (
+              <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/25
+                px-3 py-1 rounded-full text-xs font-bold">
+                💶 {brevet.entryCost}€ {t('entryCostLabel')}
+              </span>
+            )}
+            {brevet.hasMedal && (
+              <span className="text-amber-400 bg-amber-500/10 border border-amber-500/25
+                px-3 py-1 rounded-full text-xs font-bold">
+                🏅 {t('medalLabel')}{brevet.medalCost > 0 ? ` (+${brevet.medalCost}€)` : ''}
+              </span>
+            )}
             {brevet.allowPreRide && (
               <span className="text-indigo-400 bg-indigo-500/10 border border-indigo-500/25
                 px-3 py-1 rounded-full text-xs font-bold">
