@@ -14,6 +14,42 @@ import { isNightStart } from '@/app/lib/nightStart';
 import { useInterestedBrevets } from '@/app/lib/useInterestedBrevets';
 
 
+// Turns bare URLs (http(s):// or www.) inside plain text into clickable links.
+function linkifyText(text: string) {
+  const urlPattern = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = urlPattern.exec(text)) !== null) {
+    let url = match[0];
+    const start = match.index;
+
+    let trailing = '';
+    while (url.length > 0 && /[.,;:!?)\]'"]$/.test(url)) {
+      trailing = url.slice(-1) + trailing;
+      url = url.slice(0, -1);
+    }
+    if (!url) continue;
+
+    if (start > lastIndex) nodes.push(text.slice(lastIndex, start));
+    const href = url.startsWith('www.') ? `https://${url}` : url;
+    nodes.push(
+      <a key={key++} href={href} target="_blank" rel="noopener noreferrer"
+        className="text-cyan-400 hover:text-cyan-300 underline break-all transition-colors">
+        {url}
+      </a>
+    );
+    if (trailing) nodes.push(trailing);
+
+    lastIndex = start + match[0].length;
+  }
+
+  if (lastIndex < text.length) nodes.push(text.slice(lastIndex));
+  return nodes;
+}
+
 function WeatherLoading() {
   const t = useTranslations('brevetDetail');
   return (
@@ -899,7 +935,7 @@ export default function BrevetDetailPage() {
         {brevet.description && (
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
             <h2 className="text-white font-bold text-lg mb-4">{t('descriptionHeading')}</h2>
-            <p className="text-white/60 text-sm leading-relaxed">{brevet.description}</p>
+            <p className="text-white/60 text-sm leading-relaxed whitespace-pre-line">{linkifyText(brevet.description)}</p>
           </div>
         )}
 
