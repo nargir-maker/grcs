@@ -89,6 +89,9 @@ interface Brevet {
   difficultyColor: string;
   allowPreRide: boolean;
   allowPostRide: boolean;
+  entryCost: number;
+  hasMedal: boolean;
+  medalCost: number;
 }
 
 interface OrganizerOption {
@@ -228,6 +231,9 @@ export default function BrevetsPage() {
             difficultyColor: color,
             allowPreRide:    extra.allowPreRide  !== undefined ? !!extra.allowPreRide  : harFallback,
             allowPostRide:   extra.allowPostRide !== undefined ? !!extra.allowPostRide : harFallback,
+            entryCost:       parseFloat(extra.entryCost?.toString() ?? '0') || 0,
+            hasMedal:        extra.hasMedal === true,
+            medalCost:       parseFloat(extra.medalCost?.toString() ?? '0') || 0,
           });
         });
 
@@ -322,6 +328,7 @@ export default function BrevetsPage() {
                     const timeStr  = dateObj && !isNaN(dateObj.getTime())
                       ? dateObj.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })
                       : '';
+                    const isPast = !!dateObj && !isNaN(dateObj.getTime()) && dateObj.getTime() < now.getTime();
 
                     return (
                       <Link
@@ -351,7 +358,21 @@ export default function BrevetsPage() {
                           {/* Gradient overlay */}
                           <div className="absolute inset-0 bg-gradient-to-t
                             from-[#0A1628] via-[#0A1628]/60 to-transparent" />
+                          {isPast && (
+                            <div className="absolute inset-0 bg-[#0A1628]/55" />
+                          )}
                         </div>
+
+                        {/* Completed ribbon */}
+                        {isPast && (
+                          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none overflow-hidden rounded-2xl">
+                            <div className="-rotate-[32deg] bg-black/75 border-y border-white/15 w-[150%] py-1 text-center">
+                              <span className="text-white/85 text-[10px] font-black tracking-[0.2em] uppercase">
+                                {t('monthlyCompleted')}
+                              </span>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Distance badge */}
                         <div className="absolute top-2 right-2 z-10">

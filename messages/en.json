@@ -126,6 +126,7 @@
   },
   "brevets": {
     "monthlyTitle": "🚴 {month} Brevets",
+    "monthlyCompleted": "Completed",
     "heading": "📅 Brevet Calendar",
     "subheading": "All scheduled brevets for the season",
     "mapButton": "Map of all routes",

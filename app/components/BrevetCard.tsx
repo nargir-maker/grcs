@@ -24,6 +24,9 @@ interface BrevetCardProps {
     difficultyColor: string;
     allowPreRide?: boolean;
     allowPostRide?: boolean;
+    entryCost?: number;
+    hasMedal?: boolean;
+    medalCost?: number;
   };
   hasCoOrg: boolean;
   isFavorite?: boolean;
@@ -139,8 +142,8 @@ export default function BrevetCard({ b, hasCoOrg, isFavorite, onToggleFavorite }
               <p className="text-white/40 text-[10px] leading-tight truncate">
                 {b.certification} {b.type}
               </p>
-              {(b.allowPreRide || b.allowPostRide) && (
-                <div className="flex items-center gap-1 mt-1">
+              {(b.allowPreRide || b.allowPostRide || (b.entryCost ?? 0) > 0 || b.hasMedal) && (
+                <div className="flex items-center gap-1 mt-1 flex-wrap">
                   {b.allowPreRide && (
                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
                       style={{ color: '#818cf8', background: 'rgba(129,140,248,0.15)', border: '1px solid rgba(129,140,248,0.3)' }}>
@@ -151,6 +154,18 @@ export default function BrevetCard({ b, hasCoOrg, isFavorite, onToggleFavorite }
                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
                       style={{ color: '#fb923c', background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.3)' }}>
                       🌆 POST
+                    </span>
+                  )}
+                  {(b.entryCost ?? 0) > 0 && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ color: '#34d399', background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)' }}>
+                      💶 {b.entryCost}€
+                    </span>
+                  )}
+                  {b.hasMedal && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ color: '#fbbf24', background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.3)' }}>
+                      🏅{(b.medalCost ?? 0) > 0 ? ` +${b.medalCost}€` : ''}
                     </span>
                   )}
                 </div>

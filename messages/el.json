@@ -126,6 +126,7 @@
   },
   "brevets": {
     "monthlyTitle": "🚴 Τα Brevets του {month}",
+    "monthlyCompleted": "Ολοκληρώθηκε",
     "heading": "📅 Ημερολόγιο Brevet",
     "subheading": "Όλα τα προγραμματισμένα brevets της σεζόν",
     "mapButton": "Χάρτης όλων των διαδρομών",
