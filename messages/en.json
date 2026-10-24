@@ -1032,7 +1032,12 @@
     "ridersHeading": "Riders",
     "distanceCovered": "covered",
     "avgSpeedUnit": "km/h avg",
-    "noRidersYet": "No riders yet"
+    "noRidersYet": "No riders yet",
+    "motionMoving": "Moving",
+    "motionStopped": "Stopped",
+    "motionNoGps": "No GPS",
+    "motionNoSignal": "No signal",
+    "motionNoConnection": "Disconnected"
   },
   "friendly": {
     "loadingMap": "Loading map...",
@@ -1060,6 +1065,11 @@
     "signalNow": "Now",
     "signalMinutesAgo": "{mins}m",
     "signalLabel": "signal",
+    "motionMoving": "Moving",
+    "motionStopped": "Stopped",
+    "motionNoGps": "No GPS",
+    "motionNoSignal": "No signal",
+    "motionNoConnection": "Disconnected",
     "waitingForRiders": "Waiting for riders to join the ride...",
     "footerLabel": "Friendly Ride"
   },

@@ -1032,7 +1032,12 @@
     "ridersHeading": "Αναβάτες",
     "distanceCovered": "διανυθείσα",
     "avgSpeedUnit": "km/h μ.ο.",
-    "noRidersYet": "Δεν υπάρχουν αναβάτες ακόμα"
+    "noRidersYet": "Δεν υπάρχουν αναβάτες ακόμα",
+    "motionMoving": "Κινείται",
+    "motionStopped": "Στάση",
+    "motionNoGps": "Χωρίς GPS",
+    "motionNoSignal": "Χωρίς σήμα",
+    "motionNoConnection": "Χωρίς σύνδεση"
   },
   "friendly": {
     "loadingMap": "Φόρτωση χάρτη...",
@@ -1060,6 +1065,11 @@
     "signalNow": "Τώρα",
     "signalMinutesAgo": "{mins}λ",
     "signalLabel": "σήμα",
+    "motionMoving": "Κινείται",
+    "motionStopped": "Στάση",
+    "motionNoGps": "Χωρίς GPS",
+    "motionNoSignal": "Χωρίς σήμα",
+    "motionNoConnection": "Χωρίς σύνδεση",
     "waitingForRiders": "Αναμονή για αναβάτες να ενωθούν στη βόλτα...",
     "footerLabel": "Φιλική Βόλτα"
   },

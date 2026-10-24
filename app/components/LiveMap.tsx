@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { riderMotionFromRider, RIDER_MOTION_COLOR } from '@/app/lib/riderMotion';
 
 interface Rider {
   id: string;
@@ -14,6 +15,13 @@ interface Rider {
   currentKm: string;
   gender: string;
   rideMode?: string;
+  // Motion-state inputs (see app/lib/riderMotion.ts) — optional since not
+  // every caller reads these raw RTDB fields yet.
+  stoppedSec?: number;
+  timestamp?: number;
+  aliveTs?: number;
+  online?: boolean;
+  battery?: number;
 }
 
 interface LiveMapProps {
@@ -94,6 +102,7 @@ function svgRiderMarker(
   registryId: string,
   labelMode: 'brevet' | 'friendly',
   rideMode?: string,
+  motionColor?: string | null,
 ): string {
   const bg = isDNF      ? '#616161'
            : isFinished ? '#388E3C'
@@ -142,6 +151,8 @@ function svgRiderMarker(
       <text x="${chipX + chipW / 2}" y="${chipY + chipH / 2 + 5}"
         text-anchor="middle" font-family="Arial,sans-serif"
         font-size="13" font-weight="bold" fill="white">${chipLabel}</text>
+      ${motionColor ? `<circle cx="${sqSize - 5}" cy="${sqY + 5}" r="5"
+        fill="${motionColor}" stroke="white" stroke-width="1.3"/>` : ''}
     </svg>`;
 }
 
@@ -399,10 +410,12 @@ export default function LiveMap({
       const isDNF      = rider.status === 'DNF';
       const isFinished = rider.status === 'FINISHED';
       const sqSize     = isSelected ? 40 : 32;
+      const motion     = riderMotionFromRider(rider);
 
       const icon = L.divIcon({
         html: svgRiderMarker(rider.gender, isDNF, isFinished, isSelected,
-          rider.fullName, rider.registryId ?? '', riderLabelMode, rider.rideMode),
+          rider.fullName, rider.registryId ?? '', riderLabelMode, rider.rideMode,
+          motion ? RIDER_MOTION_COLOR[motion.state] : null),
         className: '',
         iconAnchor: [sqSize / 2, sqSize / 2],
       });
@@ -426,6 +439,12 @@ export default function LiveMap({
               <span style="color:${isDNF ? '#ef4444' : isFinished ? '#22c55e' : '#06b6d4'}">
                 ${isFinished ? '🏁 Τερμάτισε' : isDNF ? '❌ DNF' : '🚴 Σε πορεία'}
               </span><br/>
+              ${motion ? `<span style="color:${RIDER_MOTION_COLOR[motion.state]}">
+                ${motion.state === 'moving' ? '🚴 Κινείται'
+                  : motion.state === 'stopped' ? '⏸ Στάση'
+                  : motion.state === 'noGps' ? '📡 Χωρίς GPS'
+                  : '📵 Χωρίς σήμα'}
+              </span><br/>` : ''}
               📍 km ${parseFloat(rider.currentKm).toFixed(0)}<br/>
               ⚡ ${rider.avgSpeed} km/h μ.ο.
             </div>

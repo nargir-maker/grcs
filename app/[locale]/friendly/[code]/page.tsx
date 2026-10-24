@@ -10,6 +10,7 @@ import { ref, onValue, off, get, push, set, serverTimestamp } from 'firebase/dat
 import { rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
 import { decodeParam } from '@/app/lib/routeParams';
+import { riderMotionFromRider, motionLabel, RIDER_MOTION_TEXT_CLASS } from '@/app/lib/riderMotion';
 
 function MapLoading() {
   const t = useTranslations('friendly');
@@ -45,6 +46,10 @@ interface Rider {
   currentKm: string;
   timestamp: number;
   gender: string;
+  stoppedSec?: number;
+  aliveTs?: number;
+  online?: boolean;
+  battery?: number;
 }
 
 interface ChatMessage {
@@ -341,6 +346,10 @@ export default function FriendlyRidePage() {
           currentKm: val.current_km ?? '0',
           timestamp: val.timestamp ?? 0,
           gender:    val.gender ?? 'M',
+          stoppedSec: val.stopped_sec != null ? parseFloat(val.stopped_sec) : undefined,
+          aliveTs:    val.alive_ts != null ? parseFloat(val.alive_ts) : undefined,
+          online:     typeof val.online === 'boolean' ? val.online : undefined,
+          battery:    val.battery != null ? parseFloat(val.battery) : undefined,
         }));
       setRiders(list);
       setLastUpdate(new Date());
@@ -587,8 +596,7 @@ export default function FriendlyRidePage() {
               {riders
                 .sort((a, b) => parseFloat(b.currentKm) - parseFloat(a.currentKm))
                 .map(rider => {
-                  const mins = rider.timestamp
-                    ? Math.floor((Date.now() - rider.timestamp) / 60000) : null;
+                  const motion = riderMotionFromRider(rider);
                   return (
                     <div key={rider.id}
                       onClick={() => setSelectedRider(
@@ -606,7 +614,13 @@ export default function FriendlyRidePage() {
                         <p className="text-white text-sm font-medium truncate">
                           {rider.fullName}
                         </p>
-                        <p className="text-xs text-green-400">{`🚴 ${t('statOnRide')}`}</p>
+                        {motion ? (
+                          <p className={`text-xs ${RIDER_MOTION_TEXT_CLASS[motion.state]}`}>
+                            {motionLabel(t, motion)}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-green-400">{`🚴 ${t('statOnRide')}`}</p>
+                        )}
                       </div>
                       <div className="flex gap-4 text-right shrink-0">
                         {rider.currentKm !== '0' && (
@@ -623,15 +637,6 @@ export default function FriendlyRidePage() {
                               {parseFloat(rider.avgSpeed).toFixed(1)}
                             </div>
                             <div className="text-white/30 text-xs">{t('avgSpeedUnit')}</div>
-                          </div>
-                        )}
-                        {mins !== null && (
-                          <div>
-                            <div className={`text-sm font-bold ${
-                              mins > 5 ? 'text-red-400' : 'text-green-400'}`}>
-                              {mins < 1 ? t('signalNow') : t('signalMinutesAgo', { mins })}
-                            </div>
-                            <div className="text-white/30 text-xs">{t('signalLabel')}</div>
                           </div>
                         )}
                       </div>

@@ -8,6 +8,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db, rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
 import { decodeParam } from '@/app/lib/routeParams';
+import { riderMotionFromRider, motionLabel, RIDER_MOTION_TEXT_CLASS } from '@/app/lib/riderMotion';
 
 function MapLoading() {
   const t = useTranslations('liveBrevet');
@@ -48,7 +49,13 @@ interface Rider {
   gender: string;
   checkpoints: Record<string, string>;
   rideMode: string;
+  stoppedSec?: number;
+  aliveTs?: number;
+  online?: boolean;
+  battery?: number;
 }
+
+const MOTION_SUPPRESS_STATUSES = new Set(['FINISHED', 'DNF', 'OVT', 'ready']);
 
 interface BrevetInfo {
   title: string;
@@ -153,6 +160,10 @@ export default function LiveBrevetPage() {
         gender:      val.gender ?? 'M',
         checkpoints: val.checkpoints ?? {},
         rideMode:    val.rideMode ?? '',
+        stoppedSec:  val.stopped_sec != null ? parseFloat(val.stopped_sec) : undefined,
+        aliveTs:     val.alive_ts != null ? parseFloat(val.alive_ts) : undefined,
+        online:      typeof val.online === 'boolean' ? val.online : undefined,
+        battery:     val.battery != null ? parseFloat(val.battery) : undefined,
       }));
       setRiders(riderList);
       setLastUpdate(new Date());
@@ -352,6 +363,14 @@ export default function LiveBrevetPage() {
                     <p className={`text-xs ${statusColor(rider.status)}`}>
                       {statusLabel(rider.status)}
                     </p>
+                    {(() => {
+                      const motion = riderMotionFromRider(rider, { suppressStatuses: MOTION_SUPPRESS_STATUSES });
+                      return motion ? (
+                        <p className={`text-xs ${RIDER_MOTION_TEXT_CLASS[motion.state]}`}>
+                          {motionLabel(t, motion)}
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                   <div className="flex gap-4 text-right shrink-0">
                     {rider.currentKm !== '0' && (
