@@ -10,7 +10,7 @@ import { ref, onValue, off, get, push, set, serverTimestamp } from 'firebase/dat
 import { rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
 import { decodeParam } from '@/app/lib/routeParams';
-import { riderMotionFromRider, motionLabel, RIDER_MOTION_TEXT_CLASS } from '@/app/lib/riderMotion';
+import { riderMotionFromRider, motionLabel, RIDER_MOTION_TEXT_CLASS, RIDER_MOTION_EMOJI } from '@/app/lib/riderMotion';
 
 function MapLoading() {
   const t = useTranslations('friendly');
@@ -611,7 +611,8 @@ export default function FriendlyRidePage() {
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-white text-sm font-medium truncate">
+                        <p className="text-white text-sm font-medium truncate flex items-center gap-1.5">
+                          {motion && <span className="shrink-0">{RIDER_MOTION_EMOJI[motion.state]}</span>}
                           {rider.fullName}
                         </p>
                         {motion ? (

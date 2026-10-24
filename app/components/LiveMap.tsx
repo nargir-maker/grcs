@@ -124,7 +124,11 @@ function svgRiderMarker(
   const chipLabel  = (labelMode === 'brevet' && registryId && registryId !== '-'
     ? `${registryId}-${firstInitial} ${lastName}`.trim()
     : firstName) + rideModeBadge;
-  const chipW = Math.max(56, chipLabel.length * 8.5 + 18);
+  const padH      = 9;
+  // Mirrors Flutter's rider_motion.dart paintBadge convention of reserving a
+  // small slot before the name for the moving/stopped/noGps/noSignal badge.
+  const badgeSlot = motionColor ? 16 : 0;
+  const chipW = Math.max(56, chipLabel.length * 8.5 + 18) + badgeSlot;
   const chipH = 24, gap = 4;
   const totalW = sqSize + gap + chipW;
   const totalH = Math.max(sqSize, chipH);
@@ -148,10 +152,10 @@ function svgRiderMarker(
       <rect x="${chipX}" y="${chipY}" width="${chipW}" height="${chipH}"
         rx="6" ry="6" fill="${bg}" fill-opacity="0.88"
         stroke="white" stroke-opacity="0.5" stroke-width="1.2"/>
-      <text x="${chipX + chipW / 2}" y="${chipY + chipH / 2 + 5}"
-        text-anchor="middle" font-family="Arial,sans-serif"
+      <text x="${chipX + padH + badgeSlot}" y="${chipY + chipH / 2 + 5}"
+        text-anchor="start" font-family="Arial,sans-serif"
         font-size="13" font-weight="bold" fill="white">${chipLabel}</text>
-      ${motionColor ? `<circle cx="${sqSize - 5}" cy="${sqY + 5}" r="5"
+      ${motionColor ? `<circle cx="${chipX + padH + 6}" cy="${chipY + chipH / 2}" r="6"
         fill="${motionColor}" stroke="white" stroke-width="1.3"/>` : ''}
     </svg>`;
 }

@@ -8,7 +8,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db, rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
 import { decodeParam } from '@/app/lib/routeParams';
-import { riderMotionFromRider, motionLabel, RIDER_MOTION_TEXT_CLASS } from '@/app/lib/riderMotion';
+import { riderMotionFromRider, motionLabel, RIDER_MOTION_TEXT_CLASS, RIDER_MOTION_EMOJI } from '@/app/lib/riderMotion';
 
 function MapLoading() {
   const t = useTranslations('liveBrevet');
@@ -327,7 +327,9 @@ export default function LiveBrevetPage() {
             <div className="divide-y divide-white/5">
               {riders
                 .sort((a, b) => parseFloat(b.currentKm) - parseFloat(a.currentKm))
-                .map(rider => (
+                .map(rider => {
+                const motion = riderMotionFromRider(rider, { suppressStatuses: MOTION_SUPPRESS_STATUSES });
+                return (
                 <div
                   key={rider.id}
                   onClick={() => setSelectedRider(
@@ -346,6 +348,7 @@ export default function LiveBrevetPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-sm font-medium truncate flex items-center gap-1.5">
+                      {motion && <span className="shrink-0">{RIDER_MOTION_EMOJI[motion.state]}</span>}
                       {rider.fullName}
                       {rider.rideMode === 'pre' && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full
@@ -363,14 +366,11 @@ export default function LiveBrevetPage() {
                     <p className={`text-xs ${statusColor(rider.status)}`}>
                       {statusLabel(rider.status)}
                     </p>
-                    {(() => {
-                      const motion = riderMotionFromRider(rider, { suppressStatuses: MOTION_SUPPRESS_STATUSES });
-                      return motion ? (
-                        <p className={`text-xs ${RIDER_MOTION_TEXT_CLASS[motion.state]}`}>
-                          {motionLabel(t, motion)}
-                        </p>
-                      ) : null;
-                    })()}
+                    {motion && (
+                      <p className={`text-xs ${RIDER_MOTION_TEXT_CLASS[motion.state]}`}>
+                        {motionLabel(t, motion)}
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-4 text-right shrink-0">
                     {rider.currentKm !== '0' && (
@@ -400,7 +400,7 @@ export default function LiveBrevetPage() {
                     </div>
                   )}
                 </div>
-              ))}
+              );})}
             </div>
           </div>
         )}
