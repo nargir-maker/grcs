@@ -17,6 +17,11 @@ interface WeatherPoint extends RoutePoint {
   windDirection: number;
   routeBearing: number;
   precipitation: number;
+  // % chance of measurable rain in the hour, from Open-Meteo's ensemble
+  // models. Only the 'openmeteo' source provides this reliably for Greece —
+  // MET Norway's equivalent field is Nordic-only and ERA5 archive data is
+  // recorded fact, not a forecast, so neither has a meaningful probability.
+  precipitationProbability: number | null;
   weatherCode: number;
   etaTime: Date;
   loading: boolean;
@@ -67,6 +72,31 @@ function windColor(kmh: number): string {
   if (kmh < 35) return '#FCD34D';
   if (kmh < 50) return '#FB923C';
   return '#F87171';
+}
+
+// Thresholds are the standard meteorological mm/h bands (WMO / UK Met Office)
+// for rain intensity, since the mm figure we get per route point is an hourly rate.
+function rainLabel(mmPerHour: number): string {
+  if (mmPerHour < 0.5)  return 'Ψιχάλα';
+  if (mmPerHour < 2.5)  return 'Ελαφριά βροχή';
+  if (mmPerHour < 7.6)  return 'Μέτρια βροχή';
+  if (mmPerHour < 50)   return 'Δυνατή βροχή';
+  return 'Καταρρακτώδης βροχή';
+}
+
+function rainColor(mmPerHour: number): string {
+  if (mmPerHour < 0.5)  return '#93C5FD';
+  if (mmPerHour < 2.5)  return '#60A5FA';
+  if (mmPerHour < 7.6)  return '#3B82F6';
+  if (mmPerHour < 50)   return '#2563EB';
+  return '#7C3AED';
+}
+
+function probColor(pct: number): string {
+  if (pct < 20) return '#94A3B8';
+  if (pct < 50) return '#60A5FA';
+  if (pct < 80) return '#FB923C';
+  return '#EF4444';
 }
 
 function defaultSpeed(distKm: number): number {
@@ -171,13 +201,13 @@ async function fetchWeather(
   lng: number,
   date: Date,
   source: WeatherSource,
-): Promise<{ temp: number; windSpeed: number; windGusts: number; windDirection: number; precipitation: number; weatherCode: number; source: WeatherSource }> {
+): Promise<{ temp: number; windSpeed: number; windGusts: number; windDirection: number; precipitation: number; precipitationProbability: number | null; weatherCode: number; source: WeatherSource }> {
   if (source === 'metno') {
     const url = `/api/weather/metno?lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}&time=${encodeURIComponent(date.toISOString())}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`metno ${res.status}`);
     const data = await res.json();
-    return { ...data, source: 'metno' as const };
+    return { precipitationProbability: null, ...data, source: 'metno' as const };
   }
 
   if (source === 'archive') {
@@ -185,7 +215,7 @@ async function fetchWeather(
     const res = await fetch(url);
     if (!res.ok) throw new Error(`archive ${res.status}`);
     const data = await res.json();
-    return { ...data, source: 'archive' as const };
+    return { precipitationProbability: null, ...data, source: 'archive' as const };
   }
 
   const dateStr = date.toISOString().split('T')[0];
@@ -193,7 +223,7 @@ async function fetchWeather(
   const url =
     `https://api.open-meteo.com/v1/forecast?` +
     `latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}` +
-    `&hourly=temperature_2m,precipitation,windspeed_10m,wind_gusts_10m,winddirection_10m,weathercode` +
+    `&hourly=temperature_2m,precipitation,precipitation_probability,windspeed_10m,wind_gusts_10m,winddirection_10m,weathercode` +
     `&start_date=${dateStr}&end_date=${endDate}` +
     `&models=best_match&timezone=UTC`;
   const res = await fetch(url);
@@ -216,6 +246,7 @@ async function fetchWeather(
     windGusts:     Math.round(data.hourly.wind_gusts_10m?.[idx] ?? 0),
     windDirection: Math.round(data.hourly.winddirection_10m?.[idx] ?? 0),
     precipitation: Math.round((data.hourly.precipitation?.[idx] ?? 0) * 10) / 10,
+    precipitationProbability: data.hourly.precipitation_probability?.[idx] ?? null,
     weatherCode:   data.hourly.weathercode?.[idx] ?? 0,
     source:        'openmeteo' as const,
   };
@@ -322,6 +353,7 @@ export default function WeatherStrip({
           windDirection: 0,
           routeBearing,
           precipitation: 0,
+          precipitationProbability: null,
           weatherCode: 0,
           etaTime,
           loading: true,
@@ -479,6 +511,12 @@ export default function WeatherStrip({
             </div>
           )}
 
+          {mode === 'forecast' && weatherSource === 'metno' && (
+            <div className="mb-5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/40 text-xs">
+              ☂️ Η πιθανότητα βροχής (%) δεν είναι διαθέσιμη από το MET Norway εκτός Σκανδιναβίας — επιλέξτε Open-Meteo για να τη δείτε.
+            </div>
+          )}
+
           {loading && (
             <div className="flex items-center gap-3 py-4 text-white/40 text-sm">
               <div className="w-4 h-4 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
@@ -598,10 +636,33 @@ export default function WeatherStrip({
                               </span>
                             )}
 
-                            {pt.precipitation > 0 && (
-                              <span className="text-base text-blue-300 mt-0.5">
-                                🌧️ {pt.precipitation}mm
-                              </span>
+                            {((pt.precipitationProbability ?? 0) > 0 || pt.precipitation > 0) && (
+                              <div className="flex flex-col items-center mt-1">
+                                {pt.precipitationProbability != null && (
+                                  <span
+                                    className="text-sm font-semibold"
+                                    style={{ color: probColor(pt.precipitationProbability) }}
+                                  >
+                                    ☂️ {pt.precipitationProbability}% πιθανότητα
+                                  </span>
+                                )}
+                                {pt.precipitation > 0 && (
+                                  <>
+                                    <span
+                                      className="text-base font-semibold"
+                                      style={{ color: rainColor(pt.precipitation) }}
+                                    >
+                                      🌧️ {rainLabel(pt.precipitation)}
+                                    </span>
+                                    <span
+                                      className="text-sm"
+                                      style={{ color: rainColor(pt.precipitation) }}
+                                    >
+                                      {pt.precipitation} mm/ώρα
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             )}
 
                             <span className="text-base text-white/70 mt-2 font-medium">
@@ -629,6 +690,21 @@ export default function WeatherStrip({
                 <span style={{ color: '#FCD34D' }}>💨 20-35 Μέτριος</span>
                 <span style={{ color: '#FB923C' }}>💨 35-50 Δυνατός</span>
                 <span style={{ color: '#F87171' }}>💨 &gt;50 Θυελλώδης</span>
+              </div>
+
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-sm">
+                <span style={{ color: '#93C5FD' }}>🌧️ &lt;0.5mm Ψιχάλα</span>
+                <span style={{ color: '#60A5FA' }}>🌧️ 0.5-2.5mm Ελαφριά</span>
+                <span style={{ color: '#3B82F6' }}>🌧️ 2.5-7.6mm Μέτρια</span>
+                <span style={{ color: '#2563EB' }}>🌧️ 7.6-50mm Δυνατή</span>
+                <span style={{ color: '#7C3AED' }}>🌧️ &gt;50mm Καταρρακτώδης</span>
+              </div>
+
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-sm">
+                <span style={{ color: '#94A3B8' }}>☂️ &lt;20% Χαμηλή πιθανότητα</span>
+                <span style={{ color: '#60A5FA' }}>☂️ 20-50% Μέτρια πιθανότητα</span>
+                <span style={{ color: '#FB923C' }}>☂️ 50-80% Αυξημένη πιθανότητα</span>
+                <span style={{ color: '#EF4444' }}>☂️ &gt;80% Σχεδόν σίγουρη βροχή</span>
               </div>
 
               <p className="text-white/30 text-xs mt-3">
