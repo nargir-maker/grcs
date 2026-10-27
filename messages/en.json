@@ -186,6 +186,8 @@
     "start": "Start",
     "finish": "Finish",
     "gpxButton": "📥 GPX",
+    "routeUpdatedRecent": "🔄 Route updated · {date}",
+    "routeUpdated": "Route: {date}",
     "registerButton": "🚴 Register →",
     "registerDisabled": "🚴 Register",
     "daylightHeading": "🌤️ Brevet Light & Darkness",

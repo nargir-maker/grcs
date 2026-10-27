@@ -186,6 +186,8 @@
     "start": "Αφετηρία",
     "finish": "Τερματισμός",
     "gpxButton": "📥 GPX",
+    "routeUpdatedRecent": "🔄 Ενημέρωση διαδρομής · {date}",
+    "routeUpdated": "Διαδρομή: {date}",
     "registerButton": "🚴 Εγγραφή →",
     "registerDisabled": "🚴 Εγγραφή",
     "daylightHeading": "🌤️ Φως & Σκοτάδι Brevet",

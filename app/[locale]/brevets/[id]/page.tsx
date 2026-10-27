@@ -12,6 +12,7 @@ import RegistrationForm from '@/app/components/RegistrationForm';
 import { decodeParam } from '@/app/lib/routeParams';
 import { isNightStart } from '@/app/lib/nightStart';
 import { useInterestedBrevets } from '@/app/lib/useInterestedBrevets';
+import { useGpxUpdatedDate } from '@/app/lib/gpxDates';
 
 
 // Turns bare URLs (http(s):// or www.) inside plain text into clickable links.
@@ -568,6 +569,7 @@ export default function BrevetDetailPage() {
   const [scrubberKm, setScrubberKm] = useState<number | null>(null);
   const handleScrub = useCallback((km: number | null) => setScrubberKm(km), []);
   const { isInterested, toggle: toggleFavorite } = useInterestedBrevets();
+  const { date: gpxUpdatedAt, isRecent: gpxUpdatedRecently } = useGpxUpdatedDate(brevet?.gpxUrl);
 
   useEffect(() => {
     const email = session?.user?.email;
@@ -840,12 +842,37 @@ export default function BrevetDetailPage() {
                 scrubberKm={scrubberKm} startDate={startDate ?? undefined} />
             </div>
           )}
+          {gpxUpdatedAt && (
+            gpxUpdatedRecently ? (
+              <div className="mt-3 inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold px-3 py-1.5 rounded-full self-start">
+                {t('routeUpdatedRecent', { date: gpxUpdatedAt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) })}
+              </div>
+            ) : (
+              <div className="mt-3 text-white/40 text-xs">
+                🗺️ {t('routeUpdated', { date: gpxUpdatedAt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) })}
+              </div>
+            )
+          )}
           <div className="flex gap-3 mt-6">
-            {brevet.mapUrl && (
-              <a href={brevet.mapUrl} target="_blank" rel="noopener noreferrer"
+            {brevet.gpxUrl && (
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch(brevet.gpxUrl);
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${brevet.title.replace(/\s+/g, '_')}.gpx`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  } catch {
+                    window.open(brevet.gpxUrl, '_blank');
+                  }
+                }}
                 className="flex-1 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-sm font-bold py-3 rounded-xl text-center transition-colors">
                 {t('gpxButton')}
-              </a>
+              </button>
             )}
             {brevet.externalRegistration ? (
               <a href={brevet.externalRegistration} target="_blank" rel="noopener noreferrer"
