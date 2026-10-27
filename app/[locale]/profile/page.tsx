@@ -116,7 +116,7 @@ const events = (val.events ?? []).map((e: any) => ({
   mt:  e.mt ?? '',
   rt:  e.rt ?? '',
   rm:  e.rm ?? '',
-  ds:  e.ds ?? '',
+  ds:  typeof e.ds === 'string' ? e.ds : '',
 }));
 
 history[year] = {

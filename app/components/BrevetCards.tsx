@@ -214,7 +214,7 @@ function isEmpty(v: string | undefined | null) {
 function rideModeOf(e: BrevetEvent): 'pre' | 'post' | 'official' {
   const rm = (e.rm ?? '').trim();
   if (rm === 'pre' || rm === 'post') return rm;
-  const ds = (e.ds ?? '').trim().toUpperCase();
+  const ds = typeof e.ds === 'string' ? e.ds.trim().toUpperCase() : '';
   if (ds.startsWith('PRERIDE'))  return 'pre';
   if (ds.startsWith('POSTRIDE')) return 'post';
   return 'official';
