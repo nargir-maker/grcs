@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import {
+  POI_CATEGORIES, DEFAULT_ENABLED_CATEGORIES, poiCategoryDef,
+  type PoiCategory, type PoiCategoryDef,
+} from '@/app/lib/poiCategories';
 
 const ElevationChart = dynamic(() => import('./ElevationChart'), { ssr: false });
 
@@ -307,6 +311,132 @@ function svgKmMarker(km: number): string {
     </svg>`;
 }
 
+// ── Σταθμοί διαδρομής (POI) ──────────────────────────────────────────────────
+export interface PoiMarkerData {
+  id: string;
+  category: PoiCategory;
+  name: string | null;
+  lat: number;
+  lng: number;
+  kmAlongRoute: number;
+  offsetM: number;
+  openingHours: string | null;
+}
+
+const POI_LS_KEY = 'poi_enabled_categories_v1';
+
+function loadPoiEnabled(): Set<PoiCategory> {
+  try {
+    const raw = localStorage.getItem(POI_LS_KEY);
+    if (raw) return new Set(JSON.parse(raw));
+  } catch {}
+  return new Set(DEFAULT_ENABLED_CATEGORIES);
+}
+
+function savePoiEnabled(set: Set<PoiCategory>) {
+  try { localStorage.setItem(POI_LS_KEY, JSON.stringify([...set])); } catch {}
+}
+
+function svgPoiMarker(def: PoiCategoryDef): string {
+  return `<div style="
+    width:26px;height:26px;border-radius:50%;
+    background:${def.color};border:2px solid #fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.5)">
+    ${def.icon}
+  </div>`;
+}
+
+function buildPoiMarkers(
+  L: any, map: any, pois: PoiMarkerData[], enabled: Set<PoiCategory>, layerRef: { current: any[] },
+) {
+  layerRef.current.forEach(m => map.removeLayer(m));
+  layerRef.current = [];
+  pois.filter(p => enabled.has(p.category)).forEach(poi => {
+    const def = poiCategoryDef(poi.category);
+    if (!def) return;
+    const icon = L.divIcon({ html: svgPoiMarker(def), className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
+    const marker = L.marker([poi.lat, poi.lng], { icon, zIndexOffset: 200 }).addTo(map);
+    const title = poi.name ? `${def.icon} ${poi.name}` : `${def.icon} ${def.label}`;
+    const hoursHtml = poi.openingHours ? `<br/>🕐 ${poi.openingHours}` : '';
+    marker.bindPopup(`<b>${title}</b><br/>km ${poi.kmAlongRoute}${hoursHtml}`);
+    layerRef.current.push(marker);
+  });
+}
+
+async function fetchRoutePois(gpxUrl: string, parsedCoords: ParsedCoord[]): Promise<PoiMarkerData[]> {
+  const cacheKey = `poi_cache_v1:${gpxUrl}`;
+  try {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      const { ts, pois } = JSON.parse(cached);
+      if (Date.now() - ts < 3600_000) return pois;
+    }
+  } catch {}
+
+  const res = await fetch('/api/overpass/pois', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trackPoints: parsedCoords.map(c => ({ lat: c.lat, lng: c.lng })) }),
+  });
+  if (!res.ok) throw new Error('Σφάλμα φόρτωσης σταθμών');
+  const json = await res.json();
+  const pois: PoiMarkerData[] = json.pois ?? [];
+  try { sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), pois })); } catch {}
+  return pois;
+}
+
+// Reusable "Στάσεις" toggle button + category-chip panel — shared by inline + fullscreen map.
+function PoiControl({
+  open, onToggleOpen, enabled, onToggleCategory, loading, error,
+}: {
+  open: boolean;
+  onToggleOpen: () => void;
+  enabled: Set<PoiCategory>;
+  onToggleCategory: (id: PoiCategory) => void;
+  loading: boolean;
+  error: string | null;
+}) {
+  return (
+    <>
+      <button onClick={onToggleOpen} title="Σταθμοί στη διαδρομή"
+        className="absolute top-3 left-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5
+          rounded-lg text-xs font-bold border backdrop-blur-sm transition-all hover:brightness-110"
+        style={{
+          backgroundColor: open ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.85)',
+          borderColor: 'rgba(6,182,212,0.4)',
+          color: open ? '#000' : '#06b6d4',
+        }}>
+        📍 Στάσεις
+      </button>
+      {open && (
+        <div className="absolute top-14 left-3 z-[1001] rounded-xl border backdrop-blur-md p-3"
+          style={{ background: 'rgba(10,22,40,0.90)', borderColor: 'rgba(255,255,255,0.15)', maxWidth: 280 }}>
+          {loading && <p className="text-white/50 text-xs mb-2">Φόρτωση σταθμών…</p>}
+          {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
+          <div className="flex flex-wrap gap-1.5">
+            {POI_CATEGORIES.map(cat => {
+              const on = enabled.has(cat.id);
+              return (
+                <button key={cat.id} onClick={() => onToggleCategory(cat.id)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border transition-all"
+                  style={{
+                    background: on ? cat.color : 'rgba(255,255,255,0.05)',
+                    borderColor: on ? cat.color : 'rgba(255,255,255,0.15)',
+                    color: on ? '#000' : 'rgba(255,255,255,0.6)',
+                  }}>
+                  <span>{cat.icon}</span><span>{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-white/20 text-[10px] mt-2">© OpenStreetMap contributors</p>
+        </div>
+      )}
+    </>
+  );
+}
+
 function kmInterval(zoom: number): number {
   if (zoom < 8)  return 50;
   if (zoom < 10) return 30;
@@ -585,6 +715,7 @@ export function TileSwitcher({
 // ── Fullscreen modal ──────────────────────────────────────────────────────────
 function FullscreenMap({
   gpxUrl, controls, onClose, climbProfile, storedAscent, initialStyle, startDate,
+  pois, poiEnabled, onTogglePoiCategory, poiLoading, poiError, onRequestPois,
 }: {
   gpxUrl:        string;
   controls:      { km: number; name: string; lat: number; lng: number }[];
@@ -593,11 +724,18 @@ function FullscreenMap({
   storedAscent?: number;
   initialStyle?: string;
   startDate?:    Date;
+  pois:          PoiMarkerData[];
+  poiEnabled:    Set<PoiCategory>;
+  onTogglePoiCategory: (id: PoiCategory) => void;
+  poiLoading:    boolean;
+  poiError:      string | null;
+  onRequestPois: () => void;
 }) {
   const modalMapRef         = useRef<HTMLDivElement>(null);
   const modalMapInstanceRef = useRef<any>(null);
   const modalDotMarkerRef   = useRef<any>(null);
   const kmLayerRef          = useRef<any[]>([]);
+  const fsPoiLayerRef       = useRef<any[]>([]);
   const fsTileLayerRef      = useRef<any>(null);
   const fsLRef              = useRef<any>(null);
 
@@ -606,6 +744,8 @@ function FullscreenMap({
   const [showChart,       setShowChart]       = useState(true);
   const [fsActiveStyle,   setFsActiveStyle]   = useState(initialStyle ?? DEFAULT_STYLE);
   const [fsWeatherSource, setFsWeatherSource] = useState<WeatherSourceId | null>(null);
+  const [fsPoiOpen,       setFsPoiOpen]       = useState(false);
+  const [fsMapReady,      setFsMapReady]      = useState(false);
 
   useEffect(() => {
     if (!modalMapRef.current) return;
@@ -622,6 +762,7 @@ function FullscreenMap({
       modalMapInstanceRef.current = map;
       modalDotMarkerRef.current   = markerRef.current;
       fsLRef.current = (await import('leaflet')).default;
+      setFsMapReady(true);
       if (startDate && capturedCoords.length > 0 && !destroyed) {
         addWeatherMarkers(map, fsLRef.current, capturedCoords, startDate, windAborted, setFsWeatherSource);
       }
@@ -629,12 +770,20 @@ function FullscreenMap({
     return () => {
       destroyed = true;
       windAborted.current = true;
+      setFsMapReady(false);
       if (modalMapInstanceRef.current) {
         modalMapInstanceRef.current.remove();
         modalMapInstanceRef.current = null;
       }
     };
   }, [gpxUrl]);
+
+  useEffect(() => {
+    if (!fsMapReady) return;
+    const map = modalMapInstanceRef.current, L = fsLRef.current;
+    if (!map || !L) return;
+    buildPoiMarkers(L, map, pois, poiEnabled, fsPoiLayerRef);
+  }, [fsMapReady, pois, poiEnabled]);
 
   useEffect(() => {
     const marker = modalDotMarkerRef.current;
@@ -684,6 +833,15 @@ function FullscreenMap({
           }}>
           ⛰️ {showChart ? 'Κλείσιμο γραφήματος' : 'Υψομετρικό'}
         </button>
+
+        <PoiControl
+          open={fsPoiOpen}
+          onToggleOpen={() => { setFsPoiOpen(o => !o); onRequestPois(); }}
+          enabled={poiEnabled}
+          onToggleCategory={onTogglePoiCategory}
+          loading={poiLoading}
+          error={poiError}
+        />
 
         {/* Map */}
         <div ref={modalMapRef} style={{ position: 'absolute', inset: 0 }} />
@@ -739,9 +897,11 @@ export default function BrevetMap({
   const dotMarkerRef   = useRef<any>(null);
   const initializedRef = useRef(false);
   const kmLayerRef     = useRef<any[]>([]);
+  const poiLayerRef    = useRef<any[]>([]);
   const tileLayerRef   = useRef<any>(null);
   const LRef           = useRef<any>(null);
   const windAbortRef   = useRef(false);
+  const poiFetchedRef  = useRef(false);
 
   const [parsedCoords, setParsedCoords] = useState<ParsedCoord[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -749,6 +909,39 @@ export default function BrevetMap({
   const [mapReady,     setMapReady]     = useState(false);
   const [clockwise,    setClockwise]    = useState<boolean | null>(null);
   const [weatherSource, setWeatherSource] = useState<WeatherSourceId | null>(null);
+
+  const [poiPanelOpen, setPoiPanelOpen] = useState(false);
+  const [poiEnabled,   setPoiEnabled]   = useState<Set<PoiCategory>>(() => new Set(DEFAULT_ENABLED_CATEGORIES));
+  const [pois,         setPois]         = useState<PoiMarkerData[]>([]);
+  const [poiLoading,   setPoiLoading]   = useState(false);
+  const [poiError,     setPoiError]     = useState<string | null>(null);
+
+  useEffect(() => { setPoiEnabled(loadPoiEnabled()); }, []);
+
+  const togglePoiCategory = useCallback((id: PoiCategory) => {
+    setPoiEnabled(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      savePoiEnabled(next);
+      return next;
+    });
+  }, []);
+
+  const requestPois = useCallback(() => {
+    if (poiFetchedRef.current || poiLoading) return;
+    if (parsedCoords.length === 0) return;
+    poiFetchedRef.current = true;
+    setPoiError(null);
+    setPoiLoading(true);
+    fetchRoutePois(gpxUrl, parsedCoords)
+      .then(setPois)
+      .catch(e => {
+        console.error('POI fetch error:', e);
+        setPoiError('Σφάλμα φόρτωσης σταθμών');
+        poiFetchedRef.current = false;
+      })
+      .finally(() => setPoiLoading(false));
+  }, [gpxUrl, parsedCoords, poiLoading]);
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(f => !f), []);
 
@@ -796,6 +989,18 @@ export default function BrevetMap({
     if (pos) { marker.setLatLng(pos); marker.setOpacity(1); }
   }, [scrubberKm, parsedCoords]);
 
+  useEffect(() => {
+    if (!mapReady) return;
+    const map = mapInstanceRef.current, L = LRef.current;
+    if (!map || !L) return;
+    buildPoiMarkers(L, map, pois, poiEnabled, poiLayerRef);
+  }, [mapReady, pois, poiEnabled]);
+
+  // Σε περίπτωση που ο χρήστης ανοίξει το panel πριν προλάβει να φορτώσει το GPX.
+  useEffect(() => {
+    if (poiPanelOpen) requestPois();
+  }, [poiPanelOpen, parsedCoords, requestPois]);
+
   return (
     <>
       <link rel="stylesheet"
@@ -808,6 +1013,12 @@ export default function BrevetMap({
           onClose={toggleFullscreen}
           initialStyle={activeStyle}
           startDate={startDate}
+          pois={pois}
+          poiEnabled={poiEnabled}
+          onTogglePoiCategory={togglePoiCategory}
+          poiLoading={poiLoading}
+          poiError={poiError}
+          onRequestPois={requestPois}
         />
       )}
 
@@ -828,6 +1039,15 @@ export default function BrevetMap({
             onSwitch={setActiveStyle}
           />
         </div>
+
+        <PoiControl
+          open={poiPanelOpen}
+          onToggleOpen={() => { setPoiPanelOpen(o => !o); requestPois(); }}
+          enabled={poiEnabled}
+          onToggleCategory={togglePoiCategory}
+          loading={poiLoading}
+          error={poiError}
+        />
 
         <button onClick={toggleFullscreen} title="Πλήρης οθόνη"
           className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5
