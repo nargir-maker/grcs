@@ -388,7 +388,7 @@ async function fetchRoutePois(gpxUrl: string, parsedCoords: ParsedCoord[]): Prom
 
 // Reusable "Στάσεις" toggle button + category-chip panel — shared by inline + fullscreen map.
 function PoiControl({
-  open, onToggleOpen, enabled, onToggleCategory, loading, error,
+  open, onToggleOpen, enabled, onToggleCategory, loading, error, onRetry,
 }: {
   open: boolean;
   onToggleOpen: () => void;
@@ -396,6 +396,7 @@ function PoiControl({
   onToggleCategory: (id: PoiCategory) => void;
   loading: boolean;
   error: string | null;
+  onRetry: () => void;
 }) {
   return (
     <>
@@ -412,8 +413,13 @@ function PoiControl({
       {open && (
         <div className="absolute top-14 left-3 z-[1001] rounded-xl border backdrop-blur-md p-3"
           style={{ background: 'rgba(10,22,40,0.90)', borderColor: 'rgba(255,255,255,0.15)', maxWidth: 280 }}>
-          {loading && <p className="text-white/50 text-xs mb-2">Φόρτωση σταθμών…</p>}
-          {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
+          {loading && <p className="text-white/50 text-xs mb-2">Αναζήτηση σταθμών… (έως ~20s)</p>}
+          {error && (
+            <p className="text-red-400 text-xs mb-2">
+              {error}{' '}
+              <button onClick={onRetry} className="underline hover:text-red-300">Δοκιμάστε ξανά</button>
+            </p>
+          )}
           <div className="flex flex-wrap gap-1.5">
             {POI_CATEGORIES.map(cat => {
               const on = enabled.has(cat.id);
@@ -837,6 +843,7 @@ function FullscreenMap({
         <PoiControl
           open={fsPoiOpen}
           onToggleOpen={() => { setFsPoiOpen(o => !o); onRequestPois(); }}
+          onRetry={onRequestPois}
           enabled={poiEnabled}
           onToggleCategory={onTogglePoiCategory}
           loading={poiLoading}
@@ -1043,6 +1050,7 @@ export default function BrevetMap({
         <PoiControl
           open={poiPanelOpen}
           onToggleOpen={() => { setPoiPanelOpen(o => !o); requestPois(); }}
+          onRetry={requestPois}
           enabled={poiEnabled}
           onToggleCategory={togglePoiCategory}
           loading={poiLoading}

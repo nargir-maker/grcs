@@ -7,6 +7,42 @@ import { classifyOsmTags, OVERPASS_AMENITY, OVERPASS_SHOP, OVERPASS_TOURISM, typ
 
 const CORRIDOR_M = 1000;
 
+// Single public mirror — other open, full-planet, non-whitelisted Overpass mirrors were
+// checked (overpass-api.de blocks datacenter IPs with 406; openstreetmap.fr requires an
+// approved whitelist; openstreetmap.ru/osm.ch/nchc.org.tw were unreachable or serve a
+// limited dataset) and none were usable as a real fallback. kumi.systems can be heavily
+// overloaded at times (502/504/hangs) — the short timeout below just fails fast when that
+// happens instead of hanging the request.
+const OVERPASS_MIRRORS = [
+  'https://overpass.kumi.systems/api/interpreter',
+];
+const MIRROR_TIMEOUT_MS = 9000;
+
+async function queryOverpass(query: string): Promise<any | null> {
+  for (const url of OVERPASS_MIRRORS) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), MIRROR_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'GRC-Platform/1.0 (https://grcs-vert.vercel.app; contact: nikos.argiropoulos@gmail.com)',
+        },
+        body: `data=${encodeURIComponent(query)}`,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (res.ok) return await res.json();
+      console.error(`Overpass mirror ${url} returned ${res.status}`);
+    } catch (e) {
+      clearTimeout(timeout);
+      console.error(`Overpass mirror ${url} failed/timed out:`, e);
+    }
+  }
+  return null;
+}
+
 function haversineKm(la1: number, lo1: number, la2: number, lo2: number) {
   const R = 6371, d2r = Math.PI / 180;
   const dLa = (la2 - la1) * d2r, dLo = (lo2 - lo1) * d2r;
@@ -48,7 +84,7 @@ export async function POST(req: NextRequest) {
     const polyline = sampled.map(p => `${p.lat},${p.lng}`).join(',');
 
     const query = `
-      [out:json][timeout:20];
+      [out:json][timeout:8];
       (
         nwr["amenity"~"^(${OVERPASS_AMENITY})$"](around:${CORRIDOR_M},${polyline});
         nwr["shop"~"^(${OVERPASS_SHOP})$"](around:${CORRIDOR_M},${polyline});
@@ -60,33 +96,11 @@ export async function POST(req: NextRequest) {
       out center tags;
     `;
 
-    // Public Overpass mirror — bound the wait so a hung/overloaded mirror fails
-    // fast instead of holding the serverless function open until platform timeout.
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 22000);
-    let res: Response;
-    try {
-      res = await fetch('https://overpass.kumi.systems/api/interpreter', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'GRC-Platform/1.0 (https://grcs-vert.vercel.app; contact: nikos.argiropoulos@gmail.com)',
-        },
-        body: `data=${encodeURIComponent(query)}`,
-        signal: controller.signal,
-      });
-    } catch (e) {
-      clearTimeout(timeout);
-      console.error('Overpass fetch failed/timed out:', e);
-      return NextResponse.json({ pois: [] }, { status: 502 });
-    }
-    clearTimeout(timeout);
-
-    if (!res.ok) {
+    const data = await queryOverpass(query);
+    if (!data) {
       return NextResponse.json({ pois: [] }, { status: 502 });
     }
 
-    const data = await res.json();
     const elements = (data.elements ?? []) as {
       id: number; type: string;
       lat?: number; lon?: number;
