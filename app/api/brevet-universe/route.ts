@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCachedStats } from '@/app/lib/memberStatsCache';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
+export const revalidate = 86400;
 
 export async function GET() {
   try {

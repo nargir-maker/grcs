@@ -252,7 +252,7 @@ export default function PantheonPage() {
   useEffect(() => {
     if (!year) { setYearData(null); return; }
     setYearLoading(true);
-    fetch(`/api/pantheon?year=${year}`)
+    fetch(`/api/pantheon/${year}`)
       .then(r => r.json())
       .then(d => { setYearData(d.yearData ?? null); setYearLoading(false); })
       .catch(() => setYearLoading(false));

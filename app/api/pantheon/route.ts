@@ -1,18 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getCachedStats } from '@/app/lib/memberStatsCache';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
+export const revalidate = 86400;
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const { pantheon } = await getCachedStats();
     const { byYearClub, ...rest } = pantheon;
 
     const availableYears = Object.keys(byYearClub).sort((a, b) => b.localeCompare(a));
-    const year = req.nextUrl.searchParams.get('year');
-    const yearData = year && byYearClub[year] ? { year, ...byYearClub[year] } : null;
 
-    return NextResponse.json({ ...rest, availableYears, yearData });
+    return NextResponse.json({ ...rest, availableYears });
   } catch {
     return NextResponse.json({ error: 'Server not configured' }, { status: 503 });
   }
