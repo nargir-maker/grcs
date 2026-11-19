@@ -2,11 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import {
-  POI_CATEGORIES, DEFAULT_ENABLED_CATEGORIES, poiCategoryDef, classifyOsmTags,
-  OVERPASS_AMENITY, OVERPASS_SHOP, OVERPASS_TOURISM,
-  type PoiCategory, type PoiCategoryDef,
-} from '@/app/lib/poiCategories';
 
 const ElevationChart = dynamic(() => import('./ElevationChart'), { ssr: false });
 
@@ -312,322 +307,6 @@ function svgKmMarker(km: number): string {
     </svg>`;
 }
 
-// ── Σταθμοί διαδρομής (POI) ──────────────────────────────────────────────────
-export interface PoiMarkerData {
-  id: string;
-  category: PoiCategory;
-  name: string | null;
-  lat: number;
-  lng: number;
-  kmAlongRoute: number;
-  offsetM: number;
-  openingHours: string | null;
-}
-
-const POI_LS_KEY = 'poi_enabled_categories_v1';
-
-function loadPoiEnabled(): Set<PoiCategory> {
-  try {
-    const raw = localStorage.getItem(POI_LS_KEY);
-    if (raw) return new Set(JSON.parse(raw));
-  } catch {}
-  return new Set(DEFAULT_ENABLED_CATEGORIES);
-}
-
-function savePoiEnabled(set: Set<PoiCategory>) {
-  try { localStorage.setItem(POI_LS_KEY, JSON.stringify([...set])); } catch {}
-}
-
-function svgPoiMarker(def: PoiCategoryDef): string {
-  return `<div style="
-    width:26px;height:26px;border-radius:50%;
-    background:${def.color};border:2px solid #fff;
-    display:flex;align-items:center;justify-content:center;
-    font-size:13px;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.5)">
-    ${def.icon}
-  </div>`;
-}
-
-function buildPoiMarkers(
-  L: any, map: any, pois: PoiMarkerData[], enabled: Set<PoiCategory>, layerRef: { current: any[] },
-) {
-  layerRef.current.forEach(m => map.removeLayer(m));
-  layerRef.current = [];
-  pois.filter(p => enabled.has(p.category)).forEach(poi => {
-    const def = poiCategoryDef(poi.category);
-    if (!def) return;
-    const icon = L.divIcon({ html: svgPoiMarker(def), className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
-    const marker = L.marker([poi.lat, poi.lng], { icon, zIndexOffset: 200 }).addTo(map);
-    const title = poi.name ? `${def.icon} ${poi.name}` : `${def.icon} ${def.label}`;
-    const hoursHtml = poi.openingHours ? `<br/>🕐 ${poi.openingHours}` : '';
-    marker.bindPopup(`<b>${title}</b><br/>km ${poi.kmAlongRoute}${hoursHtml}`);
-    layerRef.current.push(marker);
-  });
-}
-
-const POI_CORRIDOR_M = 1000;
-const POI_TILE_DEG = 0.02; // ~2.2 x 1.8 km grid cells, merged into boxes below
-const POI_SAMPLE_M = 300; // spacing when covering long segments between sampled points
-
-// Queried directly from the browser, never through our own server: overpass-api.de answers
-// with 406 for datacenter-class traffic (confirmed against both our Vercel server and a dev
-// sandbox), which is exactly what a server-side proxy looks like to it. A real browser request
-// carries an ordinary residential/mobile IP and its own real User-Agent (can't be overridden
-// from fetch — and shouldn't be here). Same mirrors/order the Flutter app queries client-side.
-// Client abort on the primary mirror must stay above the query's own [timeout:35] below, or
-// we'd cut Overpass off before it gets the chance to answer.
-const POI_OVERPASS_MIRRORS: { url: string; timeoutMs: number }[] = [
-  { url: 'https://overpass-api.de/api/interpreter', timeoutMs: 45000 },
-  { url: 'https://overpass.kumi.systems/api/interpreter', timeoutMs: 20000 },
-];
-
-async function queryOverpassDirect(query: string): Promise<any | null> {
-  for (const { url, timeoutMs } of POI_OVERPASS_MIRRORS) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `data=${encodeURIComponent(query)}`,
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (res.ok) return await res.json();
-      console.error(`Overpass mirror ${url} returned ${res.status}`);
-    } catch (e) {
-      clearTimeout(timeout);
-      console.error(`Overpass mirror ${url} failed/timed out:`, e);
-    }
-  }
-  return null;
-}
-
-// Bounding boxes covering the route corridor, merged into rectangles. overpass-api.de returns
-// nothing for `around` with a long polyline (confirmed against the Flutter app's own mirror
-// testing) while boxes work reliably; the exact corridor width is applied afterwards in JS via
-// haversineM, so these boxes only need to be a superset.
-function buildCorridorBoxes(points: { lat: number; lng: number }[]): string[] {
-  if (points.length === 0) return [];
-  const padM = POI_CORRIDOR_M + POI_SAMPLE_M;
-  const cosLat = Math.cos((points[0].lat * Math.PI) / 180);
-  const padLat = padM / 111320;
-  const padLng = padLat / cosLat;
-
-  const cells = new Set<string>();
-  const cover = (lat: number, lng: number) => {
-    const cy0 = Math.floor((lat - padLat) / POI_TILE_DEG);
-    const cy1 = Math.floor((lat + padLat) / POI_TILE_DEG);
-    const cx0 = Math.floor((lng - padLng) / POI_TILE_DEG);
-    const cx1 = Math.floor((lng + padLng) / POI_TILE_DEG);
-    for (let cy = cy0; cy <= cy1; cy++) {
-      for (let cx = cx0; cx <= cx1; cx++) cells.add(`${cy},${cx}`);
-    }
-  };
-
-  for (let i = 0; i < points.length; i++) {
-    cover(points[i].lat, points[i].lng);
-    if (i === points.length - 1) break;
-    const { lat: lat0, lng: lng0 } = points[i];
-    const { lat: lat1, lng: lng1 } = points[i + 1];
-    const lenM = Math.sqrt(((lat1 - lat0) * 111320) ** 2 + ((lng1 - lng0) * 111320 * cosLat) ** 2);
-    const n = Math.ceil(lenM / POI_SAMPLE_M);
-    for (let k = 1; k < n; k++) {
-      cover(lat0 + (lat1 - lat0) * (k / n), lng0 + (lng1 - lng0) * (k / n));
-    }
-  }
-
-  const byRow = new Map<number, [number, number][]>();
-  const sortedCells = Array.from(cells)
-    .map(c => c.split(',').map(Number) as [number, number])
-    .sort((a, b) => (a[0] !== b[0] ? a[0] - b[0] : a[1] - b[1]));
-  for (const [cy, cx] of sortedCells) {
-    const row = byRow.get(cy) ?? [];
-    if (row.length > 0 && row[row.length - 1][1] === cx - 1) {
-      row[row.length - 1][1] = cx;
-    } else {
-      row.push([cx, cx]);
-    }
-    byRow.set(cy, row);
-  }
-
-  type Rect = [number, number, number, number]; // cy0, cy1, cx0, cx1
-  const rects: Rect[] = [];
-  let active = new Map<string, Rect>();
-  for (const cy of Array.from(byRow.keys()).sort((a, b) => a - b)) {
-    const next = new Map<string, Rect>();
-    for (const [cx0, cx1] of byRow.get(cy)!) {
-      const key = `${cx0},${cx1}`;
-      const existing = active.get(key);
-      if (existing && existing[1] === cy - 1) {
-        existing[1] = cy;
-        next.set(key, existing);
-      } else {
-        const rect: Rect = [cy, cy, cx0, cx1];
-        rects.push(rect);
-        next.set(key, rect);
-      }
-    }
-    active = next;
-  }
-
-  const f = (v: number) => (v * POI_TILE_DEG).toFixed(4);
-  return rects.map(([cy0, cy1, cx0, cx1]) => `(${f(cy0)},${f(cx0)},${f(cy1 + 1)},${f(cx1 + 1)})`);
-}
-
-// 1 point per ~5km is enough for the Overpass query corridor — avoids sending every raw GPX
-// trackpoint (tens of thousands for a long brevet) in the query itself.
-function downsampleForPoiRequest(parsedCoords: ParsedCoord[]): { lat: number; lng: number; km: number }[] {
-  if (parsedCoords.length === 0) return [];
-  const sampled = [parsedCoords[0]];
-  let lastKm = parsedCoords[0].distKm;
-  for (let i = 1; i < parsedCoords.length; i++) {
-    if (parsedCoords[i].distKm - lastKm >= 5) {
-      sampled.push(parsedCoords[i]);
-      lastKm = parsedCoords[i].distKm;
-    }
-  }
-  const last = parsedCoords[parsedCoords.length - 1];
-  if (sampled[sampled.length - 1] !== last) sampled.push(last);
-  return sampled.map(c => ({ lat: c.lat, lng: c.lng, km: c.distKm }));
-}
-
-async function fetchRoutePois(gpxUrl: string, parsedCoords: ParsedCoord[]): Promise<PoiMarkerData[]> {
-  const cacheKey = `poi_cache_v1:${gpxUrl}`;
-  try {
-    const cached = sessionStorage.getItem(cacheKey);
-    if (cached) {
-      const { ts, pois } = JSON.parse(cached);
-      if (Date.now() - ts < 3600_000) return pois;
-    }
-  } catch {}
-
-  const sampled = downsampleForPoiRequest(parsedCoords);
-  if (sampled.length < 2) return [];
-  const boxes = buildCorridorBoxes(sampled);
-  if (boxes.length === 0) return [];
-
-  const filters = [
-    `nwr["amenity"~"^(${OVERPASS_AMENITY})$"]`,
-    `nwr["shop"~"^(${OVERPASS_SHOP})$"]`,
-    `nwr["tourism"~"^(${OVERPASS_TOURISM})$"]`,
-    `nwr["healthcare"]`,
-    `nwr["natural"="spring"]`,
-    `nwr["man_made"="water_tap"]`,
-  ];
-  let query = `[out:json][timeout:35];(`;
-  for (const box of boxes) {
-    for (const f of filters) query += `${f}${box};`;
-  }
-  query += `);out center tags;`;
-
-  const data = await queryOverpassDirect(query);
-  if (!data) throw new Error('Σφάλμα φόρτωσης σταθμών');
-
-  const elements = (data.elements ?? []) as {
-    id: number; type: string;
-    lat?: number; lon?: number;
-    center?: { lat: number; lon: number };
-    tags?: Record<string, string>;
-  }[];
-
-  const seen = new Set<string>();
-  const pois: PoiMarkerData[] = elements
-    .map((el): PoiMarkerData | null => {
-      const lat = el.lat ?? el.center?.lat;
-      const lng = el.lon ?? el.center?.lon;
-      const tags = el.tags ?? {};
-      if (lat == null || lng == null) return null;
-      const category = classifyOsmTags(tags);
-      if (!category) return null;
-
-      const key = `${el.type}/${el.id}`;
-      if (seen.has(key)) return null;
-      seen.add(key);
-
-      // Κοντινότερο sampled point -> εκτίμηση km κατά μήκος διαδρομής + offset από αυτή
-      let minDist = Infinity, nearest = sampled[0];
-      for (const pt of sampled) {
-        const d = haversineM(lat, lng, pt.lat, pt.lng) / 1000;
-        if (d < minDist) { minDist = d; nearest = pt; }
-      }
-
-      return {
-        id: key,
-        category,
-        name: tags.name ?? null,
-        lat, lng,
-        kmAlongRoute: Math.round(nearest.km * 10) / 10,
-        offsetM: Math.round(minDist * 1000),
-        openingHours: tags.opening_hours ?? null,
-      };
-    })
-    .filter((p): p is PoiMarkerData => p !== null)
-    .filter(p => p.offsetM <= POI_CORRIDOR_M)
-    .sort((a, b) => a.kmAlongRoute - b.kmAlongRoute);
-
-  try { sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), pois })); } catch {}
-  return pois;
-}
-
-// Reusable "Στάσεις" toggle button + category-chip panel — shared by inline + fullscreen map.
-function PoiControl({
-  open, onToggleOpen, enabled, onToggleCategory, loading, error, onRetry,
-}: {
-  open: boolean;
-  onToggleOpen: () => void;
-  enabled: Set<PoiCategory>;
-  onToggleCategory: (id: PoiCategory) => void;
-  loading: boolean;
-  error: string | null;
-  onRetry: () => void;
-}) {
-  return (
-    <>
-      {/* top-[72px] clears Leaflet's default zoom control (top-left, ~10-62px) */}
-      <button onClick={onToggleOpen} title="Σταθμοί στη διαδρομή"
-        className="absolute top-[72px] left-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5
-          rounded-lg text-xs font-bold border backdrop-blur-sm transition-all hover:brightness-110"
-        style={{
-          backgroundColor: open ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.85)',
-          borderColor: 'rgba(6,182,212,0.4)',
-          color: open ? '#000' : '#06b6d4',
-        }}>
-        📍 Στάσεις
-      </button>
-      {open && (
-        <div className="absolute top-[118px] left-3 z-[1001] rounded-xl border backdrop-blur-md p-3"
-          style={{ background: 'rgba(10,22,40,0.90)', borderColor: 'rgba(255,255,255,0.15)', maxWidth: 280 }}>
-          {loading && <p className="text-white/50 text-xs mb-2">Αναζήτηση σταθμών… (έως ~65s)</p>}
-          {error && (
-            <p className="text-red-400 text-xs mb-2">
-              {error}{' '}
-              <button onClick={onRetry} className="underline hover:text-red-300">Δοκιμάστε ξανά</button>
-            </p>
-          )}
-          <div className="flex flex-wrap gap-1.5">
-            {POI_CATEGORIES.map(cat => {
-              const on = enabled.has(cat.id);
-              return (
-                <button key={cat.id} onClick={() => onToggleCategory(cat.id)}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border transition-all"
-                  style={{
-                    background: on ? cat.color : 'rgba(255,255,255,0.05)',
-                    borderColor: on ? cat.color : 'rgba(255,255,255,0.15)',
-                    color: on ? '#000' : 'rgba(255,255,255,0.6)',
-                  }}>
-                  <span>{cat.icon}</span><span>{cat.label}</span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-white/20 text-[10px] mt-2">© OpenStreetMap contributors</p>
-        </div>
-      )}
-    </>
-  );
-}
-
 function kmInterval(zoom: number): number {
   if (zoom < 8)  return 50;
   if (zoom < 10) return 30;
@@ -906,7 +585,6 @@ export function TileSwitcher({
 // ── Fullscreen modal ──────────────────────────────────────────────────────────
 function FullscreenMap({
   gpxUrl, controls, onClose, climbProfile, storedAscent, initialStyle, startDate,
-  pois, poiEnabled, onTogglePoiCategory, poiLoading, poiError, onRequestPois,
 }: {
   gpxUrl:        string;
   controls:      { km: number; name: string; lat: number; lng: number }[];
@@ -915,18 +593,11 @@ function FullscreenMap({
   storedAscent?: number;
   initialStyle?: string;
   startDate?:    Date;
-  pois:          PoiMarkerData[];
-  poiEnabled:    Set<PoiCategory>;
-  onTogglePoiCategory: (id: PoiCategory) => void;
-  poiLoading:    boolean;
-  poiError:      string | null;
-  onRequestPois: () => void;
 }) {
   const modalMapRef         = useRef<HTMLDivElement>(null);
   const modalMapInstanceRef = useRef<any>(null);
   const modalDotMarkerRef   = useRef<any>(null);
   const kmLayerRef          = useRef<any[]>([]);
-  const fsPoiLayerRef       = useRef<any[]>([]);
   const fsTileLayerRef      = useRef<any>(null);
   const fsLRef              = useRef<any>(null);
 
@@ -935,8 +606,6 @@ function FullscreenMap({
   const [showChart,       setShowChart]       = useState(true);
   const [fsActiveStyle,   setFsActiveStyle]   = useState(initialStyle ?? DEFAULT_STYLE);
   const [fsWeatherSource, setFsWeatherSource] = useState<WeatherSourceId | null>(null);
-  const [fsPoiOpen,       setFsPoiOpen]       = useState(false);
-  const [fsMapReady,      setFsMapReady]      = useState(false);
 
   useEffect(() => {
     if (!modalMapRef.current) return;
@@ -953,7 +622,6 @@ function FullscreenMap({
       modalMapInstanceRef.current = map;
       modalDotMarkerRef.current   = markerRef.current;
       fsLRef.current = (await import('leaflet')).default;
-      setFsMapReady(true);
       if (startDate && capturedCoords.length > 0 && !destroyed) {
         addWeatherMarkers(map, fsLRef.current, capturedCoords, startDate, windAborted, setFsWeatherSource);
       }
@@ -961,20 +629,12 @@ function FullscreenMap({
     return () => {
       destroyed = true;
       windAborted.current = true;
-      setFsMapReady(false);
       if (modalMapInstanceRef.current) {
         modalMapInstanceRef.current.remove();
         modalMapInstanceRef.current = null;
       }
     };
   }, [gpxUrl]);
-
-  useEffect(() => {
-    if (!fsMapReady) return;
-    const map = modalMapInstanceRef.current, L = fsLRef.current;
-    if (!map || !L) return;
-    buildPoiMarkers(L, map, pois, poiEnabled, fsPoiLayerRef);
-  }, [fsMapReady, pois, poiEnabled]);
 
   useEffect(() => {
     const marker = modalDotMarkerRef.current;
@@ -1024,16 +684,6 @@ function FullscreenMap({
           }}>
           ⛰️ {showChart ? 'Κλείσιμο γραφήματος' : 'Υψομετρικό'}
         </button>
-
-        <PoiControl
-          open={fsPoiOpen}
-          onToggleOpen={() => { setFsPoiOpen(o => !o); onRequestPois(); }}
-          onRetry={onRequestPois}
-          enabled={poiEnabled}
-          onToggleCategory={onTogglePoiCategory}
-          loading={poiLoading}
-          error={poiError}
-        />
 
         {/* Map */}
         <div ref={modalMapRef} style={{ position: 'absolute', inset: 0 }} />
@@ -1089,11 +739,9 @@ export default function BrevetMap({
   const dotMarkerRef   = useRef<any>(null);
   const initializedRef = useRef(false);
   const kmLayerRef     = useRef<any[]>([]);
-  const poiLayerRef    = useRef<any[]>([]);
   const tileLayerRef   = useRef<any>(null);
   const LRef           = useRef<any>(null);
   const windAbortRef   = useRef(false);
-  const poiFetchedRef  = useRef(false);
 
   const [parsedCoords, setParsedCoords] = useState<ParsedCoord[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -1101,39 +749,6 @@ export default function BrevetMap({
   const [mapReady,     setMapReady]     = useState(false);
   const [clockwise,    setClockwise]    = useState<boolean | null>(null);
   const [weatherSource, setWeatherSource] = useState<WeatherSourceId | null>(null);
-
-  const [poiPanelOpen, setPoiPanelOpen] = useState(false);
-  const [poiEnabled,   setPoiEnabled]   = useState<Set<PoiCategory>>(() => new Set(DEFAULT_ENABLED_CATEGORIES));
-  const [pois,         setPois]         = useState<PoiMarkerData[]>([]);
-  const [poiLoading,   setPoiLoading]   = useState(false);
-  const [poiError,     setPoiError]     = useState<string | null>(null);
-
-  useEffect(() => { setPoiEnabled(loadPoiEnabled()); }, []);
-
-  const togglePoiCategory = useCallback((id: PoiCategory) => {
-    setPoiEnabled(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      savePoiEnabled(next);
-      return next;
-    });
-  }, []);
-
-  const requestPois = useCallback(() => {
-    if (poiFetchedRef.current || poiLoading) return;
-    if (parsedCoords.length === 0) return;
-    poiFetchedRef.current = true;
-    setPoiError(null);
-    setPoiLoading(true);
-    fetchRoutePois(gpxUrl, parsedCoords)
-      .then(setPois)
-      .catch(e => {
-        console.error('POI fetch error:', e);
-        setPoiError('Σφάλμα φόρτωσης σταθμών');
-        poiFetchedRef.current = false;
-      })
-      .finally(() => setPoiLoading(false));
-  }, [gpxUrl, parsedCoords, poiLoading]);
 
   const toggleFullscreen = useCallback(() => setIsFullscreen(f => !f), []);
 
@@ -1181,18 +796,6 @@ export default function BrevetMap({
     if (pos) { marker.setLatLng(pos); marker.setOpacity(1); }
   }, [scrubberKm, parsedCoords]);
 
-  useEffect(() => {
-    if (!mapReady) return;
-    const map = mapInstanceRef.current, L = LRef.current;
-    if (!map || !L) return;
-    buildPoiMarkers(L, map, pois, poiEnabled, poiLayerRef);
-  }, [mapReady, pois, poiEnabled]);
-
-  // Σε περίπτωση που ο χρήστης ανοίξει το panel πριν προλάβει να φορτώσει το GPX.
-  useEffect(() => {
-    if (poiPanelOpen) requestPois();
-  }, [poiPanelOpen, parsedCoords, requestPois]);
-
   return (
     <>
       <link rel="stylesheet"
@@ -1205,12 +808,6 @@ export default function BrevetMap({
           onClose={toggleFullscreen}
           initialStyle={activeStyle}
           startDate={startDate}
-          pois={pois}
-          poiEnabled={poiEnabled}
-          onTogglePoiCategory={togglePoiCategory}
-          poiLoading={poiLoading}
-          poiError={poiError}
-          onRequestPois={requestPois}
         />
       )}
 
@@ -1231,16 +828,6 @@ export default function BrevetMap({
             onSwitch={setActiveStyle}
           />
         </div>
-
-        <PoiControl
-          open={poiPanelOpen}
-          onToggleOpen={() => { setPoiPanelOpen(o => !o); requestPois(); }}
-          onRetry={requestPois}
-          enabled={poiEnabled}
-          onToggleCategory={togglePoiCategory}
-          loading={poiLoading}
-          error={poiError}
-        />
 
         <button onClick={toggleFullscreen} title="Πλήρης οθόνη"
           className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5
