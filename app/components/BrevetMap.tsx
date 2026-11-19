@@ -366,17 +366,19 @@ function buildPoiMarkers(
 }
 
 const POI_CORRIDOR_M = 1000;
+const POI_TILE_DEG = 0.02; // ~2.2 x 1.8 km grid cells, merged into boxes below
+const POI_SAMPLE_M = 300; // spacing when covering long segments between sampled points
 
 // Queried directly from the browser, never through our own server: overpass-api.de answers
 // with 406 for datacenter-class traffic (confirmed against both our Vercel server and a dev
 // sandbox), which is exactly what a server-side proxy looks like to it. A real browser request
 // carries an ordinary residential/mobile IP and its own real User-Agent (can't be overridden
 // from fetch — and shouldn't be here). Same mirrors/order the Flutter app queries client-side.
-// Client abort on the primary mirror must stay above the query's own [timeout:20] below, or
+// Client abort on the primary mirror must stay above the query's own [timeout:35] below, or
 // we'd cut Overpass off before it gets the chance to answer.
 const POI_OVERPASS_MIRRORS: { url: string; timeoutMs: number }[] = [
-  { url: 'https://overpass-api.de/api/interpreter', timeoutMs: 25000 },
-  { url: 'https://overpass.kumi.systems/api/interpreter', timeoutMs: 12000 },
+  { url: 'https://overpass-api.de/api/interpreter', timeoutMs: 45000 },
+  { url: 'https://overpass.kumi.systems/api/interpreter', timeoutMs: 20000 },
 ];
 
 async function queryOverpassDirect(query: string): Promise<any | null> {
@@ -401,8 +403,80 @@ async function queryOverpassDirect(query: string): Promise<any | null> {
   return null;
 }
 
-// 1 point per ~5km is enough for the Overpass "around" query corridor — avoids sending every
-// raw GPX trackpoint (tens of thousands for a long brevet) in the query itself.
+// Bounding boxes covering the route corridor, merged into rectangles. overpass-api.de returns
+// nothing for `around` with a long polyline (confirmed against the Flutter app's own mirror
+// testing) while boxes work reliably; the exact corridor width is applied afterwards in JS via
+// haversineM, so these boxes only need to be a superset.
+function buildCorridorBoxes(points: { lat: number; lng: number }[]): string[] {
+  if (points.length === 0) return [];
+  const padM = POI_CORRIDOR_M + POI_SAMPLE_M;
+  const cosLat = Math.cos((points[0].lat * Math.PI) / 180);
+  const padLat = padM / 111320;
+  const padLng = padLat / cosLat;
+
+  const cells = new Set<string>();
+  const cover = (lat: number, lng: number) => {
+    const cy0 = Math.floor((lat - padLat) / POI_TILE_DEG);
+    const cy1 = Math.floor((lat + padLat) / POI_TILE_DEG);
+    const cx0 = Math.floor((lng - padLng) / POI_TILE_DEG);
+    const cx1 = Math.floor((lng + padLng) / POI_TILE_DEG);
+    for (let cy = cy0; cy <= cy1; cy++) {
+      for (let cx = cx0; cx <= cx1; cx++) cells.add(`${cy},${cx}`);
+    }
+  };
+
+  for (let i = 0; i < points.length; i++) {
+    cover(points[i].lat, points[i].lng);
+    if (i === points.length - 1) break;
+    const { lat: lat0, lng: lng0 } = points[i];
+    const { lat: lat1, lng: lng1 } = points[i + 1];
+    const lenM = Math.sqrt(((lat1 - lat0) * 111320) ** 2 + ((lng1 - lng0) * 111320 * cosLat) ** 2);
+    const n = Math.ceil(lenM / POI_SAMPLE_M);
+    for (let k = 1; k < n; k++) {
+      cover(lat0 + (lat1 - lat0) * (k / n), lng0 + (lng1 - lng0) * (k / n));
+    }
+  }
+
+  const byRow = new Map<number, [number, number][]>();
+  const sortedCells = Array.from(cells)
+    .map(c => c.split(',').map(Number) as [number, number])
+    .sort((a, b) => (a[0] !== b[0] ? a[0] - b[0] : a[1] - b[1]));
+  for (const [cy, cx] of sortedCells) {
+    const row = byRow.get(cy) ?? [];
+    if (row.length > 0 && row[row.length - 1][1] === cx - 1) {
+      row[row.length - 1][1] = cx;
+    } else {
+      row.push([cx, cx]);
+    }
+    byRow.set(cy, row);
+  }
+
+  type Rect = [number, number, number, number]; // cy0, cy1, cx0, cx1
+  const rects: Rect[] = [];
+  let active = new Map<string, Rect>();
+  for (const cy of Array.from(byRow.keys()).sort((a, b) => a - b)) {
+    const next = new Map<string, Rect>();
+    for (const [cx0, cx1] of byRow.get(cy)!) {
+      const key = `${cx0},${cx1}`;
+      const existing = active.get(key);
+      if (existing && existing[1] === cy - 1) {
+        existing[1] = cy;
+        next.set(key, existing);
+      } else {
+        const rect: Rect = [cy, cy, cx0, cx1];
+        rects.push(rect);
+        next.set(key, rect);
+      }
+    }
+    active = next;
+  }
+
+  const f = (v: number) => (v * POI_TILE_DEG).toFixed(4);
+  return rects.map(([cy0, cy1, cx0, cx1]) => `(${f(cy0)},${f(cx0)},${f(cy1 + 1)},${f(cx1 + 1)})`);
+}
+
+// 1 point per ~5km is enough for the Overpass query corridor — avoids sending every raw GPX
+// trackpoint (tens of thousands for a long brevet) in the query itself.
 function downsampleForPoiRequest(parsedCoords: ParsedCoord[]): { lat: number; lng: number; km: number }[] {
   if (parsedCoords.length === 0) return [];
   const sampled = [parsedCoords[0]];
@@ -430,20 +504,22 @@ async function fetchRoutePois(gpxUrl: string, parsedCoords: ParsedCoord[]): Prom
 
   const sampled = downsampleForPoiRequest(parsedCoords);
   if (sampled.length < 2) return [];
-  const polyline = sampled.map(p => `${p.lat},${p.lng}`).join(',');
+  const boxes = buildCorridorBoxes(sampled);
+  if (boxes.length === 0) return [];
 
-  const query = `
-    [out:json][timeout:20];
-    (
-      nwr["amenity"~"^(${OVERPASS_AMENITY})$"](around:${POI_CORRIDOR_M},${polyline});
-      nwr["shop"~"^(${OVERPASS_SHOP})$"](around:${POI_CORRIDOR_M},${polyline});
-      nwr["tourism"~"^(${OVERPASS_TOURISM})$"](around:${POI_CORRIDOR_M},${polyline});
-      nwr["healthcare"](around:${POI_CORRIDOR_M},${polyline});
-      nwr["natural"="spring"](around:${POI_CORRIDOR_M},${polyline});
-      nwr["man_made"="water_tap"](around:${POI_CORRIDOR_M},${polyline});
-    );
-    out center tags;
-  `;
+  const filters = [
+    `nwr["amenity"~"^(${OVERPASS_AMENITY})$"]`,
+    `nwr["shop"~"^(${OVERPASS_SHOP})$"]`,
+    `nwr["tourism"~"^(${OVERPASS_TOURISM})$"]`,
+    `nwr["healthcare"]`,
+    `nwr["natural"="spring"]`,
+    `nwr["man_made"="water_tap"]`,
+  ];
+  let query = `[out:json][timeout:35];(`;
+  for (const box of boxes) {
+    for (const f of filters) query += `${f}${box};`;
+  }
+  query += `);out center tags;`;
 
   const data = await queryOverpassDirect(query);
   if (!data) throw new Error('Σφάλμα φόρτωσης σταθμών');
@@ -522,7 +598,7 @@ function PoiControl({
       {open && (
         <div className="absolute top-[118px] left-3 z-[1001] rounded-xl border backdrop-blur-md p-3"
           style={{ background: 'rgba(10,22,40,0.90)', borderColor: 'rgba(255,255,255,0.15)', maxWidth: 280 }}>
-          {loading && <p className="text-white/50 text-xs mb-2">Αναζήτηση σταθμών… (έως ~40s)</p>}
+          {loading && <p className="text-white/50 text-xs mb-2">Αναζήτηση σταθμών… (έως ~65s)</p>}
           {error && (
             <p className="text-red-400 text-xs mb-2">
               {error}{' '}
