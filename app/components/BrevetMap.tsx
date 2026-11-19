@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  POI_CATEGORIES, DEFAULT_ENABLED_CATEGORIES, poiCategoryDef,
+  POI_CATEGORIES, DEFAULT_ENABLED_CATEGORIES, poiCategoryDef, classifyOsmTags,
+  OVERPASS_AMENITY, OVERPASS_SHOP, OVERPASS_TOURISM,
   type PoiCategory, type PoiCategoryDef,
 } from '@/app/lib/poiCategories';
 
@@ -364,10 +365,45 @@ function buildPoiMarkers(
   });
 }
 
-// Server only needs ~1 point per 5km to build the Overpass "around" query (see
-// app/api/overpass/pois/route.ts), so downsample before sending — avoids POSTing every
-// raw GPX trackpoint (tens of thousands for a long brevet) to the origin on every click.
-function downsampleForPoiRequest(parsedCoords: ParsedCoord[]): { lat: number; lng: number }[] {
+const POI_CORRIDOR_M = 1000;
+
+// Queried directly from the browser, never through our own server: overpass-api.de answers
+// with 406 for datacenter-class traffic (confirmed against both our Vercel server and a dev
+// sandbox), which is exactly what a server-side proxy looks like to it. A real browser request
+// carries an ordinary residential/mobile IP and its own real User-Agent (can't be overridden
+// from fetch — and shouldn't be here). Same mirrors/order the Flutter app queries client-side.
+// Client abort on the primary mirror must stay above the query's own [timeout:20] below, or
+// we'd cut Overpass off before it gets the chance to answer.
+const POI_OVERPASS_MIRRORS: { url: string; timeoutMs: number }[] = [
+  { url: 'https://overpass-api.de/api/interpreter', timeoutMs: 25000 },
+  { url: 'https://overpass.kumi.systems/api/interpreter', timeoutMs: 12000 },
+];
+
+async function queryOverpassDirect(query: string): Promise<any | null> {
+  for (const { url, timeoutMs } of POI_OVERPASS_MIRRORS) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `data=${encodeURIComponent(query)}`,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (res.ok) return await res.json();
+      console.error(`Overpass mirror ${url} returned ${res.status}`);
+    } catch (e) {
+      clearTimeout(timeout);
+      console.error(`Overpass mirror ${url} failed/timed out:`, e);
+    }
+  }
+  return null;
+}
+
+// 1 point per ~5km is enough for the Overpass "around" query corridor — avoids sending every
+// raw GPX trackpoint (tens of thousands for a long brevet) in the query itself.
+function downsampleForPoiRequest(parsedCoords: ParsedCoord[]): { lat: number; lng: number; km: number }[] {
   if (parsedCoords.length === 0) return [];
   const sampled = [parsedCoords[0]];
   let lastKm = parsedCoords[0].distKm;
@@ -379,7 +415,7 @@ function downsampleForPoiRequest(parsedCoords: ParsedCoord[]): { lat: number; ln
   }
   const last = parsedCoords[parsedCoords.length - 1];
   if (sampled[sampled.length - 1] !== last) sampled.push(last);
-  return sampled.map(c => ({ lat: c.lat, lng: c.lng }));
+  return sampled.map(c => ({ lat: c.lat, lng: c.lng, km: c.distKm }));
 }
 
 async function fetchRoutePois(gpxUrl: string, parsedCoords: ParsedCoord[]): Promise<PoiMarkerData[]> {
@@ -392,14 +428,68 @@ async function fetchRoutePois(gpxUrl: string, parsedCoords: ParsedCoord[]): Prom
     }
   } catch {}
 
-  const res = await fetch('/api/overpass/pois', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ trackPoints: downsampleForPoiRequest(parsedCoords) }),
-  });
-  if (!res.ok) throw new Error('Σφάλμα φόρτωσης σταθμών');
-  const json = await res.json();
-  const pois: PoiMarkerData[] = json.pois ?? [];
+  const sampled = downsampleForPoiRequest(parsedCoords);
+  if (sampled.length < 2) return [];
+  const polyline = sampled.map(p => `${p.lat},${p.lng}`).join(',');
+
+  const query = `
+    [out:json][timeout:20];
+    (
+      nwr["amenity"~"^(${OVERPASS_AMENITY})$"](around:${POI_CORRIDOR_M},${polyline});
+      nwr["shop"~"^(${OVERPASS_SHOP})$"](around:${POI_CORRIDOR_M},${polyline});
+      nwr["tourism"~"^(${OVERPASS_TOURISM})$"](around:${POI_CORRIDOR_M},${polyline});
+      nwr["healthcare"](around:${POI_CORRIDOR_M},${polyline});
+      nwr["natural"="spring"](around:${POI_CORRIDOR_M},${polyline});
+      nwr["man_made"="water_tap"](around:${POI_CORRIDOR_M},${polyline});
+    );
+    out center tags;
+  `;
+
+  const data = await queryOverpassDirect(query);
+  if (!data) throw new Error('Σφάλμα φόρτωσης σταθμών');
+
+  const elements = (data.elements ?? []) as {
+    id: number; type: string;
+    lat?: number; lon?: number;
+    center?: { lat: number; lon: number };
+    tags?: Record<string, string>;
+  }[];
+
+  const seen = new Set<string>();
+  const pois: PoiMarkerData[] = elements
+    .map((el): PoiMarkerData | null => {
+      const lat = el.lat ?? el.center?.lat;
+      const lng = el.lon ?? el.center?.lon;
+      const tags = el.tags ?? {};
+      if (lat == null || lng == null) return null;
+      const category = classifyOsmTags(tags);
+      if (!category) return null;
+
+      const key = `${el.type}/${el.id}`;
+      if (seen.has(key)) return null;
+      seen.add(key);
+
+      // Κοντινότερο sampled point -> εκτίμηση km κατά μήκος διαδρομής + offset από αυτή
+      let minDist = Infinity, nearest = sampled[0];
+      for (const pt of sampled) {
+        const d = haversineM(lat, lng, pt.lat, pt.lng) / 1000;
+        if (d < minDist) { minDist = d; nearest = pt; }
+      }
+
+      return {
+        id: key,
+        category,
+        name: tags.name ?? null,
+        lat, lng,
+        kmAlongRoute: Math.round(nearest.km * 10) / 10,
+        offsetM: Math.round(minDist * 1000),
+        openingHours: tags.opening_hours ?? null,
+      };
+    })
+    .filter((p): p is PoiMarkerData => p !== null)
+    .filter(p => p.offsetM <= POI_CORRIDOR_M)
+    .sort((a, b) => a.kmAlongRoute - b.kmAlongRoute);
+
   try { sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), pois })); } catch {}
   return pois;
 }
@@ -418,8 +508,9 @@ function PoiControl({
 }) {
   return (
     <>
+      {/* top-[72px] clears Leaflet's default zoom control (top-left, ~10-62px) */}
       <button onClick={onToggleOpen} title="Σταθμοί στη διαδρομή"
-        className="absolute top-3 left-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5
+        className="absolute top-[72px] left-3 z-[1000] flex items-center gap-1.5 px-2.5 py-1.5
           rounded-lg text-xs font-bold border backdrop-blur-sm transition-all hover:brightness-110"
         style={{
           backgroundColor: open ? 'rgba(6,182,212,0.85)' : 'rgba(10,22,40,0.85)',
@@ -429,9 +520,9 @@ function PoiControl({
         📍 Στάσεις
       </button>
       {open && (
-        <div className="absolute top-14 left-3 z-[1001] rounded-xl border backdrop-blur-md p-3"
+        <div className="absolute top-[118px] left-3 z-[1001] rounded-xl border backdrop-blur-md p-3"
           style={{ background: 'rgba(10,22,40,0.90)', borderColor: 'rgba(255,255,255,0.15)', maxWidth: 280 }}>
-          {loading && <p className="text-white/50 text-xs mb-2">Αναζήτηση σταθμών… (έως ~20s)</p>}
+          {loading && <p className="text-white/50 text-xs mb-2">Αναζήτηση σταθμών… (έως ~40s)</p>}
           {error && (
             <p className="text-red-400 text-xs mb-2">
               {error}{' '}
