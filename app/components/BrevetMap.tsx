@@ -364,6 +364,24 @@ function buildPoiMarkers(
   });
 }
 
+// Server only needs ~1 point per 5km to build the Overpass "around" query (see
+// app/api/overpass/pois/route.ts), so downsample before sending — avoids POSTing every
+// raw GPX trackpoint (tens of thousands for a long brevet) to the origin on every click.
+function downsampleForPoiRequest(parsedCoords: ParsedCoord[]): { lat: number; lng: number }[] {
+  if (parsedCoords.length === 0) return [];
+  const sampled = [parsedCoords[0]];
+  let lastKm = parsedCoords[0].distKm;
+  for (let i = 1; i < parsedCoords.length; i++) {
+    if (parsedCoords[i].distKm - lastKm >= 5) {
+      sampled.push(parsedCoords[i]);
+      lastKm = parsedCoords[i].distKm;
+    }
+  }
+  const last = parsedCoords[parsedCoords.length - 1];
+  if (sampled[sampled.length - 1] !== last) sampled.push(last);
+  return sampled.map(c => ({ lat: c.lat, lng: c.lng }));
+}
+
 async function fetchRoutePois(gpxUrl: string, parsedCoords: ParsedCoord[]): Promise<PoiMarkerData[]> {
   const cacheKey = `poi_cache_v1:${gpxUrl}`;
   try {
@@ -377,7 +395,7 @@ async function fetchRoutePois(gpxUrl: string, parsedCoords: ParsedCoord[]): Prom
   const res = await fetch('/api/overpass/pois', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ trackPoints: parsedCoords.map(c => ({ lat: c.lat, lng: c.lng })) }),
+    body: JSON.stringify({ trackPoints: downsampleForPoiRequest(parsedCoords) }),
   });
   if (!res.ok) throw new Error('Σφάλμα φόρτωσης σταθμών');
   const json = await res.json();
