@@ -424,35 +424,38 @@ export default function LiveMap({
         iconAnchor: [sqSize / 2, sqSize / 2],
       });
 
+      const popupHtml = `
+        <div style="min-width:160px;font-family:Arial,sans-serif;">
+          <strong>${rider.fullName}</strong>
+          ${rider.rideMode === 'pre' ? '<span style="color:#60a5fa;font-weight:bold;"> · 🌙 Pre-ride</span>'
+            : rider.rideMode === 'post' ? '<span style="color:#c084fc;font-weight:bold;"> · 🌗 Post-ride</span>' : ''}
+          <br/>
+          <span style="color:${isDNF ? '#ef4444' : isFinished ? '#22c55e' : '#06b6d4'}">
+            ${isFinished ? '🏁 Τερμάτισε' : isDNF ? '❌ DNF' : '🚴 Σε πορεία'}
+          </span><br/>
+          ${motion ? `<span style="color:${RIDER_MOTION_COLOR[motion.state]}">
+            ${motion.state === 'moving' ? '🚴 Κινείται'
+              : motion.state === 'stopped' ? '⏸ Στάση'
+              : motion.state === 'noGps' ? '📡 Χωρίς GPS'
+              : '📵 Χωρίς σήμα'}
+          </span><br/>` : ''}
+          📍 km ${parseFloat(rider.currentKm).toFixed(0)}<br/>
+          ⚡ ${rider.avgSpeed} km/h μ.ο.
+        </div>
+      `;
+
       if (riderMarkers.current.has(rider.id)) {
         const marker = riderMarkers.current.get(rider.id);
         marker.setLatLng([rider.lat, rider.lng]);
         marker.setIcon(icon);
+        marker.setPopupContent(popupHtml);
       } else {
         const marker = L.marker([rider.lat, rider.lng], {
           icon,
           zIndexOffset: isSelected ? 1000 : 500,
         })
           .addTo(map)
-          .bindPopup(`
-            <div style="min-width:160px;font-family:Arial,sans-serif;">
-              <strong>${rider.fullName}</strong>
-              ${rider.rideMode === 'pre' ? '<span style="color:#60a5fa;font-weight:bold;"> · 🌙 Pre-ride</span>'
-                : rider.rideMode === 'post' ? '<span style="color:#c084fc;font-weight:bold;"> · 🌗 Post-ride</span>' : ''}
-              <br/>
-              <span style="color:${isDNF ? '#ef4444' : isFinished ? '#22c55e' : '#06b6d4'}">
-                ${isFinished ? '🏁 Τερμάτισε' : isDNF ? '❌ DNF' : '🚴 Σε πορεία'}
-              </span><br/>
-              ${motion ? `<span style="color:${RIDER_MOTION_COLOR[motion.state]}">
-                ${motion.state === 'moving' ? '🚴 Κινείται'
-                  : motion.state === 'stopped' ? '⏸ Στάση'
-                  : motion.state === 'noGps' ? '📡 Χωρίς GPS'
-                  : '📵 Χωρίς σήμα'}
-              </span><br/>` : ''}
-              📍 km ${parseFloat(rider.currentKm).toFixed(0)}<br/>
-              ⚡ ${rider.avgSpeed} km/h μ.ο.
-            </div>
-          `)
+          .bindPopup(popupHtml)
           .on('click', () => onRiderSelect(rider.id));
         riderMarkers.current.set(rider.id, marker);
       }
