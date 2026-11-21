@@ -8,6 +8,26 @@
 
 import { useEffect, useState } from 'react';
 
+// Rewrites a github.com/<owner>/<repo>/(raw|blob)/<ref>/<path> URL to the
+// equivalent raw.githubusercontent.com URL. fetch() against the github.com
+// shorthand fails CORS (its 302 redirect sends an empty
+// Access-Control-Allow-Origin header), so every GPX consumer must fetch the
+// canonical raw.githubusercontent.com form instead — organizers sometimes
+// paste the github.com link when filling in a brevet's route.
+export function normalizeGpxUrl(gpxUrl: string): string {
+  const trimmed = gpxUrl.trim();
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return trimmed;
+  }
+  if (url.hostname !== 'github.com') return trimmed;
+  const seg = url.pathname.split('/').filter(Boolean);
+  if (seg.length < 4 || (seg[2] !== 'raw' && seg[2] !== 'blob')) return trimmed;
+  return `https://raw.githubusercontent.com/${seg[0]}/${seg[1]}/${seg.slice(3).join('/')}`;
+}
+
 const OWNER = 'nargir-maker';
 const REPO = 'gbt-gpx';
 const DATES_URL = `https://raw.githubusercontent.com/${OWNER}/${REPO}/refs/heads/main/gpx_dates.json`;

@@ -147,6 +147,7 @@
     "organizerViewBanner": "Εμφάνιση brevets του συλλόγου σου",
     "seeAll": "Δες όλα →",
     "organizerLabel": "Διοργ.:",
+    "certLabel": "Φορέας:",
     "loadingText": "Φόρτωση brevets...",
     "noneFound": "Δεν βρέθηκαν brevets",
     "brevetsCount": "{count} brevets"

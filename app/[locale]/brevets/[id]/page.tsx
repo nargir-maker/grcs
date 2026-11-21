@@ -12,7 +12,7 @@ import RegistrationForm from '@/app/components/RegistrationForm';
 import { decodeParam } from '@/app/lib/routeParams';
 import { isNightStart } from '@/app/lib/nightStart';
 import { useInterestedBrevets } from '@/app/lib/useInterestedBrevets';
-import { useGpxUpdatedDate } from '@/app/lib/gpxDates';
+import { useGpxUpdatedDate, normalizeGpxUrl } from '@/app/lib/gpxDates';
 import RouteTraceBanner from '@/app/components/RouteTraceBanner';
 
 
@@ -642,7 +642,7 @@ export default function BrevetDetailPage() {
           start: route.start?.toString() ?? '', finish: route.finish?.toString() ?? '',
           ascent, certification: info.certification?.toString() ?? '',
           type: info.type?.toString() ?? 'BRM',
-          gpxUrl: route.gpxUrl?.toString() ?? '', mapUrl: route.mapUrl?.toString() ?? '',
+          gpxUrl: normalizeGpxUrl(route.gpxUrl?.toString() ?? ''), mapUrl: route.mapUrl?.toString() ?? '',
           externalRegistration: extra.registration?.toString() ?? '',
           description: extra.description?.toString() ?? '',
           imageUrl: extra.imageUrl?.toString() ?? '',

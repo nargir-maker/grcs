@@ -9,6 +9,7 @@ import { db, rtdb } from '@/app/lib/firebase';
 import dynamic from 'next/dynamic';
 import { decodeParam } from '@/app/lib/routeParams';
 import { riderMotionFromRider, motionLabel, RIDER_MOTION_TEXT_CLASS, RIDER_MOTION_EMOJI } from '@/app/lib/riderMotion';
+import { normalizeGpxUrl } from '@/app/lib/gpxDates';
 
 function MapLoading() {
   const t = useTranslations('liveBrevet');
@@ -121,7 +122,7 @@ export default function LiveBrevetPage() {
           title:    info.title?.toString() ?? id,
           distance: parseInt(info.distance?.toString() ?? '0') || 0,
           date:     info.date?.toString() ?? '',
-          gpxUrl:   route.gpxUrl?.toString() ?? '',
+          gpxUrl:   normalizeGpxUrl(route.gpxUrl?.toString() ?? ''),
           controls: rawControls.map((c: any) => ({
             km:   parseInt(c.km?.toString() ?? '0') || 0,
             name: c.name?.toString() ?? '',

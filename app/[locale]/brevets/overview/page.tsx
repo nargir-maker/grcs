@@ -13,6 +13,7 @@ import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 import { TILE_STYLES, DEFAULT_STYLE, TileSwitcher } from '@/app/components/BrevetMap';
 import PageViews from '@/app/components/PageViews';
 import { getPublicMembers, type RawMemberDoc } from '@/app/lib/publicMembersCache';
+import { normalizeGpxUrl } from '@/app/lib/gpxDates';
 
 const YEAR = 2026;
 
@@ -320,7 +321,7 @@ export default function BrevetsOverviewPage() {
         const d = doc.data();
         const info  = d.info  || {};
         const route = d.route || {};
-        const gpxUrl = route.gpxUrl?.toString() ?? '';
+        const gpxUrl = normalizeGpxUrl(route.gpxUrl?.toString() ?? '');
         if (!gpxUrl) return;
         const certification = info.certification?.toString() ?? '';
         const coOrganizerId = info.coOrganizerId?.toString() ?? '';

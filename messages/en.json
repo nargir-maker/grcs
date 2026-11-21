@@ -147,6 +147,7 @@
     "organizerViewBanner": "Showing your club's brevets",
     "seeAll": "See all →",
     "organizerLabel": "Organizer:",
+    "certLabel": "Authority:",
     "loadingText": "Loading brevets...",
     "noneFound": "No brevets found",
     "brevetsCount": "{count} brevets"

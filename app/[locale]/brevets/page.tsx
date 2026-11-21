@@ -7,6 +7,7 @@ import { usePageEnabled, ComingSoon } from '@/app/lib/usePageEnabled';
 import BrevetCard from '@/app/components/BrevetCard';
 import PageViews from '@/app/components/PageViews';
 import { useInterestedBrevets } from '@/app/lib/useInterestedBrevets';
+import { normalizeGpxUrl } from '@/app/lib/gpxDates';
 import { Link } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 
@@ -94,10 +95,31 @@ interface Brevet {
   medalCost: number;
 }
 
-interface OrganizerOption {
-  id: string;
-  name: string;
-  logo: string;
+const NOMINAL_DISTANCE_BANDS: Record<number, [number, number]> = {
+  200:  [189, 225],
+  300:  [289, 325],
+  400:  [389, 425],
+  600:  [589, 625],
+  1000: [989, 1025],
+};
+
+function distanceBucket(d: number): string {
+  if (d < NOMINAL_DISTANCE_BANDS[200][0])  return '<200';
+  if (d > NOMINAL_DISTANCE_BANDS[1000][1]) return '1000+';
+  for (const cat of [1000, 600, 400, 300]) {
+    if (d >= NOMINAL_DISTANCE_BANDS[cat][0]) return String(cat);
+  }
+  return '200';
+}
+
+type CertCategory = 'ACP' | 'HAR' | 'BOTH';
+
+function certCategory(b: Brevet): CertCategory {
+  const certNorm = b.certification.toUpperCase().replace(/\./g, '').trim();
+  const isCoOrganized = certNorm === 'BOTH' || (!!b.coOrganizerId && b.coOrganizerId !== '0');
+  if (isCoOrganized) return 'BOTH';
+  if (certNorm === 'HAR') return 'HAR';
+  return 'ACP';
 }
 
 function getDifficultyLabel(bdi: number): { label: string; color: string } {
@@ -118,39 +140,23 @@ function computeBDI(wcs: number, km: number, ascent: number): number {
   return (km / 100) * (1 + ascent / (km * 8));
 }
 
-function deriveOrganizers(data: Brevet[]): OrganizerOption[] {
-  const seen = new Map<string, OrganizerOption>();
-  data.forEach((b) => {
-    if (b.organizerId && !seen.has(b.organizerId)) {
-      seen.set(b.organizerId, {
-        id:   b.organizerId,
-        name: b.organizer,
-        logo: b.organizerLogo,
-      });
-    }
-  });
-  return Array.from(seen.values()).sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
-}
-
 export default function BrevetsPage() {
   const t = useTranslations('brevets');
   const locale = useLocale();
   const dateLocale = locale === 'el' ? 'el-GR' : 'en-US';
   const [brevets, setBrevets] = useState<Brevet[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<number | null>(null);
+  const [filter, setFilter] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState<number | null>(new Date().getFullYear());
   const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + 1 - i);
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
   const [monthFilter, setMonthFilter] = useState<number | null>(null);
+  const [certFilter, setCertFilter] = useState<CertCategory | null>(null);
   const [organizerFilter, setOrganizerFilter] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return new URLSearchParams(window.location.search).get('organizer');
   });
-  const [organizers, setOrganizers] = useState<OrganizerOption[]>([]);
   const [isOrganizerView, setIsOrganizerView] = useState(false);
   const [myOrganizerClubId, setMyOrganizerClubId] = useState<string | null>(null);
   const { isInterested, toggle: toggleFavorite } = useInterestedBrevets();
@@ -170,7 +176,6 @@ export default function BrevetsPage() {
       try {
         if (cachedBrevets.length > 0 && Date.now() - cacheTimestamp < CACHE_TTL) {
           setBrevets(cachedBrevets);
-          setOrganizers(deriveOrganizers(cachedBrevets));
           setLoading(false);
           return;
         }
@@ -225,7 +230,7 @@ export default function BrevetsPage() {
             ascent,
             certification:   info.certification?.toString() ?? '',
             type:            info.type?.toString() ?? 'BRM',
-            gpxUrl:          route.gpxUrl?.toString() ?? '',
+            gpxUrl:          normalizeGpxUrl(route.gpxUrl?.toString() ?? ''),
             imageUrl:        extra.imageUrl?.toString() ?? '',
             difficultyLabel: label,
             difficultyColor: color,
@@ -246,7 +251,6 @@ export default function BrevetsPage() {
         cachedBrevets  = data;
         cacheTimestamp = Date.now();
         setBrevets(data);
-        setOrganizers(deriveOrganizers(data));
 
       } catch (e) {
         console.error('Error fetching data:', e);
@@ -258,16 +262,17 @@ export default function BrevetsPage() {
   }, []);
 
   const filtered = brevets.filter((b) => {
-    const matchDist      = filter === null || b.distance === filter;
+    const matchDist      = filter === null || distanceBucket(b.distance) === filter;
     const matchYear      = yearFilter === null || new Date(b.date).getFullYear() === yearFilter;
     const matchMonth     = monthFilter === null || new Date(b.date).getMonth() + 1 === monthFilter;
     const matchDiff      = difficultyFilter === null || b.difficultyLabel === difficultyFilter;
+    const matchCert      = certFilter === null || certCategory(b) === certFilter;
     const matchOrganizer = organizerFilter === null || b.organizerId === organizerFilter;
     const matchSearch    = search === '' ||
       b.title.toLowerCase().includes(search.toLowerCase()) ||
       b.start.toLowerCase().includes(search.toLowerCase()) ||
       b.organizer.toLowerCase().includes(search.toLowerCase());
-    return matchDist && matchYear && matchMonth && matchDiff && matchOrganizer && matchSearch;
+    return matchDist && matchYear && matchMonth && matchDiff && matchCert && matchOrganizer && matchSearch;
   });
 
   const hasCoOrg = (b: Brevet) =>
@@ -475,7 +480,7 @@ export default function BrevetsPage() {
 
           <div className="flex gap-2 flex-wrap items-center">
             <span className="text-white/30 text-xs w-16">{t('distanceLabel')}</span>
-            {[null, 200, 300, 400, 600, 1000].map((d) => (
+            {[null, '<200', '200', '300', '400', '600', '1000', '1000+'].map((d) => (
               <button
                 key={d ?? 'all'}
                 onClick={() => setFilter(d)}
@@ -557,39 +562,32 @@ export default function BrevetsPage() {
                 {t('seeAll')}
               </button>
             </div>
-          ) : organizers.length > 1 ? (
+          ) : (
             <div className="flex items-center gap-3">
-              <span className="text-white/30 text-xs w-16 flex-shrink-0">{t('organizerLabel')}</span>
-              <div className="flex gap-2 overflow-x-auto pb-1"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', cursor: 'grab' }}
-                ref={(el) => {
-                  if (!el) return;
-                  el.onwheel = (e) => { if (e.deltaY !== 0) { e.preventDefault(); el.scrollLeft += e.deltaY; } };
-                  let isDown = false, startX = 0, scrollLeft = 0;
-                  el.onmousedown = (e) => { isDown = true; el.style.cursor = 'grabbing'; startX = e.pageX - el.offsetLeft; scrollLeft = el.scrollLeft; };
-                  el.onmouseleave = () => { isDown = false; el.style.cursor = 'grab'; };
-                  el.onmouseup   = () => { isDown = false; el.style.cursor = 'grab'; };
-                  el.onmousemove = (e) => { if (!isDown) return; e.preventDefault(); el.scrollLeft = scrollLeft - (e.pageX - el.offsetLeft - startX); };
-                }}
-              >
+              <span className="text-white/30 text-xs w-16 flex-shrink-0">{t('certLabel')}</span>
+              <div className="flex gap-2">
                 <button
-                  onClick={() => setOrganizerFilter(null)}
+                  onClick={() => setCertFilter(null)}
                   className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold
                     transition-colors border ${
-                    organizerFilter === null
+                    certFilter === null
                       ? 'bg-cyan-500 text-black border-transparent'
                       : 'bg-white/5 text-white/60 hover:text-white border-white/10'
                   }`}
                 >
-                  {t('monthAll')}
+                  {t('all')}
                 </button>
-                {organizers.map((org) => {
-                  const isSelected = organizerFilter === org.id;
+                {([
+                  { value: 'ACP' as const,  logo: '/logos/acp_hom.png',  label: 'ACP' },
+                  { value: 'HAR' as const,  logo: '/logos/har_logo3.png', label: 'HAR' },
+                  { value: 'BOTH' as const, logo: '/logos/both.png',     label: 'ACP+HAR' },
+                ]).map((c) => {
+                  const isSelected = certFilter === c.value;
                   return (
                     <button
-                      key={org.id}
-                      onClick={() => setOrganizerFilter(isSelected ? null : org.id)}
-                      title={org.name}
+                      key={c.value}
+                      onClick={() => setCertFilter(isSelected ? null : c.value)}
+                      title={c.label}
                       className={`flex-shrink-0 w-14 h-14 rounded-full transition-all border-2 overflow-hidden ${
                         isSelected
                           ? 'border-cyan-500 scale-110 shadow-lg shadow-cyan-500/30'
@@ -597,8 +595,8 @@ export default function BrevetsPage() {
                       }`}
                     >
                       <img
-                        src={org.logo}
-                        alt={org.name}
+                        src={c.logo}
+                        alt={c.label}
                         className="w-full h-full object-contain bg-white/5"
                         onError={(e) => { (e.target as HTMLImageElement).src = '/logos/000000.png'; }}
                       />
@@ -607,7 +605,7 @@ export default function BrevetsPage() {
                 })}
               </div>
             </div>
-          ) : null}
+          )}
 
         </div>
 
