@@ -13,6 +13,7 @@ import { decodeParam } from '@/app/lib/routeParams';
 import { isNightStart } from '@/app/lib/nightStart';
 import { useInterestedBrevets } from '@/app/lib/useInterestedBrevets';
 import { useGpxUpdatedDate } from '@/app/lib/gpxDates';
+import RouteTraceBanner from '@/app/components/RouteTraceBanner';
 
 
 // Turns bare URLs (http(s):// or www.) inside plain text into clickable links.
@@ -729,8 +730,10 @@ export default function BrevetDetailPage() {
 
         {/* ── HERO ── */}
         <div className="relative mb-8">
-          <div className="h-72 rounded-2xl overflow-hidden border border-white/10 bg-white/5">
-            {brevet.imageUrl && <img src={brevet.imageUrl} alt={brevet.title} className="w-full h-full object-cover" />}
+          <div className="relative h-72 rounded-2xl overflow-hidden border border-white/10 bg-white/5">
+            {brevet.imageUrl
+              ? <img src={brevet.imageUrl} alt={brevet.title} className="w-full h-full object-cover" />
+              : brevet.gpxUrl && <RouteTraceBanner gpxUrl={brevet.gpxUrl} />}
           </div>
           {startDate && isNightStart(startDate) && (
             <div className="absolute top-3 right-3 z-20 flex flex-col items-center gap-1.5">
