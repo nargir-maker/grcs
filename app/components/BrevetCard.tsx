@@ -3,6 +3,7 @@
 // Usage: <BrevetCard b={brevet} hasCoOrg={hasCoOrg(brevet)} />
 
 import { isNightStart } from '@/app/lib/nightStart';
+import RouteTraceBanner from './RouteTraceBanner';
 
 interface BrevetCardProps {
   b: {
@@ -91,8 +92,11 @@ export default function BrevetCard({ b, hasCoOrg, isFavorite, onToggleFavorite }
           backgroundColor: hasImage ? undefined : 'rgba(255,255,255,0.04)',
         }}
       >
+        {/* No-photo fallback: GPX route trace as a decorative background */}
+        {!hasImage && b.gpxUrl && <RouteTraceBanner gpxUrl={b.gpxUrl} />}
+
         {/* Dark gradient overlay on photo — lightens on hover so the photo "lights up" */}
-        {hasImage && (
+        {(hasImage || b.gpxUrl) && (
           <div className="absolute inset-0 transition-opacity duration-300 group-hover:opacity-70"
             style={{
               background: 'linear-gradient(to bottom, rgba(5,10,25,0.45) 0%, rgba(5,10,25,0.75) 55%, rgba(5,10,25,0.97) 100%)',
